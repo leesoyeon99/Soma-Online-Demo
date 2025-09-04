@@ -18,50 +18,14 @@ function App() {
   const [isAIChatbotOpen, setIsAIChatbotOpen] = useState(false);
   // const [isLoggedIn, setIsLoggedIn] = useState(false); // 현재 사용하지 않음
   
-  // 파일 목록 - PDF와 이미지 혼합
+  // 파일 목록 - 소마 프리미어 교재만
   const files = [
     { 
       id: 1, 
       title: '소마 프리미어 교재', 
       url: '/somapremier.pdf',
       type: 'pdf'
-    },
-    { 
-      id: 2, 
-      title: '셋카드 놀이를 해 봅시다', 
-      url: '/assets/images/somabook-screenshot.png',
-      type: 'image'
-    },
-    { 
-      id: 3, 
-      title: '21년 1학기 과학 - 동물들의 생활', 
-      url: 'https://dummyimage.com/600x800/3b82f6/ffffff&text=과학+교재',
-      type: 'image'
-    },
-    { 
-      id: 4, 
-      title: '사고력 도형특강 3과정 (NEW)', 
-      url: 'https://dummyimage.com/600x800/10b981/ffffff&text=도형+특강',
-      type: 'image'
-    },
-    { 
-      id: 5, 
-      title: '22년 1학기 수학 - 개념 셀프북', 
-      url: 'https://dummyimage.com/600x800/f59e0b/ffffff&text=수학+셀프북',
-      type: 'image'
-    },
-    { 
-      id: 6, 
-      title: '21년 2학기 과학 - 물의 여행', 
-      url: 'https://dummyimage.com/600x800/8b5cf6/ffffff&text=물의+여행',
-      type: 'image'
-    },
-    { 
-      id: 7, 
-      title: '2023 프리미어 초급2-내지', 
-      url: 'https://dummyimage.com/600x800/3b82f6/ffffff&text=프리미어+초급2',
-      type: 'image'
-    },
+    }
   ];
 
   // 상태 관리
