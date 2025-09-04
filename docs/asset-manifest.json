@@ -1,0 +1,17 @@
+{
+  "files": {
+    "main.css": "/soma-online-demo/static/css/main.7fb28fd8.css",
+    "main.js": "/soma-online-demo/static/js/main.42e21deb.js",
+    "static/js/453.16e5ab7f.chunk.js": "/soma-online-demo/static/js/453.16e5ab7f.chunk.js",
+    "static/media/SEBANG Gothic.ttf": "/soma-online-demo/static/media/SEBANG Gothic.db6b063ed02c51ddb019.ttf",
+    "static/media/SEBANG Gothic Bold.ttf": "/soma-online-demo/static/media/SEBANG Gothic Bold.30f4399d3b4155a0202c.ttf",
+    "index.html": "/soma-online-demo/index.html",
+    "main.7fb28fd8.css.map": "/soma-online-demo/static/css/main.7fb28fd8.css.map",
+    "main.42e21deb.js.map": "/soma-online-demo/static/js/main.42e21deb.js.map",
+    "453.16e5ab7f.chunk.js.map": "/soma-online-demo/static/js/453.16e5ab7f.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.7fb28fd8.css",
+    "static/js/main.42e21deb.js"
+  ]
+}

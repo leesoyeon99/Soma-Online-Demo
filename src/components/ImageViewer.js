@@ -7,7 +7,13 @@ const ImageViewer = ({
   selectedColor,
   brushSize,
   onStrokeDataChange,
-  isRecording
+  isRecording,
+  studentStrokeData,
+  studentAudioUrl,
+  teacherFeedbackData,
+  showTeacherFeedback,
+  isTeacherMode,
+  isStudentMode
 }) => {
   const imageRef = useRef(null);
   const markupCanvasRef = useRef(null);
@@ -60,12 +66,55 @@ const ImageViewer = ({
     const context = canvas.getContext('2d');
     context.clearRect(0, 0, canvas.width, canvas.height);
     
+    // 학생 필기 그리기 (선생님 모드에서)
+    if (isTeacherMode && studentStrokeData) {
+      context.globalAlpha = 0.7;
+      context.strokeStyle = '#3b82f6';
+      context.lineWidth = 3;
+      context.lineCap = 'round';
+      context.lineJoin = 'round';
+      
+      for (let stroke of studentStrokeData) {
+        if (stroke.points && stroke.points.length > 1) {
+          context.beginPath();
+          context.moveTo(stroke.points[0].x, stroke.points[0].y);
+          for (let i = 1; i < stroke.points.length; i++) {
+            context.lineTo(stroke.points[i].x, stroke.points[i].y);
+          }
+          context.stroke();
+        }
+      }
+      context.globalAlpha = 1;
+    }
+    
+    // 선생님 첨삭 그리기 (학생 모드에서)
+    if (isStudentMode && teacherFeedbackData && showTeacherFeedback) {
+      context.globalAlpha = 0.8;
+      context.strokeStyle = '#ef4444';
+      context.lineWidth = 4;
+      context.lineCap = 'round';
+      context.lineJoin = 'round';
+      
+      for (let stroke of teacherFeedbackData) {
+        if (stroke.points && stroke.points.length > 1) {
+          context.beginPath();
+          context.moveTo(stroke.points[0].x, stroke.points[0].y);
+          for (let i = 1; i < stroke.points.length; i++) {
+            context.lineTo(stroke.points[i].x, stroke.points[i].y);
+          }
+          context.stroke();
+        }
+      }
+      context.globalAlpha = 1;
+    }
+    
+    // 현재 그리기 중인 필기
     for (let drawing of savedDrawings) {
       if (drawing.type === 'stroke') {
         drawStroke(context, drawing);
       }
     }
-  }, [savedDrawings]);
+  }, [savedDrawings, isTeacherMode, studentStrokeData, isStudentMode, teacherFeedbackData, showTeacherFeedback]);
 
   // 이미지 로드 완료 시 캔버스 크기 조정
   const handleImageLoad = useCallback(() => {

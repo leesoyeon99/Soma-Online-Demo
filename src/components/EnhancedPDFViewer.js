@@ -1,8 +1,8 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
 
-// PDF.js worker 설정
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@4.4.168/build/pdf.worker.min.mjs';
+// PDF.js worker 설정 - 로컬 worker 사용
+pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 
 const EnhancedPDFViewer = ({ 
   pdfUrl, 
@@ -43,15 +43,25 @@ const EnhancedPDFViewer = ({
   useEffect(() => {
     if (pdfUrl) {
       setPageRendering(true);
-      pdfjsLib.getDocument(pdfUrl).promise
+      console.log('PDF 로딩 시작:', pdfUrl);
+      
+      pdfjsLib.getDocument({
+        url: pdfUrl,
+        cMapUrl: 'https://unpkg.com/pdfjs-dist@4.4.168/cmaps/',
+        cMapPacked: true,
+      }).promise
         .then(pdf => {
+          console.log('PDF 로딩 성공:', pdf.numPages, '페이지');
           setPdfDoc(pdf);
-          onPageCountChange(pdf.numPages);
+          if (onPageCountChange) {
+            onPageCountChange(pdf.numPages);
+          }
           setPageRendering(false);
         })
         .catch(error => {
           console.error('PDF 로드 오류:', error);
           setPageRendering(false);
+          alert('PDF 파일을 불러올 수 없습니다. 파일 경로를 확인해주세요.');
         });
     }
   }, [pdfUrl, onPageCountChange]);

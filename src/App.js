@@ -3,9 +3,10 @@ import './App.css';
 import LandingPage from './components/LandingPage';
 import LoginPage from './components/LoginPage';
 import BookListPage from './components/BookListPage';
-import EnhancedPDFViewer from './components/EnhancedPDFViewer';
 import ImageViewer from './components/ImageViewer';
 import AIChatbot from './components/AIChatbot';
+import TeacherLoginPage from './components/TeacherLoginPage';
+import TeacherBookListPage from './components/TeacherBookListPage';
 
 function App() {
   console.log('App 컴포넌트 렌더링 시작');
@@ -16,38 +17,49 @@ function App() {
   const [isAIChatbotOpen, setIsAIChatbotOpen] = useState(false);
   // const [isLoggedIn, setIsLoggedIn] = useState(false); // 현재 사용하지 않음
   
-  // 이미지 파일 목록 - 모든 파일을 이미지로 설정
+  // 파일 목록 - PDF와 이미지 혼합
   const files = [
     { 
       id: 1, 
-      title: '21년 1학기 과학 - 동물들의 생활', 
-      url: 'https://picsum.photos/600/800?random=2',
+      title: '셋카드 놀이를 해 봅시다', 
+      url: '/assets/images/somabook-screenshot.png',
       type: 'image'
     },
     { 
       id: 2, 
-      title: '사고력 도형특강 3과정 (NEW)', 
-      url: 'https://picsum.photos/600/800?random=1',
+      title: '21년 1학기 과학 - 동물들의 생활', 
+      url: 'https://dummyimage.com/600x800/3b82f6/ffffff&text=과학+교재',
       type: 'image'
     },
     { 
       id: 3, 
-      title: '22년 1학기 수학 - 개념 셀프북', 
-      url: 'https://picsum.photos/600/800?random=3',
+      title: '사고력 도형특강 3과정 (NEW)', 
+      url: 'https://dummyimage.com/600x800/10b981/ffffff&text=도형+특강',
       type: 'image'
     },
     { 
       id: 4, 
+      title: '22년 1학기 수학 - 개념 셀프북', 
+      url: 'https://dummyimage.com/600x800/f59e0b/ffffff&text=수학+셀프북',
+      type: 'image'
+    },
+    { 
+      id: 5, 
       title: '21년 2학기 과학 - 물의 여행', 
-      url: 'https://picsum.photos/600/800?random=4',
+      url: 'https://dummyimage.com/600x800/8b5cf6/ffffff&text=물의+여행',
+      type: 'image'
+    },
+    { 
+      id: 6, 
+      title: '2023 프리미어 초급2-내지', 
+      url: 'https://dummyimage.com/600x800/3b82f6/ffffff&text=프리미어+초급2',
       type: 'image'
     },
   ];
 
   // 상태 관리
-  const [currentPdfUrl, setCurrentPdfUrl] = useState(files[0].url);
+  const [currentPdfUrl, setCurrentPdfUrl] = useState(files[0].url); // 첫 번째 이미지를 기본으로
   const [activeFileIndex, setActiveFileIndex] = useState(0);
-  const [pageNum, setPageNum] = useState(1);
   // const [pageCount, setPageCount] = useState(1); // 현재 사용하지 않음
   const [zoomScale, setZoomScale] = useState(2.0);
   const [selectedTool, setSelectedTool] = useState('hand');
@@ -63,10 +75,19 @@ function App() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isReplaying, setIsReplaying] = useState(false);
   const [replayProgress, setReplayProgress] = useState(0);
-  const [audioBlob, setAudioBlob] = useState(null);
+  // const [audioBlob, setAudioBlob] = useState(null);
   const [audioUrl, setAudioUrl] = useState(null);
+  
+  // 학생-선생님 소통 관련 상태
+  const [studentSubmission, setStudentSubmission] = useState(null); // 학생 제출 데이터
+  const [teacherFeedback, setTeacherFeedback] = useState(null); // 선생님 첨삭 데이터
+  const [showTeacherFeedback, setShowTeacherFeedback] = useState(false); // 학생이 선생님 첨삭 보기/숨기기
+  const [submissionAlert, setSubmissionAlert] = useState(false); // 선생님에게 제출 알림
+  const [feedbackAlert, setFeedbackAlert] = useState(false); // 학생에게 첨삭 알림
+  const [isFloatingPanelOpen, setIsFloatingPanelOpen] = useState(false); // 플로팅 패널 열기/닫기
+  const [notifications, setNotifications] = useState([]); // 알림 목록
   const [mediaRecorder, setMediaRecorder] = useState(null);
-  const [audioChunks, setAudioChunks] = useState([]);
+  // const [audioChunks, setAudioChunks] = useState([]);
   const [currentAudio, setCurrentAudio] = useState(null);
   const [audioDuration, setAudioDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
@@ -75,9 +96,11 @@ function App() {
   const handleUserTypeSelect = (type) => {
     if (type === 'student') {
       setCurrentPage('login');
+    } else if (type === 'teacher') {
+      setCurrentPage('teacherLogin');
     } else {
-      // Admin과 Teacher는 데모 페이지로 (향후 구현)
-      alert(`${type === 'admin' ? 'Admin' : '강사'} 데모는 준비 중입니다!`);
+      // Admin은 데모 페이지로 (향후 구현)
+      alert('Admin 데모는 준비 중입니다!');
     }
   };
 
@@ -86,13 +109,25 @@ function App() {
     setCurrentPage('bookList');
   };
 
+  // 강사 로그인 핸들러
+  const handleTeacherLogin = () => {
+    setCurrentPage('teacherBookList');
+  };
+
   // 교재 선택 핸들러 (교재 목록에서)
   const handleBookSelect = (url, index) => {
     setCurrentPdfUrl(url);
     setActiveFileIndex(index);
-    setPageNum(1);
     setZoomScale(2.0);
     setCurrentPage('detail');
+  };
+
+  // 강사용 교재 선택 핸들러
+  const handleTeacherBookSelect = (url, index) => {
+    setCurrentPdfUrl(url);
+    setActiveFileIndex(index);
+    setZoomScale(2.0);
+    setCurrentPage('teacherDetail');
     
     // 이미지 파일인 경우 페이지 수를 1로 설정
     // if (files[index]?.type === 'image') {
@@ -147,9 +182,9 @@ function App() {
         recorder.onstop = () => {
           const audioBlob = new Blob(chunks, { type: 'audio/wav' });
           const audioUrl = URL.createObjectURL(audioBlob);
-          setAudioBlob(audioBlob);
+          // setAudioBlob(audioBlob);
           setAudioUrl(audioUrl);
-          setAudioChunks([]);
+          // setAudioChunks([]);
           
           // 스트림 정리
           stream.getTracks().forEach(track => track.stop());
@@ -157,7 +192,7 @@ function App() {
 
         recorder.start();
         setMediaRecorder(recorder);
-        setAudioChunks(chunks);
+        // setAudioChunks(chunks);
         setIsRecording(true);
         setRecordingStartTime(new Date());
         setStrokeData([]); // 새로운 녹음 시작 시 스트로크 데이터 초기화
@@ -172,49 +207,108 @@ function App() {
     }
   };
 
-  // 오디오 재생 핸들러
-  const handleAudioPlay = async () => {
-    if (audioUrl) {
-      try {
-        const audio = new Audio(audioUrl);
-        setCurrentAudio(audio);
-        
-        audio.onloadedmetadata = () => {
-          setAudioDuration(audio.duration);
-        };
-        
-        audio.ontimeupdate = () => {
-          setCurrentTime(audio.currentTime);
-        };
-        
-        audio.onended = () => {
-          setIsPlaying(false);
-          setCurrentTime(0);
-        };
-        
-        audio.onerror = (error) => {
-          console.error('오디오 재생 오류:', error);
-          setIsPlaying(false);
-          alert('오디오 재생에 실패했습니다.');
-        };
-        
-        setIsPlaying(true);
-        await audio.play();
-      } catch (error) {
-        console.error('오디오 재생 오류:', error);
-        setIsPlaying(false);
-        alert('오디오 재생에 실패했습니다.');
-      }
+    // 오디오 재생 핸들러 (통합 재생으로 대체됨)
+  // const handleAudioPlay = async () => {
+  //   // 통합 재생 기능으로 대체됨
+  // };
+
+  // 학생이 선생님에게 제출하는 함수
+  const handleStudentSubmission = () => {
+    if (strokeData.length === 0 && !audioUrl) {
+      alert('제출할 필기나 녹음이 없습니다.');
+      return;
     }
+    
+    const submission = {
+      id: Date.now(),
+      studentId: 'student1',
+      studentName: '학생',
+      timestamp: new Date().toISOString(),
+      strokeData: [...strokeData],
+      audioUrl: audioUrl,
+      bookTitle: files[activeFileIndex]?.title || '교재',
+      bookUrl: currentPdfUrl
+    };
+    
+    // 로컬 스토리지에 저장 (실제로는 서버로 전송)
+    localStorage.setItem('studentSubmission', JSON.stringify(submission));
+    
+    // 알림 추가
+    const newNotification = {
+      id: Date.now(),
+      type: 'submission',
+      title: '과제 제출 완료',
+      message: `"${submission.bookTitle}" 과제가 선생님에게 전송되었습니다`,
+      timestamp: new Date().toISOString(),
+      isRead: false
+    };
+    
+    setNotifications(prev => [newNotification, ...prev]);
+    
+    // 선생님에게 알림 표시
+    setSubmissionAlert(true);
+    
+    alert('선생님에게 제출되었습니다!');
   };
 
-  // 오디오 중지 핸들러
-  const handleAudioStop = () => {
+  // 선생님이 학생에게 첨삭을 전송하는 함수
+  const handleTeacherFeedback = () => {
+    if (strokeData.length === 0) {
+      alert('첨삭할 내용이 없습니다.');
+      return;
+    }
+    
+    const feedback = {
+      id: Date.now(),
+      teacherId: 'teacher1',
+      teacherName: '선생님',
+      timestamp: new Date().toISOString(),
+      feedbackStrokeData: [...strokeData],
+      studentSubmissionId: studentSubmission?.id,
+      bookTitle: studentSubmission?.bookTitle || '교재',
+      bookUrl: studentSubmission?.bookUrl || currentPdfUrl
+    };
+    
+    // 로컬 스토리지에 저장 (실제로는 서버로 전송)
+    localStorage.setItem('teacherFeedback', JSON.stringify(feedback));
+    
+    // 알림 추가
+    const newNotification = {
+      id: Date.now(),
+      type: 'feedback',
+      title: '첨삭 완료',
+      message: `"${feedback.bookTitle}" 과제 첨삭이 완료되었습니다`,
+      timestamp: new Date().toISOString(),
+      isRead: false
+    };
+    
+    setNotifications(prev => [newNotification, ...prev]);
+    
+    // 학생에게 알림 표시
+    setFeedbackAlert(true);
+    
+    alert('학생에게 첨삭이 전송되었습니다!');
+  };
+
+  // 통합 중지 핸들러 (음성 + 필기 재생 중지)
+  const handleCombinedStop = () => {
+    // 음성 중지
     if (currentAudio) {
       currentAudio.pause();
       currentAudio.currentTime = 0;
       setCurrentTime(0);
       setIsPlaying(false);
+    }
+    
+    // 필기 재생 중지
+    setIsReplaying(false);
+    setReplayProgress(0);
+    
+    // 캔버스 초기화
+    const canvas = document.querySelector('canvas');
+    if (canvas) {
+      const context = canvas.getContext('2d');
+      context.clearRect(0, 0, canvas.width, canvas.height);
     }
   };
 
@@ -236,10 +330,10 @@ function App() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // 필기 스트로크 재생 핸들러 (노타빌리티 스타일)
-  const handleStrokeReplay = () => {
-    if (strokeData.length === 0) {
-      alert('재생할 필기가 없습니다.');
+  // 통합 재생 핸들러 (필기 + 음성 동시 재생)
+  const handleCombinedReplay = async () => {
+    if (strokeData.length === 0 && !audioUrl) {
+      alert('재생할 내용이 없습니다.');
       return;
     }
 
@@ -253,46 +347,84 @@ function App() {
       context.clearRect(0, 0, canvas.width, canvas.height);
     }
 
-    // 스트로크를 순서대로 재생
-    let currentStroke = 0;
-    const replayInterval = setInterval(() => {
-      if (currentStroke >= strokeData.length) {
-        clearInterval(replayInterval);
-        setIsReplaying(false);
-        setReplayProgress(100);
-        return;
+    // 음성 재생 시작
+    if (audioUrl) {
+      try {
+        const audio = new Audio(audioUrl);
+        setCurrentAudio(audio);
+        
+        audio.onloadedmetadata = () => {
+          setAudioDuration(audio.duration);
+        };
+        
+        audio.ontimeupdate = () => {
+          setCurrentTime(audio.currentTime);
+        };
+        
+        audio.onended = () => {
+          setIsPlaying(false);
+          setCurrentTime(0);
+        };
+        
+        audio.onerror = (error) => {
+          console.error('오디오 재생 오류:', error);
+          setIsPlaying(false);
+        };
+        
+        setIsPlaying(true);
+        await audio.play();
+      } catch (error) {
+        console.error('오디오 재생 오류:', error);
+        setIsPlaying(false);
       }
+    }
 
-      const stroke = strokeData[currentStroke];
-      if (canvas) {
-        const context = canvas.getContext('2d');
-        
-        // 스트로크 그리기
-        context.beginPath();
-        context.lineWidth = stroke.brushSize;
-        context.lineCap = 'round';
-        context.lineJoin = 'round';
-        context.strokeStyle = stroke.color;
-        
-        if (stroke.points.length > 1) {
-          context.moveTo(stroke.points[0].x, stroke.points[0].y);
-          for (let i = 1; i < stroke.points.length; i++) {
-            context.lineTo(stroke.points[i].x, stroke.points[i].y);
-          }
-          context.stroke();
+    // 필기 스트로크 재생 (음성과 동시에)
+    if (strokeData.length > 0) {
+      let currentStroke = 0;
+      const replayInterval = setInterval(() => {
+        if (currentStroke >= strokeData.length) {
+          clearInterval(replayInterval);
+          setIsReplaying(false);
+          setReplayProgress(100);
+          return;
         }
-      }
 
-      currentStroke++;
-      setReplayProgress((currentStroke / strokeData.length) * 100);
-    }, 100); // 100ms 간격으로 재생
+        const stroke = strokeData[currentStroke];
+        if (canvas) {
+          const context = canvas.getContext('2d');
+          
+          // 스트로크 그리기
+          context.beginPath();
+          context.lineWidth = stroke.brushSize;
+          context.lineCap = 'round';
+          context.lineJoin = 'round';
+          context.strokeStyle = stroke.color;
+          
+          if (stroke.points.length > 1) {
+            context.moveTo(stroke.points[0].x, stroke.points[0].y);
+            for (let i = 1; i < stroke.points.length; i++) {
+              context.lineTo(stroke.points[i].x, stroke.points[i].y);
+            }
+            context.stroke();
+          }
+        }
+
+        currentStroke++;
+        setReplayProgress((currentStroke / strokeData.length) * 100);
+      }, 100); // 100ms 간격으로 재생
+    } else {
+      // 필기가 없으면 음성만 재생
+      setIsReplaying(false);
+      setReplayProgress(100);
+    }
   };
 
   // 다시 녹음 핸들러
   const handleRerecord = () => {
     if (window.confirm('정말로 다시 녹음하시겠습니까? 현재 녹음과 필기가 모두 삭제됩니다.')) {
       setStrokeData([]);
-      setAudioBlob(null);
+      // setAudioBlob(null);
       if (audioUrl) {
         URL.revokeObjectURL(audioUrl);
         setAudioUrl(null);
@@ -300,7 +432,7 @@ function App() {
       setIsPlaying(false);
       setIsReplaying(false);
       setReplayProgress(0);
-      setAudioChunks([]);
+      // setAudioChunks([]);
       setCurrentAudio(null);
       setAudioDuration(0);
       setCurrentTime(0);
@@ -315,41 +447,6 @@ function App() {
     setStrokeData(newStrokeData);
   };
 
-  // 선생님에게 제출 핸들러
-  const handleSubmitToTeacher = () => {
-    if (strokeData.length === 0) {
-      alert('제출할 필기 내용이 없습니다. 먼저 문제를 풀어보세요!');
-      return;
-    }
-
-    const submissionData = {
-      studentId: 'student_001', // 실제로는 로그인한 학생 ID
-      bookTitle: files[activeFileIndex]?.title || '교재',
-      bookUrl: currentPdfUrl,
-      strokeData: strokeData,
-      recordingStartTime: recordingStartTime,
-      recordingEndTime: new Date(),
-      submissionTime: new Date().toISOString(),
-      totalStrokes: strokeData.length,
-      recordingDuration: recordingStartTime ? 
-        Math.round((new Date() - recordingStartTime) / 1000) : 0
-    };
-
-    // 실제로는 서버에 제출
-    console.log('선생님에게 제출:', submissionData);
-    
-    // 로컬 스토리지에 저장 (데모용)
-    const existingSubmissions = JSON.parse(localStorage.getItem('studentSubmissions') || '[]');
-    existingSubmissions.push(submissionData);
-    localStorage.setItem('studentSubmissions', JSON.stringify(existingSubmissions));
-
-    alert(`✅ 제출 완료!\n\n📚 교재: ${submissionData.bookTitle}\n✏️ 필기 횟수: ${submissionData.totalStrokes}회\n🎤 녹음 시간: ${submissionData.recordingDuration}초\n\n선생님이 확인 후 피드백을 드릴게요!`);
-    
-    // 제출 후 데이터 초기화
-    setStrokeData([]);
-    setIsRecording(false);
-    setRecordingStartTime(null);
-  };
   
   // Undo/Redo 핸들러
   // 실행 취소/다시 실행 핸들러 (이미지 뷰어에서는 사용하지 않음)
@@ -374,12 +471,658 @@ function App() {
   }
 
   if (currentPage === 'bookList') {
-    return <BookListPage files={files} onBookSelect={handleBookSelect} onBackToLogin={handleLogout} />;
+    return <BookListPage 
+      files={files} 
+      onBookSelect={handleBookSelect} 
+      onBackToLogin={handleLogout}
+      feedbackAlert={feedbackAlert}
+      setFeedbackAlert={setFeedbackAlert}
+      setTeacherFeedback={setTeacherFeedback}
+      notifications={notifications}
+      setNotifications={setNotifications}
+    />;
+  }
+
+  if (currentPage === 'teacherLogin') {
+    return <TeacherLoginPage onLogin={handleTeacherLogin} />;
+  }
+
+  if (currentPage === 'teacherBookList') {
+    return <TeacherBookListPage 
+      files={files} 
+      onBookSelect={handleTeacherBookSelect} 
+      onBackToLogin={handleLogout}
+      notifications={notifications}
+      setNotifications={setNotifications}
+    />;
+  }
+
+  // 강사용 상세 페이지
+  if (currentPage === 'teacherDetail') {
+    return (
+      <div className="App" style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%)' }}>
+        {/* 학생 제출 알림창 */}
+        {submissionAlert && (
+          <div style={{
+            position: 'fixed',
+            top: '20px',
+            right: '20px',
+            background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+            color: 'white',
+            padding: '1rem 1.5rem',
+            borderRadius: '12px',
+            boxShadow: '0 10px 25px rgba(59, 130, 246, 0.3)',
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1rem',
+            minWidth: '300px',
+            animation: 'slideIn 0.3s ease-out'
+          }}>
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.2)',
+              borderRadius: '50%',
+              width: '40px',
+              height: '40px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+              </svg>
+            </div>
+            <div>
+              <div style={{ fontWeight: 'bold', fontSize: '1rem' }}>학생 제출 알림</div>
+              <div style={{ fontSize: '0.875rem', opacity: 0.9 }}>새로운 과제가 제출되었습니다</div>
+            </div>
+            <button
+              onClick={() => {
+                setSubmissionAlert(false);
+                // 학생 제출 데이터 로드
+                const submission = localStorage.getItem('studentSubmission');
+                if (submission) {
+                  setStudentSubmission(JSON.parse(submission));
+                }
+              }}
+              style={{
+                background: 'rgba(255, 255, 255, 0.2)',
+                border: 'none',
+                color: 'white',
+                padding: '0.5rem',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '0.875rem'
+              }}
+            >
+              확인
+            </button>
+          </div>
+        )}
+
+        {/* 강사용 통합 헤더 + 툴바 */}
+        <div style={{
+          background: 'rgba(255, 255, 255, 0.95)',
+          backdropFilter: 'blur(10px)',
+          borderBottom: '2px solid rgba(59, 130, 246, 0.3)',
+          padding: '1rem 2rem',
+          boxShadow: '0 4px 12px rgba(30, 58, 138, 0.2)'
+        }}>
+          <div style={{
+            maxWidth: '1400px',
+            margin: '0 auto',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: '2rem'
+          }}>
+            {/* 왼쪽: 네비게이션 + 제목 */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <button 
+                onClick={() => { setCurrentPage('landing'); }}
+                style={{
+                  background: 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '0.5rem 1rem',
+                  cursor: 'pointer',
+                  fontSize: '0.9rem',
+                  fontWeight: '600',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.transform = 'translateY(-1px)';
+                  e.target.style.boxShadow = '0 4px 12px rgba(107, 114, 128, 0.4)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.transform = 'translateY(0)';
+                  e.target.style.boxShadow = 'none';
+                }}
+              >
+                ← 홈으로
+              </button>
+              <button 
+                onClick={() => { setCurrentPage('teacherBookList'); }}
+                style={{
+                  background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '0.5rem 1rem',
+                  cursor: 'pointer',
+                  fontSize: '0.9rem',
+                  fontWeight: '600',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.transform = 'translateY(-1px)';
+                  e.target.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.4)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.transform = 'translateY(0)';
+                  e.target.style.boxShadow = 'none';
+                }}
+              >
+                📚 교재목록
+              </button>
+              <h1 style={{ 
+                color: '#1e3a8a', 
+                fontSize: '1.5rem', 
+                fontWeight: 'bold',
+                fontFamily: 'var(--font-title)'
+              }}>
+                {files[activeFileIndex]?.title || '교재 상세'} - 강사 모드
+              </h1>
+            </div>
+            
+            {/* 중앙: 툴바 */}
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '1rem',
+              background: 'rgba(59, 130, 246, 0.1)',
+              padding: '0.5rem 1rem',
+              borderRadius: '12px',
+              border: '1px solid rgba(59, 130, 246, 0.3)'
+            }}>
+              {/* 도구 버튼들 */}
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                {['hand', 'pen', 'eraser'].map((tool) => (
+                  <button
+                    key={tool}
+                    onClick={() => handleToolChange(tool)}
+                    style={{
+                      padding: '0.5rem',
+                      borderRadius: '8px',
+                      border: selectedTool === tool ? '2px solid #3b82f6' : '2px solid rgba(59, 130, 246, 0.3)',
+                      background: selectedTool === tool ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255, 255, 255, 0.8)',
+                      color: selectedTool === tool ? '#1e3a8a' : '#64748b',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    title={tool === 'hand' ? '이동' : tool === 'pen' ? '펜' : '지우개'}
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                      {tool === 'hand' && <path d="M13 1.07V9h7c0-4.08-3.05-7.44-7-7.93zM4 15c0 4.42 3.58 8 8 8s8-3.58 8-8v-4H4v4z"/>}
+                      {tool === 'pen' && <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>}
+                      {tool === 'eraser' && <path d="M16.24 3.56l4.95 4.94c.78.79.78 2.05 0 2.84L12 20.53a4.008 4.008 0 0 1-5.66 0L2.81 17c-.78-.79-.78-2.05 0-2.84l10.6-10.6c.79-.78 2.05-.78 2.83 0M4.22 15.58l3.54 3.53c.78.79 2.04.79 2.83 0l3.53-3.53-6.36-6.36-3.54 3.36z"/>}
+                    </svg>
+                  </button>
+                ))}
+              </div>
+
+              {/* 색상 선택 */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ color: '#1e3a8a', fontSize: '0.9rem' }}>색상:</span>
+                <div style={{ display: 'flex', gap: '0.25rem' }}>
+                  {['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#000000'].map((color) => (
+                    <button
+                      key={color}
+                      onClick={() => handleColorChange(color)}
+                      style={{
+                        width: '24px',
+                        height: '24px',
+                        borderRadius: '50%',
+                        border: selectedColor === color ? '2px solid #3b82f6' : '2px solid rgba(59, 130, 246, 0.3)',
+                        background: color,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* 브러시 크기 */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ color: '#1e3a8a', fontSize: '0.9rem' }}>크기:</span>
+                <select
+                  value={brushSize}
+                  onChange={(e) => handleBrushSizeChange(Number(e.target.value))}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.8)',
+                    color: '#1e3a8a',
+                    border: '1px solid rgba(59, 130, 246, 0.3)',
+                    borderRadius: '6px',
+                    padding: '0.25rem 0.5rem',
+                    fontSize: '0.9rem'
+                  }}
+                >
+                  <option value={1}>1px</option>
+                  <option value={3}>3px</option>
+                  <option value={5}>5px</option>
+                  <option value={8}>8px</option>
+                  <option value={12}>12px</option>
+                </select>
+              </div>
+            </div>
+
+            {/* 오른쪽: 강사 모드 표시 + PDF 링크 */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '1rem'
+            }}>
+              <a
+                href={currentPdfUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.5rem 1rem',
+                  background: 'rgba(16, 185, 129, 0.2)',
+                  color: '#10b981',
+                  textDecoration: 'none',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                  fontSize: '0.9rem',
+                  fontWeight: '600',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.backgroundColor = 'rgba(16, 185, 129, 0.3)';
+                  e.target.style.borderColor = '#10b981';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = 'rgba(16, 185, 129, 0.2)';
+                  e.target.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+                }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+                </svg>
+                PDF 새창 열기
+              </a>
+              <span style={{ 
+                color: '#60a5fa', 
+                fontSize: '0.9rem', 
+                fontWeight: '600',
+                background: 'rgba(96, 165, 250, 0.2)',
+                padding: '0.5rem 1rem',
+                borderRadius: '8px',
+                border: '1px solid rgba(96, 165, 250, 0.3)'
+              }}>
+                👨‍🏫 강사 모드
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* 메인 콘텐츠 영역 */}
+        <div style={{
+          display: 'flex',
+          height: 'calc(100vh - 80px)',
+          background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%)'
+        }}>
+          <main style={{
+            flex: 1,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: '2rem',
+            overflow: 'auto'
+          }}>
+            <ImageViewer
+              imageUrl={currentPdfUrl}
+              zoomScale={zoomScale}
+              selectedTool={selectedTool}
+              selectedColor={selectedColor}
+              brushSize={brushSize}
+              onStrokeDataChange={handleStrokeDataChange}
+              isRecording={isRecording}
+              studentStrokeData={studentSubmission ? studentSubmission.strokeData : null}
+              studentAudioUrl={studentSubmission ? studentSubmission.audioUrl : null}
+              teacherFeedbackData={teacherFeedback ? teacherFeedback.feedbackStrokeData : null}
+              showTeacherFeedback={showTeacherFeedback}
+              isTeacherMode={true}
+              isStudentMode={false}
+            />
+          </main>
+        </div>
+
+        {/* 강사용 플로팅 컨트롤 패널 */}
+        <div style={{
+          position: 'fixed',
+          bottom: '20px',
+          right: '20px',
+          zIndex: 1000
+        }}>
+          {/* 플로팅 패널 열기/닫기 버튼 */}
+          {!isFloatingPanelOpen && (
+            <button
+              onClick={() => setIsFloatingPanelOpen(true)}
+              style={{
+                background: 'rgba(59, 130, 246, 0.95)',
+                backdropFilter: 'blur(10px)',
+                borderRadius: '50%',
+                width: '60px',
+                height: '60px',
+                border: 'none',
+                color: 'white',
+                cursor: 'pointer',
+                boxShadow: '0 8px 32px rgba(59, 130, 246, 0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: '1rem',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.transform = 'scale(1.1)';
+                e.target.style.backgroundColor = 'rgba(59, 130, 246, 1)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = 'scale(1)';
+                e.target.style.backgroundColor = 'rgba(59, 130, 246, 0.95)';
+              }}
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+              </svg>
+            </button>
+          )}
+
+          {isFloatingPanelOpen && (
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.95)',
+              backdropFilter: 'blur(10px)',
+              borderRadius: '16px',
+              padding: '1rem',
+              boxShadow: '0 8px 32px rgba(30, 58, 138, 0.2)',
+              border: '2px solid rgba(59, 130, 246, 0.3)',
+              minWidth: '220px'
+            }}>
+              {/* 닫기 버튼 */}
+              <button
+                onClick={() => setIsFloatingPanelOpen(false)}
+                style={{
+                  position: 'absolute',
+                  top: '10px',
+                  right: '10px',
+                  background: 'rgba(59, 130, 246, 0.5)',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '30px',
+                  height: '30px',
+                  color: 'white',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '16px'
+                }}
+              >
+                ×
+              </button>
+            {/* 학생 제출물 확인 섹션 */}
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.75rem',
+              marginBottom: '1rem'
+            }}>
+              <div style={{
+                fontSize: '0.875rem',
+                fontWeight: '600',
+                color: '#1e3a8a',
+                marginBottom: '0.5rem',
+                fontFamily: 'var(--font-ui)'
+              }}>
+                👥 학생 제출물
+              </div>
+              
+              <button
+                onClick={() => {
+                  // 학생 제출 데이터 로드
+                  const submission = localStorage.getItem('studentSubmission');
+                  if (submission) {
+                    const submissionData = JSON.parse(submission);
+                    setStudentSubmission(submissionData);
+                    alert('학생 제출물을 불러왔습니다!');
+                  } else {
+                    alert('아직 학생 제출물이 없습니다.');
+                  }
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  padding: '0.75rem 1rem',
+                  borderRadius: '12px',
+                  backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                  border: '2px solid #3b82f6',
+                  color: '#60a5fa',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  width: '100%'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.backgroundColor = 'rgba(59, 130, 246, 0.3)';
+                  e.target.style.borderColor = '#60a5fa';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = 'rgba(59, 130, 246, 0.2)';
+                  e.target.style.borderColor = '#3b82f6';
+                }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+                </svg>
+                <span style={{ fontSize: '0.875rem', fontFamily: 'var(--font-ui)' }}>
+                  제출물 확인
+                </span>
+              </button>
+            </div>
+
+            {/* AI 첨삭 섹션 */}
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.75rem',
+              marginBottom: '1rem'
+            }}>
+              <div style={{
+                fontSize: '0.875rem',
+                fontWeight: '600',
+                color: '#1e3a8a',
+                marginBottom: '0.5rem',
+                fontFamily: 'var(--font-ui)'
+              }}>
+                🤖 AI 첨삭
+              </div>
+
+              <button
+                onClick={() => setIsAIChatbotOpen(true)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  padding: '0.75rem 1rem',
+                  borderRadius: '12px',
+                  backgroundColor: 'rgba(139, 92, 246, 0.2)',
+                  border: '2px solid #8b5cf6',
+                  color: '#a78bfa',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  width: '100%'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.backgroundColor = 'rgba(139, 92, 246, 0.3)';
+                  e.target.style.borderColor = '#a78bfa';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = 'rgba(139, 92, 246, 0.2)';
+                  e.target.style.borderColor = '#8b5cf6';
+                }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <g opacity="0.9">
+                    <rect x="6" y="12" width="1.5" height="3" rx="0.75" fill="currentColor"/>
+                    <rect x="8" y="10" width="1.5" height="7" rx="0.75" fill="currentColor"/>
+                    <rect x="10" y="8" width="1.5" height="11" rx="0.75" fill="currentColor"/>
+                    <rect x="12" y="6" width="1.5" height="15" rx="0.75" fill="currentColor"/>
+                    <rect x="14" y="8" width="1.5" height="11" rx="0.75" fill="currentColor"/>
+                    <rect x="16" y="10" width="1.5" height="7" rx="0.75" fill="currentColor"/>
+                    <rect x="18" y="12" width="1.5" height="3" rx="0.75" fill="currentColor"/>
+                  </g>
+                  <g opacity="0.8">
+                    <path d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5L12 2z" fill="currentColor"/>
+                  </g>
+                </svg>
+                <span style={{ fontSize: '0.875rem', fontFamily: 'var(--font-ui)' }}>
+                  AI 첨삭
+                </span>
+              </button>
+            </div>
+
+            {/* 성적 관리 섹션 */}
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.75rem'
+            }}>
+              <div style={{
+                fontSize: '0.875rem',
+                fontWeight: '600',
+                color: '#1e3a8a',
+                marginBottom: '0.5rem',
+                fontFamily: 'var(--font-ui)'
+              }}>
+                📊 성적 관리
+              </div>
+
+              <button
+                onClick={() => alert('성적 관리 기능입니다.')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  padding: '0.75rem 1rem',
+                  borderRadius: '12px',
+                  backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                  border: '2px solid #10b981',
+                  color: '#34d399',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  width: '100%'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.backgroundColor = 'rgba(16, 185, 129, 0.3)';
+                  e.target.style.borderColor = '#34d399';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = 'rgba(16, 185, 129, 0.2)';
+                  e.target.style.borderColor = '#10b981';
+                }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M9 12L11 14L15 10"/>
+                  <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z"/>
+                </svg>
+                <span style={{ fontSize: '0.875rem', fontFamily: 'var(--font-ui)' }}>
+                  성적 입력
+                </span>
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+        {/* AI 챗봇 모달 */}
+        <AIChatbot
+          isOpen={isAIChatbotOpen}
+          onClose={() => setIsAIChatbotOpen(false)}
+          bookTitle={files[activeFileIndex]?.title || '교재'}
+        />
+      </div>
+    );
   }
 
   // 상세 페이지 (기존 뷰어)
   return (
     <div className="App">
+      {/* 선생님 첨삭 알림창 */}
+      {feedbackAlert && (
+        <div style={{
+          position: 'fixed',
+          top: '20px',
+          right: '20px',
+          background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+          color: 'white',
+          padding: '1rem 1.5rem',
+          borderRadius: '12px',
+          boxShadow: '0 10px 25px rgba(16, 185, 129, 0.3)',
+          zIndex: 1000,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '1rem',
+          minWidth: '300px',
+          animation: 'slideIn 0.3s ease-out'
+        }}>
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.2)',
+            borderRadius: '50%',
+            width: '40px',
+            height: '40px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+            </svg>
+          </div>
+          <div>
+            <div style={{ fontWeight: 'bold', fontSize: '1rem' }}>선생님 첨삭 도착</div>
+            <div style={{ fontSize: '0.875rem', opacity: 0.9 }}>새로운 첨삭이 도착했습니다</div>
+          </div>
+          <button
+            onClick={() => {
+              setFeedbackAlert(false);
+              // 선생님 첨삭 데이터 로드
+              const feedback = localStorage.getItem('teacherFeedback');
+              if (feedback) {
+                setTeacherFeedback(JSON.parse(feedback));
+              }
+            }}
+            style={{
+              background: 'rgba(255, 255, 255, 0.2)',
+              border: 'none',
+              color: 'white',
+              padding: '0.5rem',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '0.875rem'
+            }}
+          >
+            확인
+          </button>
+        </div>
+      )}
+
       {/* 통합 헤더 + 툴바 */}
       <div style={{
         background: 'linear-gradient(135deg, #fff7ed 0%, #ffedd5 50%, #fed7aa 100%)',
@@ -402,7 +1145,7 @@ function App() {
                 setCurrentPage('landing');
               }}
               style={{
-                background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+                background: 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)',
                 color: 'white',
                 border: 'none',
                 borderRadius: '8px',
@@ -417,6 +1160,27 @@ function App() {
               onMouseLeave={(e) => e.target.style.transform = 'translateY(0)'}
             >
               ← 홈으로
+            </button>
+            <button
+              onClick={() => {
+                setCurrentPage('bookList');
+              }}
+              style={{
+                background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '0.5rem 1rem',
+                cursor: 'pointer',
+                fontSize: '0.875rem',
+                fontFamily: "'SEBANG Gothic', sans-serif",
+                fontWeight: '500',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => e.target.style.transform = 'translateY(-1px)'}
+              onMouseLeave={(e) => e.target.style.transform = 'translateY(0)'}
+            >
+              📚 교재목록
             </button>
             <h1 style={{
               fontFamily: "'SEBANG Gothic', sans-serif",
@@ -556,26 +1320,21 @@ function App() {
           padding: '1.5rem',
           overflow: 'hidden'
         }}>
-          {files[activeFileIndex]?.type === 'image' ? (
-            <ImageViewer 
-              imageUrl={currentPdfUrl}
-              zoomScale={zoomScale}
-              selectedTool={selectedTool}
-              selectedColor={selectedColor}
-              brushSize={brushSize}
-              onStrokeDataChange={handleStrokeDataChange}
-              isRecording={isRecording}
-            />
-          ) : (
-            <EnhancedPDFViewer 
-              pdfUrl={currentPdfUrl}
-              pageNum={pageNum}
-              zoomScale={zoomScale}
-              selectedTool={selectedTool}
-              selectedColor={selectedColor}
-              brushSize={brushSize}
-            />
-          )}
+          <ImageViewer 
+            imageUrl={currentPdfUrl}
+            zoomScale={zoomScale}
+            selectedTool={selectedTool}
+            selectedColor={selectedColor}
+            brushSize={brushSize}
+            onStrokeDataChange={handleStrokeDataChange}
+            isRecording={isRecording}
+            studentStrokeData={null}
+            studentAudioUrl={null}
+            teacherFeedbackData={teacherFeedback ? teacherFeedback.feedbackStrokeData : null}
+            showTeacherFeedback={showTeacherFeedback}
+            isTeacherMode={false}
+            isStudentMode={true}
+          />
         </main>
       </div>
       
@@ -586,15 +1345,73 @@ function App() {
         right: '20px',
         zIndex: 1000
       }}>
-        <div style={{
-          background: 'rgba(31, 41, 55, 0.95)',
-          backdropFilter: 'blur(10px)',
-          borderRadius: '16px',
-          padding: '1rem',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-          border: '1px solid rgba(75, 85, 99, 0.3)',
-          minWidth: '220px'
-        }}>
+        {/* 플로팅 패널 열기/닫기 버튼 */}
+        {!isFloatingPanelOpen && (
+          <button
+            onClick={() => setIsFloatingPanelOpen(true)}
+            style={{
+              background: 'rgba(31, 41, 55, 0.95)',
+              backdropFilter: 'blur(10px)',
+              borderRadius: '50%',
+              width: '60px',
+              height: '60px',
+              border: 'none',
+              color: 'white',
+              cursor: 'pointer',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '1rem',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.transform = 'scale(1.1)';
+              e.target.style.backgroundColor = 'rgba(31, 41, 55, 1)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.transform = 'scale(1)';
+              e.target.style.backgroundColor = 'rgba(31, 41, 55, 0.95)';
+            }}
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+            </svg>
+          </button>
+        )}
+
+        {isFloatingPanelOpen && (
+          <div style={{
+            background: 'rgba(31, 41, 55, 0.95)',
+            backdropFilter: 'blur(10px)',
+            borderRadius: '16px',
+            padding: '1rem',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+            border: '1px solid rgba(75, 85, 99, 0.3)',
+            minWidth: '220px'
+          }}>
+            {/* 닫기 버튼 */}
+            <button
+              onClick={() => setIsFloatingPanelOpen(false)}
+              style={{
+                position: 'absolute',
+                top: '10px',
+                right: '10px',
+                background: 'rgba(75, 85, 99, 0.5)',
+                border: 'none',
+                borderRadius: '50%',
+                width: '30px',
+                height: '30px',
+                color: 'white',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '16px'
+              }}
+            >
+              ×
+            </button>
           {/* 녹음 컨트롤 섹션 */}
           <div style={{
             display: 'flex',
@@ -665,8 +1482,8 @@ function App() {
                   gap: '0.5rem'
                 }}>
                   <button
-                    onClick={handleAudioPlay}
-                    disabled={isPlaying}
+                    onClick={handleCombinedReplay}
+                    disabled={isPlaying || isReplaying}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
@@ -675,20 +1492,20 @@ function App() {
                       borderRadius: '8px',
                       backgroundColor: '#1f2937',
                       border: '2px solid #8b5cf6',
-                      color: isPlaying ? '#6b7280' : '#8b5cf6',
-                      cursor: isPlaying ? 'not-allowed' : 'pointer',
+                      color: (isPlaying || isReplaying) ? '#6b7280' : '#8b5cf6',
+                      cursor: (isPlaying || isReplaying) ? 'not-allowed' : 'pointer',
                       transition: 'all 0.2s ease',
-                      opacity: isPlaying ? 0.6 : 1,
+                      opacity: (isPlaying || isReplaying) ? 0.6 : 1,
                       flex: 1
                     }}
                     onMouseEnter={(e) => {
-                      if (!isPlaying) {
+                      if (!isPlaying && !isReplaying) {
                         e.target.style.backgroundColor = '#111827';
                         e.target.style.borderColor = '#a78bfa';
                       }
                     }}
                     onMouseLeave={(e) => {
-                      if (!isPlaying) {
+                      if (!isPlaying && !isReplaying) {
                         e.target.style.backgroundColor = '#1f2937';
                         e.target.style.borderColor = '#8b5cf6';
                       }
@@ -703,8 +1520,8 @@ function App() {
                   </button>
                   
                   <button
-                    onClick={handleAudioStop}
-                    disabled={!isPlaying}
+                    onClick={handleCombinedStop}
+                    disabled={!isPlaying && !isReplaying}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
@@ -713,20 +1530,20 @@ function App() {
                       borderRadius: '8px',
                       backgroundColor: '#1f2937',
                       border: '2px solid #ef4444',
-                      color: !isPlaying ? '#6b7280' : '#ef4444',
-                      cursor: !isPlaying ? 'not-allowed' : 'pointer',
+                      color: (!isPlaying && !isReplaying) ? '#6b7280' : '#ef4444',
+                      cursor: (!isPlaying && !isReplaying) ? 'not-allowed' : 'pointer',
                       transition: 'all 0.2s ease',
-                      opacity: !isPlaying ? 0.6 : 1,
+                      opacity: (!isPlaying && !isReplaying) ? 0.6 : 1,
                       flex: 1
                     }}
                     onMouseEnter={(e) => {
-                      if (isPlaying) {
+                      if (isPlaying || isReplaying) {
                         e.target.style.backgroundColor = '#111827';
                         e.target.style.borderColor = '#f87171';
                       }
                     }}
                     onMouseLeave={(e) => {
-                      if (isPlaying) {
+                      if (isPlaying || isReplaying) {
                         e.target.style.backgroundColor = '#1f2937';
                         e.target.style.borderColor = '#ef4444';
                       }
@@ -803,10 +1620,11 @@ function App() {
               </div>
             )}
 
-            {strokeData.length > 0 && !isRecording && (
+            {/* 통합 재생 버튼 (필기 + 음성) */}
+            {(audioUrl || strokeData.length > 0) && !isRecording && (
               <button
-                onClick={handleStrokeReplay}
-                disabled={isReplaying}
+                onClick={handleCombinedReplay}
+                disabled={isReplaying || isPlaying}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -815,20 +1633,20 @@ function App() {
                   borderRadius: '12px',
                   backgroundColor: '#1f2937',
                   border: '2px solid #f59e0b',
-                  color: isReplaying ? '#6b7280' : '#f59e0b',
-                  cursor: isReplaying ? 'not-allowed' : 'pointer',
+                  color: (isReplaying || isPlaying) ? '#6b7280' : '#f59e0b',
+                  cursor: (isReplaying || isPlaying) ? 'not-allowed' : 'pointer',
                   transition: 'all 0.2s ease',
-                  opacity: isReplaying ? 0.6 : 1,
+                  opacity: (isReplaying || isPlaying) ? 0.6 : 1,
                   width: '100%'
                 }}
                 onMouseEnter={(e) => {
-                  if (!isReplaying) {
+                  if (!isReplaying && !isPlaying) {
                     e.target.style.backgroundColor = '#111827';
                     e.target.style.borderColor = '#fbbf24';
                   }
                 }}
                 onMouseLeave={(e) => {
-                  if (!isReplaying) {
+                  if (!isReplaying && !isPlaying) {
                     e.target.style.backgroundColor = '#1f2937';
                     e.target.style.borderColor = '#f59e0b';
                   }
@@ -838,7 +1656,7 @@ function App() {
                   <path d="M8 5v14l11-7z"/>
                 </svg>
                 <span style={{ fontSize: '0.875rem', fontFamily: 'var(--font-ui)' }}>
-                  {isReplaying ? '재생 중...' : '필기 재생'}
+                  {(isReplaying || isPlaying) ? '재생 중...' : '학습 재생'}
                 </span>
               </button>
             )}
@@ -896,10 +1714,10 @@ function App() {
               </button>
             )}
 
-            {/* 제출 버튼 */}
-            {strokeData.length > 0 && !isRecording && (
+            {/* 학생 제출 버튼 (학생 모드) */}
+            {(strokeData.length > 0 || audioUrl) && !isRecording && !studentSubmission && (
               <button
-                onClick={handleSubmitToTeacher}
+                onClick={handleStudentSubmission}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -907,19 +1725,19 @@ function App() {
                   padding: '0.75rem 1rem',
                   borderRadius: '12px',
                   backgroundColor: '#1f2937',
-                  border: '2px solid #059669',
-                  color: '#10b981',
+                  border: '2px solid #10b981',
+                  color: '#34d399',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease',
                   width: '100%'
                 }}
                 onMouseEnter={(e) => {
                   e.target.style.backgroundColor = '#111827';
-                  e.target.style.borderColor = '#10b981';
+                  e.target.style.borderColor = '#34d399';
                 }}
                 onMouseLeave={(e) => {
                   e.target.style.backgroundColor = '#1f2937';
-                  e.target.style.borderColor = '#059669';
+                  e.target.style.borderColor = '#10b981';
                 }}
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -930,7 +1748,94 @@ function App() {
                 </span>
               </button>
             )}
+
+            {/* 첨삭 전송 버튼 (선생님 모드) */}
+            {strokeData.length > 0 && !isRecording && studentSubmission && (
+              <button
+                onClick={handleTeacherFeedback}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  padding: '0.75rem 1rem',
+                  borderRadius: '12px',
+                  backgroundColor: '#1f2937',
+                  border: '2px solid #3b82f6',
+                  color: '#60a5fa',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  width: '100%'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.backgroundColor = '#111827';
+                  e.target.style.borderColor = '#60a5fa';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = '#1f2937';
+                  e.target.style.borderColor = '#3b82f6';
+                }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                </svg>
+                <span style={{ fontSize: '0.875rem', fontFamily: 'var(--font-ui)' }}>
+                  학생에게 첨삭 전송
+                </span>
+              </button>
+            )}
           </div>
+
+          {/* 선생님 첨삭 on/off 버튼 */}
+          {teacherFeedback && (
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.75rem',
+              marginBottom: '1rem'
+            }}>
+              <div style={{
+                fontSize: '0.875rem',
+                fontWeight: '600',
+                color: '#f3f4f6',
+                marginBottom: '0.5rem',
+                fontFamily: 'var(--font-ui)'
+              }}>
+                📝 선생님 첨삭
+              </div>
+
+              <button
+                onClick={() => setShowTeacherFeedback(!showTeacherFeedback)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  padding: '0.75rem 1rem',
+                  borderRadius: '12px',
+                  backgroundColor: '#1f2937',
+                  border: showTeacherFeedback ? '2px solid #10b981' : '2px solid #6b7280',
+                  color: showTeacherFeedback ? '#10b981' : '#f3f4f6',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  width: '100%'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.backgroundColor = '#111827';
+                  e.target.style.borderColor = showTeacherFeedback ? '#10b981' : '#9ca3af';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = '#1f2937';
+                  e.target.style.borderColor = showTeacherFeedback ? '#10b981' : '#6b7280';
+                }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                </svg>
+                <span style={{ fontSize: '0.875rem', fontFamily: 'var(--font-ui)' }}>
+                  {showTeacherFeedback ? '첨삭 숨기기' : '첨삭 보기'}
+                </span>
+              </button>
+            </div>
+          )}
 
           {/* AI 섹션 */}
           <div style={{
@@ -994,7 +1899,8 @@ function App() {
               </span>
             </button>
           </div>
-        </div>
+          </div>
+        )}
       </div>
 
       {/* 재생 진행률 인디케이터 */}
