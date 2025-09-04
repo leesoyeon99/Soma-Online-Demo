@@ -45,10 +45,19 @@ const StaticPDFViewer = ({
         const pdfUrl = `/${pdfFileName}`;
         console.log('PDF URL:', pdfUrl);
         
+        // 먼저 fetch로 PDF 파일을 가져와서 ArrayBuffer로 변환
+        const response = await fetch(pdfUrl);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const arrayBuffer = await response.arrayBuffer();
+        console.log('PDF 파일 다운로드 완료, 크기:', arrayBuffer.byteLength);
+        
         const loadingTask = pdfjsLib.getDocument({
-          url: pdfUrl,
+          data: arrayBuffer,
           cMapUrl: 'https://unpkg.com/pdfjs-dist@5.4.149/cmaps/',
           cMapPacked: true,
+          verbosity: 0
         });
         
         const pdf = await loadingTask.promise;
