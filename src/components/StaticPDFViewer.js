@@ -1,8 +1,8 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
 
-// PDF.js worker 설정 - CDN 사용
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@4.4.168/build/pdf.worker.min.mjs';
+// PDF.js worker 설정 - CDN 사용 (API 버전과 일치)
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@5.4.149/build/pdf.worker.min.mjs';
 
 const StaticPDFViewer = ({ 
   pdfFileName = 'somapremier.pdf',
@@ -47,7 +47,7 @@ const StaticPDFViewer = ({
         
         const loadingTask = pdfjsLib.getDocument({
           url: pdfUrl,
-          cMapUrl: 'https://unpkg.com/pdfjs-dist@4.4.168/cmaps/',
+          cMapUrl: 'https://unpkg.com/pdfjs-dist@5.4.149/cmaps/',
           cMapPacked: true,
         });
         
