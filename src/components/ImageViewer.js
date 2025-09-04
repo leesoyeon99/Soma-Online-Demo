@@ -124,54 +124,58 @@ const ImageViewer = ({
     
     if (image && canvas) {
       console.log('이미지 크기:', image.naturalWidth, 'x', image.naturalHeight);
-      // 이미지의 실제 표시 크기 계산
-      const maxWidth = 800; // 최대 너비 제한
-      const naturalRatio = image.naturalHeight / image.naturalWidth;
       
-      let displayWidth = Math.min(image.naturalWidth, maxWidth);
-      let displayHeight = displayWidth * naturalRatio;
+      // 캔버스 크기를 이미지의 실제 크기로 설정
+      canvas.width = image.naturalWidth;
+      canvas.height = image.naturalHeight;
       
-      // 줌 적용
-      displayWidth *= zoomScale;
-      displayHeight *= zoomScale;
-      
-      // 캔버스 크기 설정
-      canvas.width = displayWidth;
-      canvas.height = displayHeight;
-      canvas.style.width = `${displayWidth}px`;
-      canvas.style.height = `${displayHeight}px`;
+      // 캔버스 스타일 크기는 이미지와 동일하게 설정
+      canvas.style.width = `${image.naturalWidth}px`;
+      canvas.style.height = `${image.naturalHeight}px`;
       
       redrawMarkups();
       setImageLoaded(true);
-      console.log('이미지 뷰어 초기화 완료');
+      console.log('이미지 뷰어 초기화 완료 - 캔버스 크기:', canvas.width, 'x', canvas.height);
     }
-  }, [zoomScale, redrawMarkups, imageUrl]);
+  }, [redrawMarkups, imageUrl]);
 
   // 줌 변경 시 캔버스 크기 재조정
   useEffect(() => {
     if (imageLoaded) {
-      handleImageLoad();
+      const image = imageRef.current;
+      const canvas = markupCanvasRef.current;
+      
+      if (image && canvas) {
+        // 캔버스 크기는 이미지의 실제 크기로 유지
+        canvas.width = image.naturalWidth;
+        canvas.height = image.naturalHeight;
+        canvas.style.width = `${image.naturalWidth}px`;
+        canvas.style.height = `${image.naturalHeight}px`;
+        
+        redrawMarkups();
+      }
     }
-  }, [zoomScale, imageLoaded, handleImageLoad]);
+  }, [zoomScale, imageLoaded, redrawMarkups]);
 
   // 마우스/터치 위치 계산
   const getEventPos = useCallback((e) => {
     const canvas = markupCanvasRef.current;
-    if (!canvas) return { x: 0, y: 0 };
+    const image = imageRef.current;
+    if (!canvas || !image) return { x: 0, y: 0 };
     
-    const rect = canvas.getBoundingClientRect();
+    const canvasRect = canvas.getBoundingClientRect();
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
     
-    // 캔버스의 실제 크기와 표시 크기 비율 계산
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
+    // 캔버스 기준 좌표 계산 (줌 고려)
+    const canvasX = (clientX - canvasRect.left) / zoomScale;
+    const canvasY = (clientY - canvasRect.top) / zoomScale;
     
     return {
-      x: (clientX - rect.left) * scaleX,
-      y: (clientY - rect.top) * scaleY
+      x: Math.max(0, Math.min(canvasX, canvas.width)),
+      y: Math.max(0, Math.min(canvasY, canvas.height))
     };
-  }, []);
+  }, [zoomScale]);
 
   // 그리기 시작
   const startDrawing = useCallback((e) => {
@@ -313,11 +317,15 @@ const ImageViewer = ({
       <div style={{
         display: imageLoaded ? 'flex' : 'none',
         justifyContent: 'center',
-        position: 'relative'
+        alignItems: 'center',
+        position: 'relative',
+        minHeight: '100%'
       }}>
         <div style={{
           position: 'relative',
-          display: 'inline-block'
+          display: 'inline-block',
+          transform: `scale(${zoomScale})`,
+          transformOrigin: 'center center'
         }}>
                   <img
           ref={imageRef}
@@ -343,8 +351,6 @@ const ImageViewer = ({
             maxWidth: '800px',
             width: 'auto',
             height: 'auto',
-            transform: `scale(${zoomScale})`,
-            transformOrigin: 'center',
             border: '2px solid #e2e8f0',
             borderRadius: '8px',
             boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
@@ -362,7 +368,9 @@ const ImageViewer = ({
               left: 0,
               cursor: selectedTool === 'hand' ? 'grab' : 'crosshair',
               borderRadius: '8px',
-              pointerEvents: 'auto'
+              pointerEvents: 'auto',
+              transform: `scale(${zoomScale})`,
+              transformOrigin: 'top left'
             }}
             onMouseDown={(e) => {
               e.preventDefault();

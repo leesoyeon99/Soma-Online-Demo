@@ -4,6 +4,7 @@ import LandingPage from './components/LandingPage';
 import LoginPage from './components/LoginPage';
 import BookListPage from './components/BookListPage';
 import ImageViewer from './components/ImageViewer';
+import StaticPDFViewer from './components/StaticPDFViewer';
 import AIChatbot from './components/AIChatbot';
 import TeacherLoginPage from './components/TeacherLoginPage';
 import TeacherBookListPage from './components/TeacherBookListPage';
@@ -21,36 +22,42 @@ function App() {
   const files = [
     { 
       id: 1, 
+      title: '소마 프리미어 교재', 
+      url: '/somapremier.pdf',
+      type: 'pdf'
+    },
+    { 
+      id: 2, 
       title: '셋카드 놀이를 해 봅시다', 
       url: '/assets/images/somabook-screenshot.png',
       type: 'image'
     },
     { 
-      id: 2, 
+      id: 3, 
       title: '21년 1학기 과학 - 동물들의 생활', 
       url: 'https://dummyimage.com/600x800/3b82f6/ffffff&text=과학+교재',
       type: 'image'
     },
     { 
-      id: 3, 
+      id: 4, 
       title: '사고력 도형특강 3과정 (NEW)', 
       url: 'https://dummyimage.com/600x800/10b981/ffffff&text=도형+특강',
       type: 'image'
     },
     { 
-      id: 4, 
+      id: 5, 
       title: '22년 1학기 수학 - 개념 셀프북', 
       url: 'https://dummyimage.com/600x800/f59e0b/ffffff&text=수학+셀프북',
       type: 'image'
     },
     { 
-      id: 5, 
+      id: 6, 
       title: '21년 2학기 과학 - 물의 여행', 
       url: 'https://dummyimage.com/600x800/8b5cf6/ffffff&text=물의+여행',
       type: 'image'
     },
     { 
-      id: 6, 
+      id: 7, 
       title: '2023 프리미어 초급2-내지', 
       url: 'https://dummyimage.com/600x800/3b82f6/ffffff&text=프리미어+초급2',
       type: 'image'
@@ -58,9 +65,14 @@ function App() {
   ];
 
   // 상태 관리
-  const [currentPdfUrl, setCurrentPdfUrl] = useState(files[0].url); // 첫 번째 이미지를 기본으로
+  const [currentPdfUrl, setCurrentPdfUrl] = useState(files[0].url); // 첫 번째 파일을 기본으로
   const [activeFileIndex, setActiveFileIndex] = useState(0);
-  // const [pageCount, setPageCount] = useState(1); // 현재 사용하지 않음
+  
+  // 현재 선택된 파일 정보
+  const currentFile = files[activeFileIndex];
+  const isCurrentFilePDF = currentFile && currentFile.type === 'pdf';
+  const [pageCount, setPageCount] = useState(1);
+  const [currentPageNum, setCurrentPageNum] = useState(1);
   const [zoomScale, setZoomScale] = useState(2.0);
   const [selectedTool, setSelectedTool] = useState('hand');
   const [selectedColor, setSelectedColor] = useState('#ef4444');
@@ -120,6 +132,7 @@ function App() {
     setActiveFileIndex(index);
     setZoomScale(2.0);
     setCurrentPage('detail');
+    setCurrentPageNum(1); // 페이지를 1로 리셋
   };
 
   // 강사용 교재 선택 핸들러
@@ -128,6 +141,7 @@ function App() {
     setActiveFileIndex(index);
     setZoomScale(2.0);
     setCurrentPage('teacherDetail');
+    setCurrentPageNum(1); // 페이지를 1로 리셋
     
     // 이미지 파일인 경우 페이지 수를 1로 설정
     // if (files[index]?.type === 'image') {
@@ -136,7 +150,24 @@ function App() {
   };
 
 
-  // 페이지 네비게이션 핸들러 (이미지 뷰어에서는 사용하지 않음)
+  // PDF 페이지 네비게이션 핸들러
+  const handlePageChange = (newPageNum) => {
+    if (newPageNum >= 1 && newPageNum <= pageCount) {
+      setCurrentPageNum(newPageNum);
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (currentPageNum > 1) {
+      setCurrentPageNum(currentPageNum - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (currentPageNum < pageCount) {
+      setCurrentPageNum(currentPageNum + 1);
+    }
+  };
 
   // 줌 핸들러 (향후 툴바에 추가할 때 사용)
   // const handleZoomIn = () => {
@@ -646,6 +677,67 @@ function App() {
               borderRadius: '12px',
               border: '1px solid rgba(59, 130, 246, 0.3)'
             }}>
+              {/* PDF 페이지 네비게이션 (PDF 파일일 때만 표시) */}
+              {isCurrentFilePDF && (
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '0.5rem',
+                  marginBottom: '0.5rem',
+                  padding: '0.5rem',
+                  backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                  borderRadius: '8px'
+                }}>
+                  <button
+                    onClick={handlePrevPage}
+                    disabled={currentPageNum <= 1}
+                    style={{
+                      padding: '0.25rem',
+                      borderRadius: '6px',
+                      border: '1px solid rgba(59, 130, 246, 0.3)',
+                      background: currentPageNum <= 1 ? 'rgba(156, 163, 175, 0.3)' : 'rgba(255, 255, 255, 0.8)',
+                      color: currentPageNum <= 1 ? '#9ca3af' : '#3b82f6',
+                      cursor: currentPageNum <= 1 ? 'not-allowed' : 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    title="이전 페이지"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+                    </svg>
+                  </button>
+                  
+                  <span style={{ 
+                    fontSize: '0.875rem', 
+                    color: '#1e3a8a',
+                    fontFamily: 'var(--font-ui)',
+                    minWidth: '60px',
+                    textAlign: 'center'
+                  }}>
+                    {currentPageNum} / {pageCount}
+                  </span>
+                  
+                  <button
+                    onClick={handleNextPage}
+                    disabled={currentPageNum >= pageCount}
+                    style={{
+                      padding: '0.25rem',
+                      borderRadius: '6px',
+                      border: '1px solid rgba(59, 130, 246, 0.3)',
+                      background: currentPageNum >= pageCount ? 'rgba(156, 163, 175, 0.3)' : 'rgba(255, 255, 255, 0.8)',
+                      color: currentPageNum >= pageCount ? '#9ca3af' : '#3b82f6',
+                      cursor: currentPageNum >= pageCount ? 'not-allowed' : 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    title="다음 페이지"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
+                    </svg>
+                  </button>
+                </div>
+              )}
+
               {/* 도구 버튼들 */}
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 {['hand', 'pen', 'eraser'].map((tool) => (
@@ -785,21 +877,40 @@ function App() {
             padding: '2rem',
             overflow: 'auto'
           }}>
-            <ImageViewer
-              imageUrl={currentPdfUrl}
-              zoomScale={zoomScale}
-              selectedTool={selectedTool}
-              selectedColor={selectedColor}
-              brushSize={brushSize}
-              onStrokeDataChange={handleStrokeDataChange}
-              isRecording={isRecording}
-              studentStrokeData={studentSubmission ? studentSubmission.strokeData : null}
-              studentAudioUrl={studentSubmission ? studentSubmission.audioUrl : null}
-              teacherFeedbackData={teacherFeedback ? teacherFeedback.feedbackStrokeData : null}
-              showTeacherFeedback={showTeacherFeedback}
-              isTeacherMode={true}
-              isStudentMode={false}
-            />
+            {isCurrentFilePDF ? (
+              <StaticPDFViewer
+                pdfFileName={currentFile.url.replace('/', '')}
+                pageNum={currentPageNum}
+                zoomScale={zoomScale}
+                selectedTool={selectedTool}
+                selectedColor={selectedColor}
+                brushSize={brushSize}
+                onStrokeDataChange={handleStrokeDataChange}
+                isRecording={isRecording}
+                studentStrokeData={studentSubmission ? studentSubmission.strokeData : null}
+                teacherFeedbackData={teacherFeedback ? teacherFeedback.feedbackStrokeData : null}
+                showTeacherFeedback={showTeacherFeedback}
+                isTeacherMode={true}
+                isStudentMode={false}
+                onPageCountChange={setPageCount}
+              />
+            ) : (
+              <ImageViewer
+                imageUrl={currentPdfUrl}
+                zoomScale={zoomScale}
+                selectedTool={selectedTool}
+                selectedColor={selectedColor}
+                brushSize={brushSize}
+                onStrokeDataChange={handleStrokeDataChange}
+                isRecording={isRecording}
+                studentStrokeData={studentSubmission ? studentSubmission.strokeData : null}
+                studentAudioUrl={studentSubmission ? studentSubmission.audioUrl : null}
+                teacherFeedbackData={teacherFeedback ? teacherFeedback.feedbackStrokeData : null}
+                showTeacherFeedback={showTeacherFeedback}
+                isTeacherMode={true}
+                isStudentMode={false}
+              />
+            )}
           </main>
         </div>
 
@@ -1207,6 +1318,67 @@ function App() {
             borderRadius: '12px',
             border: '1px solid rgba(249, 115, 22, 0.2)'
           }}>
+            {/* PDF 페이지 네비게이션 (PDF 파일일 때만 표시) */}
+            {isCurrentFilePDF && (
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '0.5rem',
+                marginRight: '1rem',
+                padding: '0.5rem',
+                backgroundColor: 'rgba(249, 115, 22, 0.1)',
+                borderRadius: '8px'
+              }}>
+                <button
+                  onClick={handlePrevPage}
+                  disabled={currentPageNum <= 1}
+                  style={{
+                    padding: '0.25rem',
+                    borderRadius: '6px',
+                    border: '1px solid rgba(249, 115, 22, 0.3)',
+                    background: currentPageNum <= 1 ? 'rgba(156, 163, 175, 0.3)' : 'rgba(255, 255, 255, 0.8)',
+                    color: currentPageNum <= 1 ? '#9ca3af' : '#f97316',
+                    cursor: currentPageNum <= 1 ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                  title="이전 페이지"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+                  </svg>
+                </button>
+                
+                <span style={{ 
+                  fontSize: '0.875rem', 
+                  color: '#ea580c',
+                  fontFamily: 'var(--font-ui)',
+                  minWidth: '60px',
+                  textAlign: 'center'
+                }}>
+                  {currentPageNum} / {pageCount}
+                </span>
+                
+                <button
+                  onClick={handleNextPage}
+                  disabled={currentPageNum >= pageCount}
+                  style={{
+                    padding: '0.25rem',
+                    borderRadius: '6px',
+                    border: '1px solid rgba(249, 115, 22, 0.3)',
+                    background: currentPageNum >= pageCount ? 'rgba(156, 163, 175, 0.3)' : 'rgba(255, 255, 255, 0.8)',
+                    color: currentPageNum >= pageCount ? '#9ca3af' : '#f97316',
+                    cursor: currentPageNum >= pageCount ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                  title="다음 페이지"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
+                  </svg>
+                </button>
+              </div>
+            )}
+
             {/* 도구 버튼들 */}
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               {['hand', 'pen', 'eraser'].map((tool) => (
@@ -1320,21 +1492,39 @@ function App() {
           padding: '1.5rem',
           overflow: 'hidden'
         }}>
-          <ImageViewer 
-            imageUrl={currentPdfUrl}
-            zoomScale={zoomScale}
-            selectedTool={selectedTool}
-            selectedColor={selectedColor}
-            brushSize={brushSize}
-            onStrokeDataChange={handleStrokeDataChange}
-            isRecording={isRecording}
-            studentStrokeData={null}
-            studentAudioUrl={null}
-            teacherFeedbackData={teacherFeedback ? teacherFeedback.feedbackStrokeData : null}
-            showTeacherFeedback={showTeacherFeedback}
-            isTeacherMode={false}
-            isStudentMode={true}
-          />
+          {isCurrentFilePDF ? (
+            <StaticPDFViewer
+              pdfFileName={currentFile.url.replace('/', '')}
+              pageNum={currentPageNum}
+              zoomScale={zoomScale}
+              selectedTool={selectedTool}
+              selectedColor={selectedColor}
+              brushSize={brushSize}
+              onStrokeDataChange={handleStrokeDataChange}
+              isRecording={isRecording}
+              teacherFeedbackData={teacherFeedback ? teacherFeedback.feedbackStrokeData : null}
+              showTeacherFeedback={showTeacherFeedback}
+              isTeacherMode={false}
+              isStudentMode={true}
+              onPageCountChange={setPageCount}
+            />
+          ) : (
+            <ImageViewer 
+              imageUrl={currentPdfUrl}
+              zoomScale={zoomScale}
+              selectedTool={selectedTool}
+              selectedColor={selectedColor}
+              brushSize={brushSize}
+              onStrokeDataChange={handleStrokeDataChange}
+              isRecording={isRecording}
+              studentStrokeData={null}
+              studentAudioUrl={null}
+              teacherFeedbackData={teacherFeedback ? teacherFeedback.feedbackStrokeData : null}
+              showTeacherFeedback={showTeacherFeedback}
+              isTeacherMode={false}
+              isStudentMode={true}
+            />
+          )}
         </main>
       </div>
       
