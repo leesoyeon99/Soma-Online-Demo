@@ -81,6 +81,8 @@ const TeacherBookListPage = ({ files, onBookSelect, onBackToLogin, notifications
             >
               ← 로그인으로
             </button>
+            
+            
             <h1 style={{
               color: '#1e3a8a',
               fontSize: '1.5rem',
@@ -162,17 +164,6 @@ const TeacherBookListPage = ({ files, onBookSelect, onBackToLogin, notifications
               </button>
             </div>
             
-            <span style={{
-              color: '#60a5fa',
-              fontSize: '0.9rem',
-              fontWeight: '600',
-              background: 'rgba(96, 165, 250, 0.2)',
-              padding: '0.5rem 1rem',
-              borderRadius: '8px',
-              border: '1px solid rgba(96, 165, 250, 0.3)'
-            }}>
-              👨‍🏫 강사 모드
-            </span>
           </div>
         </div>
       </header>
@@ -277,7 +268,10 @@ const TeacherBookListPage = ({ files, onBookSelect, onBackToLogin, notifications
                 return (
                   <div
                     key={originalIndex}
-                    onClick={() => onBookSelect(file.url, originalIndex)}
+                    onClick={() => {
+                      console.log('교재 카드 클릭됨:', { title: file.title, index: originalIndex });
+                      onBookSelect(file.url, originalIndex);
+                    }}
                     style={{
                       background: 'rgba(255, 255, 255, 0.95)',
                       backdropFilter: 'blur(10px)',

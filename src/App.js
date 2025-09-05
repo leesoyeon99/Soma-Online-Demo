@@ -18,11 +18,17 @@ function App() {
   const [isAIChatbotOpen, setIsAIChatbotOpen] = useState(false);
   // const [isLoggedIn, setIsLoggedIn] = useState(false); // 현재 사용하지 않음
   
-  // 파일 목록 - 소마 프리미어 교재만
+  // 파일 목록 - 소마 프리미어 교재들
   const files = [
     { 
       id: 1, 
-      title: '소마 프리미어 교재', 
+      title: '소마 프리미어 교재 1', 
+      url: '/somapremier.pdf',
+      type: 'pdf'
+    },
+    { 
+      id: 2, 
+      title: '소마 프리미어 교재 2(첨삭)', 
       url: '/somapremier.pdf',
       type: 'pdf'
     }
@@ -45,7 +51,6 @@ function App() {
   // 녹음 및 스트로크 데이터 상태
   const [isRecording, setIsRecording] = useState(false);
   const [strokeData, setStrokeData] = useState([]);
-  const [recordingStartTime, setRecordingStartTime] = useState(null);
   
   // 재생 관련 상태
   const [isPlaying, setIsPlaying] = useState(false);
@@ -60,6 +65,8 @@ function App() {
   const [showTeacherFeedback, setShowTeacherFeedback] = useState(false); // 학생이 선생님 첨삭 보기/숨기기
   const [submissionAlert, setSubmissionAlert] = useState(false); // 선생님에게 제출 알림
   const [feedbackAlert, setFeedbackAlert] = useState(false); // 학생에게 첨삭 알림
+  
+  // 모달창 상태
   const [isFloatingPanelOpen, setIsFloatingPanelOpen] = useState(false); // 플로팅 패널 열기/닫기
   const [notifications, setNotifications] = useState([]); // 알림 목록
   const [mediaRecorder, setMediaRecorder] = useState(null);
@@ -90,13 +97,18 @@ function App() {
     setCurrentPage('teacherBookList');
   };
 
-  // 교재 선택 핸들러 (교재 목록에서)
+  // 교재 선택 핸들러 (교재 목록에서) - 학생 버전
   const handleBookSelect = (url, index) => {
+    console.log('학생 교재 선택:', { url, index, file: files[index] }); // 디버깅용
+    
     setCurrentPdfUrl(url);
     setActiveFileIndex(index);
     setZoomScale(2.0);
     setCurrentPage('detail');
     setCurrentPageNum(1); // 페이지를 1로 리셋
+    
+    // 학생 버전에서는 첨삭 모달창을 표시하지 않음
+    console.log('학생 버전 - 첨삭 모달창 표시 안함');
   };
 
   // 강사용 교재 선택 핸들러
@@ -104,22 +116,14 @@ function App() {
     setCurrentPdfUrl(url);
     setActiveFileIndex(index);
     setZoomScale(2.0);
-    setCurrentPage('teacherDetail');
-    setCurrentPageNum(1); // 페이지를 1로 리셋
+    setCurrentPageNum(1);
     
-    // 이미지 파일인 경우 페이지 수를 1로 설정
-    // if (files[index]?.type === 'image') {
-    //   setPageCount(1);
-    // }
+    // 교재 선택 시 상세 페이지로 이동
+    setCurrentPage('teacherDetail');
   };
 
 
-  // PDF 페이지 네비게이션 핸들러
-  const handlePageChange = (newPageNum) => {
-    if (newPageNum >= 1 && newPageNum <= pageCount) {
-      setCurrentPageNum(newPageNum);
-    }
-  };
+
 
   const handlePrevPage = () => {
     if (currentPageNum > 1) {
@@ -158,7 +162,6 @@ function App() {
       if (mediaRecorder && mediaRecorder.state === 'recording') {
         mediaRecorder.stop();
         setIsRecording(false);
-        setRecordingStartTime(null);
         console.log('녹음 중지, 스트로크 데이터:', strokeData);
       }
     } else {
@@ -189,7 +192,6 @@ function App() {
         setMediaRecorder(recorder);
         // setAudioChunks(chunks);
         setIsRecording(true);
-        setRecordingStartTime(new Date());
         setStrokeData([]); // 새로운 녹음 시작 시 스트로크 데이터 초기화
         setIsPlaying(false); // 녹음 시작 시 재생 중지
         setIsReplaying(false);
@@ -208,6 +210,10 @@ function App() {
   // };
 
   // 학생이 선생님에게 제출하는 함수
+  // 모달창 표시 함수들
+
+
+
   const handleStudentSubmission = () => {
     if (strokeData.length === 0 && !audioUrl) {
       alert('제출할 필기나 녹음이 없습니다.');
@@ -243,7 +249,6 @@ function App() {
     // 선생님에게 알림 표시
     setSubmissionAlert(true);
     
-    alert('선생님에게 제출되었습니다!');
   };
 
   // 선생님이 학생에게 첨삭을 전송하는 함수
@@ -537,7 +542,12 @@ function App() {
                 // 학생 제출 데이터 로드
                 const submission = localStorage.getItem('studentSubmission');
                 if (submission) {
-                  setStudentSubmission(JSON.parse(submission));
+                  const submissionData = JSON.parse(submission);
+                  setStudentSubmission(submissionData);
+                  // 상세 페이지로 이동
+                  setCurrentPage('teacherDetail');
+                } else {
+                  alert('아직 학생 제출물이 없습니다.');
                 }
               }}
               style={{
@@ -775,55 +785,6 @@ function App() {
             </div>
 
             {/* 오른쪽: 강사 모드 표시 + PDF 링크 */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '1rem'
-            }}>
-              <a
-                href={currentPdfUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '0.5rem 1rem',
-                  background: 'rgba(16, 185, 129, 0.2)',
-                  color: '#10b981',
-                  textDecoration: 'none',
-                  borderRadius: '8px',
-                  border: '1px solid rgba(16, 185, 129, 0.3)',
-                  fontSize: '0.9rem',
-                  fontWeight: '600',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.backgroundColor = 'rgba(16, 185, 129, 0.3)';
-                  e.target.style.borderColor = '#10b981';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.backgroundColor = 'rgba(16, 185, 129, 0.2)';
-                  e.target.style.borderColor = 'rgba(16, 185, 129, 0.3)';
-                }}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
-                </svg>
-                PDF 새창 열기
-              </a>
-              <span style={{ 
-                color: '#60a5fa', 
-                fontSize: '0.9rem', 
-                fontWeight: '600',
-                background: 'rgba(96, 165, 250, 0.2)',
-                padding: '0.5rem 1rem',
-                borderRadius: '8px',
-                border: '1px solid rgba(96, 165, 250, 0.3)'
-              }}>
-                👨‍🏫 강사 모드
-              </span>
-            </div>
           </div>
         </div>
 
@@ -833,7 +794,7 @@ function App() {
           height: 'calc(100vh - 80px)',
           background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%)'
         }}>
-          <main style={{
+          <main className="pdf-viewer-container" style={{
             flex: 1,
             display: 'flex',
             justifyContent: 'center',
@@ -879,7 +840,7 @@ function App() {
         </div>
 
         {/* 강사용 플로팅 컨트롤 패널 */}
-        <div style={{
+        <div className="floating-panel" style={{
           position: 'fixed',
           bottom: '20px',
           right: '20px',
@@ -976,7 +937,8 @@ function App() {
                   if (submission) {
                     const submissionData = JSON.parse(submission);
                     setStudentSubmission(submissionData);
-                    alert('학생 제출물을 불러왔습니다!');
+                    // 상세 페이지로 이동
+                    setCurrentPage('teacherDetail');
                   } else {
                     alert('아직 학생 제출물이 없습니다.');
                   }
@@ -1177,11 +1139,8 @@ function App() {
           <button
             onClick={() => {
               setFeedbackAlert(false);
-              // 선생님 첨삭 데이터 로드
-              const feedback = localStorage.getItem('teacherFeedback');
-              if (feedback) {
-                setTeacherFeedback(JSON.parse(feedback));
-              }
+              // 상세 페이지로 이동
+              setCurrentPage('detail');
             }}
             style={{
               background: 'rgba(255, 255, 255, 0.2)',
@@ -1273,7 +1232,7 @@ function App() {
           </div>
           
           {/* 중앙: 툴바 */}
-          <div style={{
+          <div className="toolbar" style={{
             display: 'flex',
             alignItems: 'center',
             gap: '1rem',
@@ -1903,6 +1862,44 @@ function App() {
               </button>
             )}
 
+            {/* 첨삭 확인 버튼 (선생님 모드) */}
+            {currentPage === 'teacherDetail' && (
+              <button
+                onClick={() => {
+                  // 상세 페이지로 이동
+                  setCurrentPage('teacherDetail');
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  padding: '0.75rem 1rem',
+                  borderRadius: '12px',
+                  backgroundColor: '#1f2937',
+                  border: '2px solid #ef4444',
+                  color: '#fca5a5',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  width: '100%'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.backgroundColor = '#111827';
+                  e.target.style.borderColor = '#fca5a5';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = '#1f2937';
+                  e.target.style.borderColor = '#ef4444';
+                }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                </svg>
+                <span style={{ fontSize: '0.875rem', fontFamily: 'var(--font-ui)' }}>
+                  첨삭 확인 및 작성
+                </span>
+              </button>
+            )}
+
             {/* 첨삭 전송 버튼 (선생님 모드) */}
             {strokeData.length > 0 && !isRecording && studentSubmission && (
               <button
@@ -2121,7 +2118,8 @@ function App() {
         bookTitle={files[activeFileIndex]?.title || '교재'}
       />
 
-      {/* CSS 애니메이션 */}
+
+      {/* CSS 애니메이션 및 반응형 스타일 */}
       <style jsx>{`
         @keyframes pulse {
           0% {
@@ -2132,6 +2130,105 @@ function App() {
           }
           100% {
             box-shadow: 0 4px 12px rgba(31, 41, 55, 0.4), 0 0 0 4px rgba(251, 191, 36, 0.2);
+          }
+        }
+
+        /* 아이패드용 반응형 스타일 */
+        @media (max-width: 1024px) and (min-width: 768px) {
+          .pdf-viewer-container {
+            padding: 0.5rem !important;
+          }
+          
+          .pdf-canvas {
+            max-width: 100% !important;
+            height: auto !important;
+          }
+          
+          .floating-panel {
+            position: fixed !important;
+            bottom: 1rem !important;
+            right: 1rem !important;
+            left: 1rem !important;
+            width: auto !important;
+            max-width: none !important;
+            padding: 1rem !important;
+          }
+          
+          .toolbar {
+            flex-wrap: wrap !important;
+            gap: 0.5rem !important;
+            padding: 0.75rem !important;
+          }
+          
+          .toolbar-button {
+            min-width: 44px !important;
+            min-height: 44px !important;
+            padding: 0.5rem !important;
+            font-size: 0.875rem !important;
+          }
+          
+          .modal-content {
+            max-width: 95% !important;
+            max-height: 90% !important;
+            padding: 1.5rem !important;
+            margin: 1rem !important;
+          }
+          
+          .modal-title {
+            font-size: 1.5rem !important;
+          }
+          
+          .modal-button {
+            padding: 0.75rem 1.5rem !important;
+            font-size: 1rem !important;
+            min-height: 44px !important;
+          }
+        }
+
+        /* 모바일용 반응형 스타일 */
+        @media (max-width: 767px) {
+          .pdf-viewer-container {
+            padding: 0.25rem !important;
+          }
+          
+          .floating-panel {
+            position: fixed !important;
+            bottom: 0.5rem !important;
+            right: 0.5rem !important;
+            left: 0.5rem !important;
+            width: auto !important;
+            max-width: none !important;
+            padding: 0.75rem !important;
+          }
+          
+          .toolbar {
+            flex-wrap: wrap !important;
+            gap: 0.25rem !important;
+            padding: 0.5rem !important;
+          }
+          
+          .toolbar-button {
+            min-width: 40px !important;
+            min-height: 40px !important;
+            padding: 0.375rem !important;
+            font-size: 0.75rem !important;
+          }
+          
+          .modal-content {
+            max-width: 98% !important;
+            max-height: 95% !important;
+            padding: 1rem !important;
+            margin: 0.5rem !important;
+          }
+          
+          .modal-title {
+            font-size: 1.25rem !important;
+          }
+          
+          .modal-button {
+            padding: 0.625rem 1rem !important;
+            font-size: 0.875rem !important;
+            min-height: 40px !important;
           }
         }
       `}</style>
