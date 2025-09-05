@@ -136,19 +136,19 @@ const LandingPage = ({ onSelectUserType }) => {
             gap: '2rem',
             alignItems: 'center'
           }}>
-            <a href="#" style={{
+            <a href="/" style={{
               color: '#64748b',
               textDecoration: 'none',
               fontSize: '0.9rem',
               transition: 'color 0.2s'
             }}>브랜드</a>
-            <a href="#" style={{
+            <a href="/" style={{
               color: '#64748b',
               textDecoration: 'none',
               fontSize: '0.9rem',
               transition: 'color 0.2s'
             }}>교육프로그램</a>
-            <a href="#" style={{
+            <a href="/" style={{
               color: '#64748b',
               textDecoration: 'none',
               fontSize: '0.9rem',
