@@ -1,6 +1,38 @@
 import React from 'react';
 
 const LandingPage = ({ onSelectUserType }) => {
+  // 비디오 카드 컴포넌트
+  const VideoCard = ({ src, style, isSmall = false }) => (
+    <div style={{
+      width: '1136px',
+      height: '400px',
+      margin: '0 auto 3rem',
+      position: 'relative',
+      borderRadius: '20px',
+      overflow: 'hidden',
+      boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15)',
+      ...style
+    }}>
+      <video
+        src={src}
+        loop
+        muted
+        autoPlay
+        playsInline
+        style={{
+          width: isSmall ? '66.67%' : '100%',
+          height: isSmall ? '66.67%' : '100%',
+          objectFit: 'cover',
+          position: isSmall ? 'absolute' : 'relative',
+          top: isSmall ? 'auto' : 'auto',
+          bottom: isSmall ? '0' : 'auto',
+          left: isSmall ? '50%' : 'auto',
+          transform: isSmall ? 'translateX(-50%)' : 'none'
+        }}
+      />
+    </div>
+  );
+
   const userTypes = [
     {
       id: 'admin',
@@ -130,12 +162,17 @@ const LandingPage = ({ onSelectUserType }) => {
       <main style={{
         maxWidth: '1200px',
         margin: '0 auto',
-        padding: '4rem 2rem'
+        padding: '4rem 2rem',
+        position: 'relative',
+        overflow: 'hidden'
       }}>
+
         {/* 히어로 섹션 */}
         <div style={{
           textAlign: 'center',
-          marginBottom: '4rem'
+          marginBottom: '4rem',
+          position: 'relative',
+          zIndex: 2
         }}>
           <h1 style={{
             fontSize: '3.5rem',
@@ -172,7 +209,9 @@ const LandingPage = ({ onSelectUserType }) => {
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
           gap: '2rem',
-          marginBottom: '4rem'
+          marginBottom: '4rem',
+          position: 'relative',
+          zIndex: 2
         }}>
           {userTypes.map((userType) => (
             <div
@@ -229,7 +268,7 @@ const LandingPage = ({ onSelectUserType }) => {
                 </div>
               )}
 
-              {/* 아이콘 */}
+              {/* 아이콘과 캐릭터 */}
               <div style={{
                 width: '80px',
                 height: '80px',
@@ -239,9 +278,11 @@ const LandingPage = ({ onSelectUserType }) => {
                 alignItems: 'center',
                 justifyContent: 'center',
                 margin: '0 auto 1.5rem',
-                color: userType.color
+                color: userType.color,
+                position: 'relative'
               }}>
                 {userType.icon}
+                
               </div>
 
               {/* 제목 */}
@@ -295,13 +336,20 @@ const LandingPage = ({ onSelectUserType }) => {
           ))}
         </div>
 
+        {/* 첫 번째 비디오 카드 - 데모 카드들 하단 */}
+        <VideoCard 
+          src={`${process.env.PUBLIC_URL}/assets/characters/character.mp4`}
+        />
+
         {/* 시연 가이드 */}
         <div style={{
           background: 'white',
           borderRadius: '20px',
           padding: '2.5rem',
           boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)',
-          marginBottom: '3rem'
+          marginBottom: '3rem',
+          position: 'relative',
+          zIndex: 2
         }}>
           <div style={{
             display: 'flex',
@@ -330,7 +378,7 @@ const LandingPage = ({ onSelectUserType }) => {
             gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
             gap: '2rem'
           }}>
-            <div style={{ textAlign: 'center' }}>
+            <div style={{ textAlign: 'center', position: 'relative' }}>
               <div style={{
                 width: '60px',
                 height: '60px',
@@ -342,7 +390,8 @@ const LandingPage = ({ onSelectUserType }) => {
                 margin: '0 auto 1rem',
                 color: 'white',
                 fontSize: '1.5rem',
-                fontWeight: 'bold'
+                fontWeight: 'bold',
+                position: 'relative'
               }}>
                 1
               </div>
@@ -363,7 +412,7 @@ const LandingPage = ({ onSelectUserType }) => {
               </p>
             </div>
 
-            <div style={{ textAlign: 'center' }}>
+            <div style={{ textAlign: 'center', position: 'relative' }}>
               <div style={{
                 width: '60px',
                 height: '60px',
@@ -375,7 +424,8 @@ const LandingPage = ({ onSelectUserType }) => {
                 margin: '0 auto 1rem',
                 color: 'white',
                 fontSize: '1.5rem',
-                fontWeight: 'bold'
+                fontWeight: 'bold',
+                position: 'relative'
               }}>
                 2
               </div>
@@ -396,7 +446,7 @@ const LandingPage = ({ onSelectUserType }) => {
               </p>
             </div>
 
-            <div style={{ textAlign: 'center' }}>
+            <div style={{ textAlign: 'center', position: 'relative' }}>
               <div style={{
                 width: '60px',
                 height: '60px',
@@ -408,7 +458,8 @@ const LandingPage = ({ onSelectUserType }) => {
                 margin: '0 auto 1rem',
                 color: 'white',
                 fontSize: '1.5rem',
-                fontWeight: 'bold'
+                fontWeight: 'bold',
+                position: 'relative'
               }}>
                 3
               </div>
@@ -431,7 +482,17 @@ const LandingPage = ({ onSelectUserType }) => {
           </div>
         </div>
 
+        {/* 두 번째 비디오 카드 - 시연 가이드 하단 */}
+        <VideoCard 
+          src={`${process.env.PUBLIC_URL}/assets/characters/vdo_char_pc.mp4`}
+          isSmall={true}
+          style={{
+            background: '#ed9b2c'
+          }}
+        />
+
       </main>
+
 
       {/* 하단 푸터 */}
       <footer style={{
@@ -448,6 +509,56 @@ const LandingPage = ({ onSelectUserType }) => {
           © 2024 소마 온라인. 모든 권리 보유.
         </p>
       </footer>
+
+      {/* CSS 애니메이션 */}
+      <style jsx>{`
+        @keyframes bounce {
+          0%, 20%, 50%, 80%, 100% {
+            transform: translateY(0);
+          }
+          40% {
+            transform: translateY(-10px);
+          }
+          60% {
+            transform: translateY(-5px);
+          }
+        }
+
+        @keyframes wiggle {
+          0%, 100% {
+            transform: rotate(0deg);
+          }
+          25% {
+            transform: rotate(5deg);
+          }
+          75% {
+            transform: rotate(-5deg);
+          }
+        }
+
+        @keyframes float {
+          0%, 100% {
+            transform: translateY(0px);
+          }
+          50% {
+            transform: translateY(-8px);
+          }
+        }
+
+        @keyframes pulse {
+          0%, 100% {
+            opacity: 1;
+          }
+          50% {
+            opacity: 0.7;
+          }
+        }
+
+        /* 호버 효과 */
+        .character-hover:hover {
+          animation: pulse 1s infinite;
+        }
+      `}</style>
     </div>
   );
 };

@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
+import TeacherSubmissionPage from './TeacherSubmissionPage';
 
-const TeacherBookListPage = ({ files, onBookSelect, onBackToLogin, notifications, setNotifications }) => {
+const TeacherBookListPage = ({ files, onBookSelect, onBackToLogin, onGoToSubmissions, notifications, setNotifications }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [favorites, setFavorites] = useState(new Set());
-  const [activeTab, setActiveTab] = useState('books'); // 'books' 또는 'notifications'
+  const [activeTab, setActiveTab] = useState('submissions'); // 'books' 또는 'submissions'
 
   const handleFavoriteToggle = (index) => {
     const newFavorites = new Set(favorites);
@@ -89,7 +90,7 @@ const TeacherBookListPage = ({ files, onBookSelect, onBackToLogin, notifications
               fontWeight: 'bold',
               fontFamily: 'var(--font-title)'
             }}>
-              📚 교재 목록 - 강사 모드
+              교재 목록 - 강사 모드
             </h1>
           </div>
           
@@ -98,7 +99,7 @@ const TeacherBookListPage = ({ files, onBookSelect, onBackToLogin, notifications
             alignItems: 'center',
             gap: '1rem'
           }}>
-            {/* 알림 탭 */}
+            {/* 탭 네비게이션 */}
             <div style={{
               display: 'flex',
               alignItems: 'center',
@@ -123,13 +124,13 @@ const TeacherBookListPage = ({ files, onBookSelect, onBackToLogin, notifications
                   transition: 'all 0.2s ease'
                 }}
               >
-                📚 교재
+                교재
               </button>
               <button
-                onClick={() => setActiveTab('notifications')}
+                onClick={() => setActiveTab('submissions')}
                 style={{
-                  background: activeTab === 'notifications' ? 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)' : 'transparent',
-                  color: activeTab === 'notifications' ? 'white' : '#64748b',
+                  background: activeTab === 'submissions' ? 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)' : 'transparent',
+                  color: activeTab === 'submissions' ? 'white' : '#64748b',
                   border: 'none',
                   borderRadius: '8px',
                   padding: '0.5rem 1rem',
@@ -141,7 +142,7 @@ const TeacherBookListPage = ({ files, onBookSelect, onBackToLogin, notifications
                   position: 'relative'
                 }}
               >
-                🔔 알림
+                제출물 관리
                 {notifications.length > 0 && (
                   <span style={{
                     position: 'absolute',
@@ -454,246 +455,14 @@ const TeacherBookListPage = ({ files, onBookSelect, onBackToLogin, notifications
             )}
           </>
         ) : (
-          /* 알림 탭 */
-          <div style={{
-            background: 'rgba(255, 255, 255, 0.95)',
-            backdropFilter: 'blur(10px)',
-            borderRadius: '16px',
-            padding: '2rem',
-            boxShadow: '0 8px 32px rgba(30, 58, 138, 0.2)',
-            border: '1px solid rgba(59, 130, 246, 0.2)'
-          }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '1rem',
-              marginBottom: '2rem'
-            }}>
-              <div style={{
-                width: '50px',
-                height: '50px',
-                background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                borderRadius: '12px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
-                  <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
-                </svg>
-              </div>
-              <div>
-                <h2 style={{
-                  fontFamily: 'var(--font-title)',
-                  fontWeight: '700',
-                  fontSize: '1.5rem',
-                  color: '#1e3a8a',
-                  margin: '0 0 0.25rem 0'
-                }}>
-                  강사 알림 센터
-                </h2>
-                <p style={{
-                  fontFamily: 'var(--font-body)',
-                  fontSize: '0.875rem',
-                  color: '#64748b',
-                  margin: '0'
-                }}>
-                  학생들의 과제 제출 및 소통 내역을 확인하세요
-                </p>
-              </div>
-            </div>
-
-            {/* 알림 목록 */}
-            <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '1rem'
-            }}>
-              {/* 샘플 알림들 */}
-              <div style={{
-                background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                color: 'white',
-                padding: '1.5rem',
-                borderRadius: '12px',
-                boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)',
-                border: '1px solid rgba(59, 130, 246, 0.2)'
-              }}>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '1rem',
-                  marginBottom: '0.5rem'
-                }}>
-                  <div style={{
-                    background: 'rgba(255, 255, 255, 0.2)',
-                    borderRadius: '50%',
-                    width: '40px',
-                    height: '40px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 style={{
-                      fontFamily: 'var(--font-title)',
-                      fontWeight: '600',
-                      fontSize: '1rem',
-                      margin: '0 0 0.25rem 0'
-                    }}>
-                      학생 과제 제출
-                    </h3>
-                    <p style={{
-                      fontFamily: 'var(--font-body)',
-                      fontSize: '0.875rem',
-                      opacity: 0.9,
-                      margin: '0'
-                    }}>
-                      김학생이 "셋카드 놀이를 해 봅시다" 교재에 필기와 녹음을 제출했습니다
-                    </p>
-                  </div>
-                </div>
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginTop: '1rem'
-                }}>
-                  <span style={{
-                    fontFamily: 'var(--font-ui)',
-                    fontSize: '0.75rem',
-                    opacity: 0.8
-                  }}>
-                    2024.01.15 14:30
-                  </span>
-                  <button
-                    onClick={() => {
-                      // 과제 확인 로직
-                      alert('학생 과제를 확인합니다!');
-                    }}
-                    style={{
-                      background: 'rgba(255, 255, 255, 0.2)',
-                      border: 'none',
-                      color: 'white',
-                      padding: '0.5rem 1rem',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      fontSize: '0.875rem',
-                      fontFamily: 'var(--font-ui)',
-                      fontWeight: '500'
-                    }}
-                  >
-                    확인하기
-                  </button>
-                </div>
-              </div>
-
-              <div style={{
-                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                color: 'white',
-                padding: '1.5rem',
-                borderRadius: '12px',
-                boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
-                border: '1px solid rgba(16, 185, 129, 0.2)'
-              }}>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '1rem',
-                  marginBottom: '0.5rem'
-                }}>
-                  <div style={{
-                    background: 'rgba(255, 255, 255, 0.2)',
-                    borderRadius: '50%',
-                    width: '40px',
-                    height: '40px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 style={{
-                      fontFamily: 'var(--font-title)',
-                      fontWeight: '600',
-                      fontSize: '1rem',
-                      margin: '0 0 0.25rem 0'
-                    }}>
-                      첨삭 완료
-                    </h3>
-                    <p style={{
-                      fontFamily: 'var(--font-body)',
-                      fontSize: '0.875rem',
-                      opacity: 0.9,
-                      margin: '0'
-                    }}>
-                      이학생의 "21년 1학기 과학 - 동물들의 생활" 과제 첨삭이 완료되었습니다
-                    </p>
-                  </div>
-                </div>
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginTop: '1rem'
-                }}>
-                  <span style={{
-                    fontFamily: 'var(--font-ui)',
-                    fontSize: '0.75rem',
-                    opacity: 0.8
-                  }}>
-                    2024.01.15 10:15
-                  </span>
-                  <span style={{
-                    background: 'rgba(255, 255, 255, 0.2)',
-                    padding: '0.25rem 0.75rem',
-                    borderRadius: '12px',
-                    fontSize: '0.75rem',
-                    fontFamily: 'var(--font-ui)',
-                    fontWeight: '500'
-                  }}>
-                    첨삭 완료
-                  </span>
-                </div>
-              </div>
-
-              {/* 빈 상태 */}
-              {notifications.length === 0 && (
-                <div style={{
-                  textAlign: 'center',
-                  padding: '3rem',
-                  color: '#64748b'
-                }}>
-                  <svg width="64" height="64" viewBox="0 0 24 24" fill="#cbd5e1" style={{ marginBottom: '1rem' }}>
-                    <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
-                  </svg>
-                  <h3 style={{
-                    fontFamily: 'var(--font-title)',
-                    fontSize: '1.25rem',
-                    fontWeight: '600',
-                    marginBottom: '0.5rem',
-                    color: '#374151'
-                  }}>
-                    새로운 알림이 없습니다
-                  </h3>
-                  <p style={{
-                    fontFamily: 'var(--font-body)',
-                    fontSize: '1rem',
-                    margin: '0',
-                    color: '#64748b'
-                  }}>
-                    학생들의 과제 제출 및 소통 내역이 여기에 표시됩니다
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
+          /* 제출물 관리 탭 - TeacherSubmissionPage 컴포넌트 직접 렌더링 */
+          <TeacherSubmissionPage 
+            onBackToBookList={() => setActiveTab('books')}
+            onViewSubmission={(submission) => {
+              // 제출물을 선택하면 바로 첨삭 상세페이지로 이동
+              onGoToSubmissions(submission);
+            }}
+          />
         )}
       </main>
     </div>
