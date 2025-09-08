@@ -72,9 +72,8 @@ const LandingPage = ({ onSelectUserType }) => {
       description: '교재 학습, 문제 풀이, 필기 연습',
       icon: (
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 2L13.09 8.26L22 9L13.09 9.74L12 16L10.91 9.74L2 9L10.91 8.26L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          <path d="M19 3L21 5L19 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          <path d="M5 3L3 5L5 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M12 2L15.09 8.26L22 9L17 14L18.18 21L12 18L5.82 21L7 14L2 9L8.91 8.26L12 2Z" fill="currentColor"/>
+          <path d="M12 6L13.5 10.5L18 10.5L14.5 13.5L15.5 18L12 15.5L8.5 18L9.5 13.5L6 10.5L10.5 10.5L12 6Z" fill="white" fillOpacity="0.3"/>
         </svg>
       ),
       color: '#F59E0B', // 주황색
@@ -118,10 +117,15 @@ const LandingPage = ({ onSelectUserType }) => {
               borderRadius: '8px',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center'
+              justifyContent: 'center',
+              position: 'relative',
+              overflow: 'hidden'
             }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
-                <path d="M12 2L13.09 8.26L22 9L13.09 9.74L12 16L10.91 9.74L2 9L10.91 8.26L12 2Z"/>
+                <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M2 17L12 22L22 17" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M2 12L12 17L22 12" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                <circle cx="12" cy="12" r="2" fill="white"/>
               </svg>
             </div>
             <span style={{
@@ -182,25 +186,25 @@ const LandingPage = ({ onSelectUserType }) => {
             lineHeight: 1.2,
             fontFamily: 'var(--font-title)'
           }}>
-            교재를 보고 그리며<br />
             <span style={{
               background: 'linear-gradient(135deg, #F59E0B 0%, #10B981 50%, #8B5CF6 100%)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               backgroundClip: 'text'
-            }}>배우는 즐거운 학습 공간</span>
+            }}>보고 그리고 배우는,</span><br />
+            즐거운 AI 학습 공간
           </h1>
           
           <p style={{
             fontSize: '1.25rem',
             color: '#64748b',
-            maxWidth: '600px',
+            maxWidth: '700px',
             margin: '0 auto 3rem',
             lineHeight: 1.6,
             fontFamily: 'var(--font-body)'
           }}>
-            AI 기반 개인화 학습과 실시간 채점으로<br />
-            더욱 효과적인 교육 경험을 제공합니다
+            소마만의 특별한 프로그램에 AI 기반 개인화와 실시간 학습을 결합해<br />
+            학습 효과를 극대화합니다
           </p>
         </div>
 
@@ -359,9 +363,12 @@ const LandingPage = ({ onSelectUserType }) => {
             marginBottom: '2rem'
           }}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 2L13.09 8.26L22 9L13.09 9.74L12 16L10.91 9.74L2 9L10.91 8.26L12 2Z" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M19 3L21 5L19 7" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M5 3L3 5L5 7" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M9 11H15L13 13M12 2.5L21 7L12 11.5L3 7L12 2.5Z" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M3 16L12 20.5L21 16" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M3 11L12 15.5L21 11" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <circle cx="12" cy="7" r="1.5" fill="#F59E0B"/>
+              <circle cx="8" cy="9" r="1" fill="#10B981"/>
+              <circle cx="16" cy="9" r="1" fill="#8B5CF6"/>
             </svg>
             <h3 style={{
               fontSize: '1.5rem',
