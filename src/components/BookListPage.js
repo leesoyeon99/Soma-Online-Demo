@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
+import StudentFeedbackViewer from './StudentFeedbackViewer';
 
 const BookListPage = ({ files, onBookSelect, onBackToLogin, feedbackAlert, setFeedbackAlert, setTeacherFeedback, notifications, setNotifications }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [favorites, setFavorites] = useState(new Set());
   const [activeTab, setActiveTab] = useState('books'); // 'books' 또는 'notifications'
+  const [showFeedbackViewer, setShowFeedbackViewer] = useState(false);
+  const [selectedFeedback, setSelectedFeedback] = useState(null);
 
   // 검색 필터링
   const filteredFiles = files.filter(file =>
@@ -30,6 +33,16 @@ const BookListPage = ({ files, onBookSelect, onBackToLogin, feedbackAlert, setFe
     if (!aIsFavorite && bIsFavorite) return 1;
     return 0;
   });
+
+  // 피드백 뷰어가 열려있으면 피드백 뷰어를 표시
+  if (showFeedbackViewer) {
+    return (
+      <StudentFeedbackViewer
+        feedback={selectedFeedback}
+        onBackToStudentPage={() => setShowFeedbackViewer(false)}
+      />
+    );
+  }
 
   return (
     <div style={{
@@ -141,7 +154,7 @@ const BookListPage = ({ files, onBookSelect, onBackToLogin, feedbackAlert, setFe
               WebkitTextFillColor: 'transparent',
               backgroundClip: 'text'
             }}>
-              📚 교재 목록
+              교재 목록
             </h1>
           </div>
           
@@ -170,7 +183,7 @@ const BookListPage = ({ files, onBookSelect, onBackToLogin, feedbackAlert, setFe
                 transition: 'all 0.2s ease'
               }}
             >
-              📚 교재
+              교재
             </button>
             <button
               onClick={() => setActiveTab('notifications')}
@@ -188,7 +201,7 @@ const BookListPage = ({ files, onBookSelect, onBackToLogin, feedbackAlert, setFe
                 position: 'relative'
               }}
             >
-              🔔 알림
+              알림
               {notifications.length > 0 && (
                 <span style={{
                   position: 'absolute',
@@ -585,7 +598,32 @@ const BookListPage = ({ files, onBookSelect, onBackToLogin, feedbackAlert, setFe
                   <button
                     onClick={() => {
                       // 첨삭 확인 로직
-                      alert('첨삭을 확인합니다!');
+                      setSelectedFeedback({
+                        bookTitle: '소마 프리미어 교재',
+                        studentName: '김학생',
+                        problemNumber: '문제 3',
+                        teacherName: '이선생님',
+                        feedbackDate: '2024.01.15',
+                        score: 85,
+                        comments: [
+                          {
+                            type: 'correct',
+                            text: '정답을 정확히 맞혔습니다!',
+                            position: { x: 200, y: 300 }
+                          },
+                          {
+                            type: 'improvement',
+                            text: '그래프를 더 정확하게 그려보세요.',
+                            position: { x: 150, y: 450 }
+                          },
+                          {
+                            type: 'encouragement',
+                            text: '계속 열심히 해주세요!',
+                            position: { x: 100, y: 600 }
+                          }
+                        ]
+                      });
+                      setShowFeedbackViewer(true);
                     }}
                     style={{
                       background: 'rgba(255, 255, 255, 0.2)',
