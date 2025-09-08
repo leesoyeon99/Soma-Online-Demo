@@ -36,10 +36,16 @@ jobs:
     - name: Setup Pages
       uses: actions/configure-pages@v3
       
+    - name: Copy build to docs
+      run: |
+        rm -rf docs
+        mkdir docs
+        cp -r build/* docs/
+        
     - name: Upload artifact
       uses: actions/upload-pages-artifact@v2
       with:
-        path: './build'
+        path: './docs'
 
   deploy:
     environment:
