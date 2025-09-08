@@ -8,25 +8,18 @@ import StaticPDFViewer from './components/StaticPDFViewer';
 import AIChatbot from './components/AIChatbot';
 import TeacherLoginPage from './components/TeacherLoginPage';
 import TeacherBookListPage from './components/TeacherBookListPage';
-import TeacherSubmissionPage from './components/TeacherSubmissionPage';
 import TeacherAnnotationViewer from './components/TeacherAnnotationViewer';
-import StudentFeedbackViewer from './components/StudentFeedbackViewer';
 import AdminPage from './components/AdminPage';
 
 function App() {
   console.log('App 컴포넌트 렌더링 시작');
   
   // 페이지 상태 관리
-  const [currentPage, setCurrentPage] = useState('landing'); // 'landing', 'login', 'bookList', 'detail', 'teacherSubmission', 'teacherAnnotation', 'studentFeedback'
+  const [currentPage, setCurrentPage] = useState('landing'); // 'landing', 'login', 'bookList', 'detail', 'teacherAnnotation'
   // const [userType, setUserType] = useState(null); // 'admin', 'teacher', 'student' - 현재 사용하지 않음
   const [isAIChatbotOpen, setIsAIChatbotOpen] = useState(false);
   // const [isLoggedIn, setIsLoggedIn] = useState(false); // 현재 사용하지 않음
-  
-  // 강사 첨삭 관련 상태
   const [selectedSubmission, setSelectedSubmission] = useState(null);
-  
-  // 학생 첨삭 확인 관련 상태
-  const [studentFeedback, setStudentFeedback] = useState(null);
   
   // 파일 목록 - 소마 프리미어 교재들
   const files = [
@@ -132,71 +125,11 @@ function App() {
     setCurrentPage('teacherDetail');
   };
 
-  // 강사 제출물 목록으로 이동
-  const handleGoToSubmissions = (submission = null) => {
-    if (submission) {
-      // 제출물이 전달되면 바로 첨삭 상세페이지로 이동
-      setSelectedSubmission(submission);
-      setCurrentPage('teacherAnnotation');
-    } else {
-      // 제출물이 없으면 제출물 목록 페이지로 이동
-      setCurrentPage('teacherSubmission');
-    }
-  };
-
-
-  // 제출물 목록으로 돌아가기 (교재 목록의 제출물 관리 탭으로)
-  const handleBackToSubmissions = () => {
-    setCurrentPage('teacherBookList');
-    setSelectedSubmission(null);
-  };
-
-  // 첨삭 저장
-  const handleSaveFeedback = (feedback) => {
-    // 로컬 스토리지에 저장 (실제로는 서버로 전송)
-    localStorage.setItem('teacherFeedback', JSON.stringify(feedback));
-    
-    // 학생용 피드백 데이터도 저장
-    const studentFeedbackData = {
-      ...feedback,
-      studentName: selectedSubmission?.studentName || '김학생',
-      studentId: selectedSubmission?.studentId || 'student1'
-    };
-    localStorage.setItem('studentFeedback', JSON.stringify(studentFeedbackData));
-    
-    // 알림 추가
-    const newNotification = {
-      id: Date.now(),
-      type: 'feedback',
-      title: '첨삭 완료',
-      message: `"${feedback.bookTitle}" 과제 첨삭이 완료되었습니다`,
-      timestamp: new Date().toISOString(),
-      isRead: false
-    };
-    
-    setNotifications(prev => [newNotification, ...prev]);
-    
-    // 제출물 목록으로 돌아가기
-    handleBackToSubmissions();
-  };
-
-  // 학생 첨삭 확인
-  const handleViewStudentFeedback = () => {
-    // 로컬 스토리지에서 첨삭 데이터 로드
-    const feedback = localStorage.getItem('studentFeedback');
-    if (feedback) {
-      const feedbackData = JSON.parse(feedback);
-      setStudentFeedback(feedbackData);
-      setCurrentPage('studentFeedback');
-    } else {
-      alert('아직 선생님의 첨삭이 없습니다.');
-    }
-  };
-
-  // 학생 페이지로 돌아가기
-  const handleBackToStudentPage = () => {
-    setCurrentPage('detail');
-    setStudentFeedback(null);
+  // 강사용 제출물 보기 핸들러
+  const handleGoToSubmissions = (submission) => {
+    console.log('제출물 보기:', submission);
+    setSelectedSubmission(submission);
+    setCurrentPage('teacherAnnotation');
   };
 
 
@@ -575,30 +508,18 @@ function App() {
     />;
   }
 
-  if (currentPage === 'teacherSubmission') {
-    return <TeacherSubmissionPage 
-      onBackToBookList={() => setCurrentPage('teacherBookList')}
-      onViewSubmission={handleGoToSubmissions}
-    />;
-  }
-
-  if (currentPage === 'teacherAnnotation') {
-    return <TeacherAnnotationViewer 
-      submission={selectedSubmission}
-      onBackToSubmissions={handleBackToSubmissions}
-      onSaveFeedback={handleSaveFeedback}
-    />;
-  }
-
-  if (currentPage === 'studentFeedback') {
-    return <StudentFeedbackViewer 
-      feedback={studentFeedback}
-      onBackToStudentPage={handleBackToStudentPage}
-    />;
-  }
-
   if (currentPage === 'admin') {
     return <AdminPage />;
+  }
+
+  // 강사용 첨삭 페이지
+  if (currentPage === 'teacherAnnotation') {
+    return (
+      <TeacherAnnotationViewer 
+        submission={selectedSubmission}
+        onBack={() => setCurrentPage('teacherBookList')}
+      />
+    );
   }
 
   // 강사용 상세 페이지
@@ -2040,59 +1961,8 @@ function App() {
             )}
           </div>
 
-                      {/* 선생님 첨삭 on/off 버튼 */}
-            {teacherFeedback && (
-              <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.75rem',
-                marginBottom: '1rem'
-              }}>
-                <div style={{
-                  fontSize: '0.875rem',
-                  fontWeight: '600',
-                  color: '#f3f4f6',
-                  marginBottom: '0.5rem',
-                  fontFamily: 'var(--font-ui)'
-                }}>
-                  선생님 첨삭
-                </div>
-
-                <button
-                  onClick={() => setShowTeacherFeedback(!showTeacherFeedback)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.75rem',
-                    padding: '0.75rem 1rem',
-                    borderRadius: '12px',
-                    backgroundColor: '#1f2937',
-                    border: showTeacherFeedback ? '2px solid #10b981' : '2px solid #6b7280',
-                    color: showTeacherFeedback ? '#10b981' : '#f3f4f6',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    width: '100%'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.backgroundColor = '#111827';
-                    e.target.style.borderColor = showTeacherFeedback ? '#10b981' : '#9ca3af';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.backgroundColor = '#1f2937';
-                    e.target.style.borderColor = showTeacherFeedback ? '#10b981' : '#6b7280';
-                  }}
-                >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
-                  </svg>
-                  <span style={{ fontSize: '0.875rem', fontFamily: 'var(--font-ui)' }}>
-                    {showTeacherFeedback ? '첨삭 숨기기' : '첨삭 보기'}
-                  </span>
-                </button>
-              </div>
-            )}
-
-            {/* 첨삭 확인하기 버튼 */}
+          {/* 선생님 첨삭 on/off 버튼 */}
+          {teacherFeedback && (
             <div style={{
               display: 'flex',
               flexDirection: 'column',
@@ -2106,11 +1976,11 @@ function App() {
                 marginBottom: '0.5rem',
                 fontFamily: 'var(--font-ui)'
               }}>
-                첨삭 확인
+                📝 선생님 첨삭
               </div>
 
               <button
-                onClick={handleViewStudentFeedback}
+                onClick={() => setShowTeacherFeedback(!showTeacherFeedback)}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -2118,29 +1988,30 @@ function App() {
                   padding: '0.75rem 1rem',
                   borderRadius: '12px',
                   backgroundColor: '#1f2937',
-                  border: '2px solid #8b5cf6',
-                  color: '#8b5cf6',
+                  border: showTeacherFeedback ? '2px solid #10b981' : '2px solid #6b7280',
+                  color: showTeacherFeedback ? '#10b981' : '#f3f4f6',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease',
                   width: '100%'
                 }}
                 onMouseEnter={(e) => {
                   e.target.style.backgroundColor = '#111827';
-                  e.target.style.borderColor = '#a78bfa';
+                  e.target.style.borderColor = showTeacherFeedback ? '#10b981' : '#9ca3af';
                 }}
                 onMouseLeave={(e) => {
                   e.target.style.backgroundColor = '#1f2937';
-                  e.target.style.borderColor = '#8b5cf6';
+                  e.target.style.borderColor = showTeacherFeedback ? '#10b981' : '#6b7280';
                 }}
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                  <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
                 </svg>
                 <span style={{ fontSize: '0.875rem', fontFamily: 'var(--font-ui)' }}>
-                  첨삭 확인하기
+                  {showTeacherFeedback ? '첨삭 숨기기' : '첨삭 보기'}
                 </span>
               </button>
             </div>
+          )}
 
           {/* AI 섹션 */}
           <div style={{

@@ -273,25 +273,91 @@ const TeacherAnnotationViewer = ({
     const context = canvas.getContext('2d');
     context.clearRect(0, 0, canvas.width, canvas.height);
     
-    // 학생 필기 그리기 (회색으로)
-    if (showStudentWork && submission?.strokeData) {
+    // 학생 필기 그리기 (손글씨 느낌으로)
+    if (showStudentWork && submission?.strokeData && Array.isArray(submission.strokeData)) {
       context.save();
-      context.globalAlpha = 0.7;
-      context.strokeStyle = '#6b7280';
-      context.lineWidth = 2;
-      context.lineCap = 'round';
-      context.lineJoin = 'round';
       
       submission.strokeData.forEach(stroke => {
-        if (stroke.points.length > 1) {
-          context.beginPath();
-          context.moveTo(stroke.points[0].x, stroke.points[0].y);
-          for (let i = 1; i < stroke.points.length; i++) {
-            context.lineTo(stroke.points[i].x, stroke.points[i].y);
+        if (stroke && stroke.points && Array.isArray(stroke.points) && stroke.points.length > 1) {
+          // 도구별로 다른 스타일 적용
+          if (stroke.tool === 'pen') {
+            // 펜 필기 - 원래 색상 사용하되 약간 투명하게
+            context.globalAlpha = 0.8;
+            context.strokeStyle = stroke.color || '#1f2937';
+            context.lineWidth = stroke.brushSize || 2;
+            context.lineCap = 'round';
+            context.lineJoin = 'round';
+            
+            // 손글씨 느낌을 위한 약간의 불규칙성 추가
+            context.shadowColor = 'rgba(0, 0, 0, 0.1)';
+            context.shadowBlur = 1;
+            context.shadowOffsetX = 0.5;
+            context.shadowOffsetY = 0.5;
+            
+          } else if (stroke.tool === 'highlighter') {
+            // 하이라이터 - 원래 색상 사용하되 투명하게
+            context.globalAlpha = 0.4;
+            context.strokeStyle = stroke.color || '#fbbf24';
+            context.lineWidth = (stroke.brushSize || 4) + 2; // 하이라이터는 더 두껍게
+            context.lineCap = 'round';
+            context.lineJoin = 'round';
+            context.globalCompositeOperation = 'multiply';
+            
+          } else if (stroke.type === 'text') {
+            // 텍스트 - 손글씨 폰트 느낌으로
+            context.globalAlpha = 0.9;
+            context.fillStyle = stroke.color || '#1f2937';
+            context.font = `${stroke.fontSize || 14}px "Comic Sans MS", "맑은 고딕", cursive`;
+            context.textBaseline = 'top';
+            
+            // 텍스트 그림자 효과
+            context.shadowColor = 'rgba(0, 0, 0, 0.1)';
+            context.shadowBlur = 1;
+            context.shadowOffsetX = 0.5;
+            context.shadowOffsetY = 0.5;
+            
+            context.fillText(stroke.content, stroke.x, stroke.y);
+            return; // 텍스트는 stroke가 아니므로 return
+            
+          } else if (stroke.type === 'shape') {
+            // 도형 - 원래 색상 사용
+            context.globalAlpha = 0.8;
+            context.strokeStyle = stroke.color || '#1f2937';
+            context.lineWidth = stroke.brushSize || 2;
+            context.lineCap = 'round';
+            context.lineJoin = 'round';
+            
+            // 도형 그리기
+            if (stroke.shapeType === 'circle') {
+              const centerX = stroke.startX + (stroke.endX - stroke.startX) / 2;
+              const centerY = stroke.startY + (stroke.endY - stroke.startY) / 2;
+              const radius = Math.sqrt(Math.pow(stroke.endX - stroke.startX, 2) + Math.pow(stroke.endY - stroke.startY, 2)) / 2;
+              
+              context.beginPath();
+              context.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+              context.stroke();
+              return;
+              
+            } else if (stroke.shapeType === 'rectangle') {
+              context.beginPath();
+              context.rect(stroke.startX, stroke.startY, stroke.endX - stroke.startX, stroke.endY - stroke.startY);
+              context.stroke();
+              return;
+            }
           }
-          context.stroke();
+          
+          // 일반 stroke 그리기 (펜, 하이라이터)
+          if (stroke.type === 'stroke') {
+            context.beginPath();
+            context.moveTo(stroke.points[0].x, stroke.points[0].y);
+            for (let i = 1; i < stroke.points.length; i++) {
+              context.lineTo(stroke.points[i].x, stroke.points[i].y);
+            }
+            context.stroke();
+          }
         }
       });
+      
       context.restore();
     }
     
@@ -499,18 +565,27 @@ const TeacherAnnotationViewer = ({
             <button
               onClick={handleSaveFeedback}
               style={{
-                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
                 color: 'white',
                 border: 'none',
-                borderRadius: '8px',
-                padding: '0.5rem 1rem',
+                borderRadius: '12px',
+                padding: '0.75rem 1.5rem',
                 cursor: 'pointer',
                 fontSize: '0.9rem',
                 fontWeight: '600',
-                transition: 'all 0.2s ease',
+                transition: 'all 0.3s ease',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.5rem'
+                gap: '0.5rem',
+                boxShadow: '0 4px 15px rgba(99, 102, 241, 0.3)'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.transform = 'translateY(-2px)';
+                e.target.style.boxShadow = '0 6px 20px rgba(99, 102, 241, 0.4)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.boxShadow = '0 4px 15px rgba(99, 102, 241, 0.3)';
               }}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">

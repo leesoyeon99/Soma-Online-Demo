@@ -9,7 +9,7 @@ const MOCK_TEXTBOOKS = [
   { id: "bk4", title: "사고력 연산 지도사 과정 1 (M1)" },
 ];
 
-const MOCK_PAGES = Array.from({ length: 40 }).map((_, i) =>
+const MOCK_PAGES = Array.from({ length: 200 }).map((_, i) =>
   (i + 1).toString().padStart(4, "0")
 );
 
@@ -81,9 +81,33 @@ export default function AdminPage() {
   const [aiResults, setAiResults] = useState({});
   const [progress, setProgress] = useState(0);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
+  
+  // 페이지 선택 UI 개선을 위한 새로운 상태들
+  const [currentPageRange, setCurrentPageRange] = useState({ start: 1, end: 20 });
+  const [pageSearchQuery, setPageSearchQuery] = useState('');
+  const [showPageNavigator, setShowPageNavigator] = useState(false);
+  const [selectedPageSection, setSelectedPageSection] = useState(1);
+
+  // 페이지 섹션 계산 (20페이지씩 그룹화)
+  const pageSections = Array.from({ length: Math.ceil(MOCK_PAGES.length / 20) }, (_, i) => ({
+    id: i + 1,
+    start: i * 20 + 1,
+    end: Math.min((i + 1) * 20, MOCK_PAGES.length),
+    label: `${i * 20 + 1}-${Math.min((i + 1) * 20, MOCK_PAGES.length)}`
+  }));
 
   const selectedProblem = problems.find((p) => p.id === selectedProblemId) || problems[0];
 
+  // 현재 섹션의 페이지들
+  const currentSectionPages = MOCK_PAGES.slice(
+    (selectedPageSection - 1) * 20,
+    selectedPageSection * 20
+  );
+
+  // 페이지 검색 필터링
+  const filteredPages = currentSectionPages.filter(page => 
+    page.includes(pageSearchQuery)
+  );
 
   const onTogglePage = (pg) => {
     setSelectedPages((prev) => {
@@ -92,6 +116,68 @@ export default function AdminPage() {
       return next.length > 20 ? prev : next;
     });
   };
+
+  // 페이지 섹션 변경
+  const changePageSection = (sectionId) => {
+    setSelectedPageSection(sectionId);
+    setPageSearchQuery('');
+  };
+
+  // 페이지 범위 점프
+  const jumpToPageRange = (startPage) => {
+    const sectionId = Math.ceil(startPage / 20);
+    setSelectedPageSection(sectionId);
+    setPageSearchQuery(startPage.toString().padStart(4, "0"));
+  };
+
+  // 전체 선택/해제
+  const toggleAllPages = () => {
+    if (selectedPages.length >= 20) {
+      setSelectedPages([]);
+    } else {
+      const remainingSlots = 20 - selectedPages.length;
+      const availablePages = filteredPages.filter(page => !selectedPages.includes(page));
+      const pagesToAdd = availablePages.slice(0, remainingSlots);
+      setSelectedPages(prev => [...prev, ...pagesToAdd]);
+    }
+  };
+
+  // 키보드 단축키 지원
+  React.useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (step === 2) { // 페이지 선택 단계에서만
+        if (e.ctrlKey || e.metaKey) {
+          switch (e.key) {
+            case 'a':
+              e.preventDefault();
+              toggleAllPages();
+              break;
+            case 'f':
+              e.preventDefault();
+              document.querySelector('input[placeholder="페이지 번호 입력"]')?.focus();
+              break;
+            case 'ArrowLeft':
+              e.preventDefault();
+              if (selectedPageSection > 1) {
+                changePageSection(selectedPageSection - 1);
+              }
+              break;
+            case 'ArrowRight':
+              e.preventDefault();
+              if (selectedPageSection < pageSections.length) {
+                changePageSection(selectedPageSection + 1);
+              }
+              break;
+          }
+        } else if (e.key === 'Escape') {
+          setPageSearchQuery('');
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [step, selectedPageSection, pageSections.length, toggleAllPages, changePageSection]);
 
   const runAutoClassify = async () => {
     setBusy(true);
@@ -312,53 +398,104 @@ export default function AdminPage() {
                 disabled={busy}
                 style={{
                   background: busy ? 
-                    'linear-gradient(135deg, #9ca3af 0%, #6b7280 100%)' : 
-                    'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                  color: 'white',
-                  padding: '10px 20px',
+                    'rgba(156, 163, 175, 0.1)' : 
+                    'rgba(255, 255, 255, 0.9)',
+                  color: busy ? '#9ca3af' : '#3b82f6',
+                  padding: '12px 24px',
                   fontSize: '14px',
                   fontWeight: '600',
-                  borderRadius: '20px',
-                  border: 'none',
+                  borderRadius: '12px',
+                  border: busy ? '1px solid #d1d5db' : '1px solid #3b82f6',
                   cursor: busy ? 'not-allowed' : 'pointer',
                   boxShadow: busy ? 
-                    '0 4px 15px rgba(156, 163, 175, 0.3)' : 
-                    '0 4px 15px rgba(16, 185, 129, 0.3)',
+                    '0 2px 8px rgba(156, 163, 175, 0.2)' : 
+                    '0 2px 8px rgba(59, 130, 246, 0.2)',
                   transition: 'all 0.3s ease',
-                  opacity: busy ? 0.7 : 1
+                  opacity: busy ? 0.7 : 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}
+                onMouseEnter={(e) => {
+                  if (!busy) {
+                    e.target.style.background = 'rgba(59, 130, 246, 0.1)';
+                    e.target.style.transform = 'translateY(-1px)';
+                    e.target.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.3)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!busy) {
+                    e.target.style.background = 'rgba(255, 255, 255, 0.9)';
+                    e.target.style.transform = 'translateY(0)';
+                    e.target.style.boxShadow = '0 2px 8px rgba(59, 130, 246, 0.2)';
+                  }
                 }}
               >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                </svg>
                 {busy ? "AI 분석 중..." : "AI 자동 분류"}
               </button>
               <button style={{
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                color: 'white',
-                padding: '10px 20px',
+                background: 'rgba(255, 255, 255, 0.9)',
+                color: '#6366f1',
+                padding: '12px 24px',
                 fontSize: '14px',
                 fontWeight: '600',
-                borderRadius: '20px',
-                border: 'none',
+                borderRadius: '12px',
+                border: '1px solid #6366f1',
                 cursor: 'pointer',
-                boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)',
-                transition: 'all 0.3s ease'
-              }}>
+                boxShadow: '0 2px 8px rgba(99, 102, 241, 0.2)',
+                transition: 'all 0.3s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.background = 'rgba(99, 102, 241, 0.1)';
+                e.target.style.transform = 'translateY(-1px)';
+                e.target.style.boxShadow = '0 4px 12px rgba(99, 102, 241, 0.3)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.background = 'rgba(255, 255, 255, 0.9)';
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.boxShadow = '0 2px 8px rgba(99, 102, 241, 0.2)';
+              }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/>
+                </svg>
                 저장
               </button>
               <button 
                 onClick={() => setShowCompletionModal(true)}
                 style={{
-                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                   color: 'white',
-                  padding: '10px 20px',
+                  padding: '12px 24px',
                   fontSize: '14px',
                   fontWeight: '600',
-                  borderRadius: '20px',
+                  borderRadius: '12px',
                   border: 'none',
                   cursor: 'pointer',
-                  boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)',
-                  transition: 'all 0.3s ease'
+                  boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)',
+                  transition: 'all 0.3s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.transform = 'translateY(-2px)';
+                  e.target.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.5)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.transform = 'translateY(0)';
+                  e.target.style.boxShadow = '0 4px 15px rgba(102, 126, 234, 0.4)';
                 }}
               >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                </svg>
                 완료하기
               </button>
             </div>
@@ -542,13 +679,162 @@ export default function AdminPage() {
               </div>
             </div>
             
+            {/* 페이지 네비게이션 컨트롤 */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              marginBottom: '20px',
+              padding: '16px',
+              background: 'rgba(102, 126, 234, 0.05)',
+              borderRadius: '12px',
+              border: '1px solid rgba(102, 126, 234, 0.1)'
+            }}>
+              {/* 페이지 섹션 선택 */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '14px', fontWeight: '600', color: '#374151' }}>페이지 범위:</span>
+                <select
+                  value={selectedPageSection}
+                  onChange={(e) => changePageSection(parseInt(e.target.value))}
+                  style={{
+                    padding: '8px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid #d1d5db',
+                    background: 'white',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {pageSections.map(section => (
+                    <option key={section.id} value={section.id}>
+                      {section.label} ({section.start}-{section.end})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* 페이지 검색 */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '14px', fontWeight: '600', color: '#374151' }}>검색:</span>
+                <input
+                  type="text"
+                  value={pageSearchQuery}
+                  onChange={(e) => setPageSearchQuery(e.target.value)}
+                  placeholder="페이지 번호 입력"
+                  style={{
+                    padding: '8px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid #d1d5db',
+                    fontSize: '14px',
+                    width: '120px'
+                  }}
+                />
+              </div>
+
+              {/* 빠른 점프 버튼들 */}
+              <div style={{ display: 'flex', gap: '4px' }}>
+                <button
+                  onClick={() => jumpToPageRange(1)}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    border: '1px solid #d1d5db',
+                    background: 'white',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  1페이지
+                </button>
+                <button
+                  onClick={() => jumpToPageRange(50)}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    border: '1px solid #d1d5db',
+                    background: 'white',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  50페이지
+                </button>
+                <button
+                  onClick={() => jumpToPageRange(100)}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    border: '1px solid #d1d5db',
+                    background: 'white',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  100페이지
+                </button>
+                <button
+                  onClick={() => jumpToPageRange(150)}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    border: '1px solid #d1d5db',
+                    background: 'white',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  150페이지
+                </button>
+              </div>
+
+              {/* 전체 선택/해제 */}
+              <button
+                onClick={toggleAllPages}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  border: '1px solid #667eea',
+                  background: selectedPages.length >= 20 ? '#667eea' : 'white',
+                  color: selectedPages.length >= 20 ? 'white' : '#667eea',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                title="Ctrl+A: 전체 선택/해제"
+              >
+                {selectedPages.length >= 20 ? '전체 해제' : '전체 선택'}
+              </button>
+
+              {/* 키보드 단축키 도움말 */}
+              <div style={{
+                fontSize: '11px',
+                color: '#6b7280',
+                background: 'rgba(107, 114, 128, 0.1)',
+                padding: '4px 8px',
+                borderRadius: '6px',
+                whiteSpace: 'nowrap'
+              }}>
+                <div>Ctrl+A: 전체선택</div>
+                <div>Ctrl+F: 검색</div>
+                <div>Ctrl+←/→: 섹션이동</div>
+              </div>
+            </div>
+
+            {/* 페이지 그리드 */}
             <div style={{ 
               display: 'grid', 
               gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', 
               gap: '12px',
-              marginBottom: '24px'
+              marginBottom: '24px',
+              minHeight: '200px'
             }}>
-              {MOCK_PAGES.map((pg) => {
+              {filteredPages.map((pg) => {
                 const checked = selectedPages.includes(pg);
                 return (
                   <button
@@ -569,33 +855,140 @@ export default function AdminPage() {
                         ? '0 8px 25px rgba(102, 126, 234, 0.3)' 
                         : '0 4px 15px rgba(0, 0, 0, 0.1)',
                       transition: 'all 0.3s ease',
-                      transform: checked ? 'translateY(-2px)' : 'translateY(0)'
+                      transform: checked ? 'translateY(-2px)' : 'translateY(0)',
+                      position: 'relative'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!checked) {
+                        e.target.style.transform = 'translateY(-1px)';
+                        e.target.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.2)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!checked) {
+                        e.target.style.transform = 'translateY(0)';
+                        e.target.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.1)';
+                      }
                     }}
                   >
                     {checked && <span style={{ marginRight: '4px' }}>✓</span>}
                     {pg}
+                    {checked && (
+                      <div style={{
+                        position: 'absolute',
+                        top: '4px',
+                        right: '4px',
+                        width: '8px',
+                        height: '8px',
+                        background: '#10b981',
+                        borderRadius: '50%'
+                      }} />
+                    )}
                   </button>
                 );
               })}
             </div>
+
+            {/* 페이지가 없을 때 메시지 */}
+            {filteredPages.length === 0 && (
+              <div style={{
+                textAlign: 'center',
+                padding: '40px',
+                color: '#6b7280',
+                fontSize: '16px',
+                background: 'rgba(107, 114, 128, 0.05)',
+                borderRadius: '12px',
+                marginBottom: '24px'
+              }}>
+                "{pageSearchQuery}"에 해당하는 페이지가 없습니다.
+              </div>
+            )}
             
+            {/* 선택된 페이지 요약 */}
             <div style={{ 
               padding: '20px',
               background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)',
               borderRadius: '12px',
               marginBottom: '24px'
             }}>
-              <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '8px' }}>
-                선택된 페이지 목록
-              </div>
               <div style={{ 
-                fontSize: '16px', 
-                fontWeight: '500', 
-                color: '#1f2937',
-                wordBreak: 'break-all'
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'space-between',
+                marginBottom: '12px'
               }}>
-                {selectedPages.length > 0 ? selectedPages.join(", ") : "선택된 페이지가 없습니다"}
+                <div style={{ fontSize: '14px', color: '#6b7280', fontWeight: '600' }}>
+                  선택된 페이지 목록
+                </div>
+                <div style={{ 
+                  fontSize: '12px', 
+                  color: selectedPages.length >= 20 ? '#ef4444' : '#10b981',
+                  fontWeight: '600',
+                  padding: '4px 8px',
+                  background: selectedPages.length >= 20 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+                  borderRadius: '6px'
+                }}>
+                  {selectedPages.length} / 20 페이지
+                </div>
               </div>
+              
+              {selectedPages.length > 0 ? (
+                <div style={{ 
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '8px',
+                  maxHeight: '120px',
+                  overflow: 'auto'
+                }}>
+                  {selectedPages.map((page, index) => (
+                    <div
+                      key={page}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '6px 12px',
+                        background: 'white',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(102, 126, 234, 0.2)',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        color: '#374151'
+                      }}
+                    >
+                      <span>{page}</span>
+                      <button
+                        onClick={() => onTogglePage(page)}
+                        style={{
+                          width: '16px',
+                          height: '16px',
+                          borderRadius: '50%',
+                          border: 'none',
+                          background: '#ef4444',
+                          color: 'white',
+                          fontSize: '10px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ 
+                  fontSize: '16px', 
+                  fontWeight: '500', 
+                  color: '#9ca3af',
+                  textAlign: 'center',
+                  padding: '20px'
+                }}>
+                  선택된 페이지가 없습니다
+                </div>
+              )}
             </div>
             
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'space-between' }}>

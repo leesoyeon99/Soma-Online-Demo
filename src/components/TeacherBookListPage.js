@@ -4,7 +4,7 @@ import TeacherSubmissionPage from './TeacherSubmissionPage';
 const TeacherBookListPage = ({ files, onBookSelect, onBackToLogin, onGoToSubmissions, notifications, setNotifications }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [favorites, setFavorites] = useState(new Set());
-  const [activeTab, setActiveTab] = useState('submissions'); // 'books' 또는 'submissions'
+  const [activeTab, setActiveTab] = useState('books'); // 'books' 또는 'submissions'
 
   const handleFavoriteToggle = (index) => {
     const newFavorites = new Set(favorites);
@@ -90,7 +90,7 @@ const TeacherBookListPage = ({ files, onBookSelect, onBackToLogin, onGoToSubmiss
               fontWeight: 'bold',
               fontFamily: 'var(--font-title)'
             }}>
-              교재 목록 - 강사 모드
+              교재 목록
             </h1>
           </div>
           

@@ -12,34 +12,103 @@ const TeacherSubmissionPage = ({ onBackToBookList, onViewSubmission }) => {
       {
         id: 1,
         studentId: 'student1',
-        studentName: '김학생',
-        bookTitle: '소마 프리미어 교재 1',
+        studentName: '김민수',
+        bookTitle: '중1 1학기 수학 개념 진도북 - 1단원',
         bookUrl: '/somapremier.pdf',
         submittedAt: '2024-01-15T14:30:00Z',
-        status: 'pending', // 'pending', 'graded'
+        status: 'pending',
         hasAudio: true,
         hasDrawing: true,
         strokeData: [
           {
             type: 'stroke',
             tool: 'pen',
-            color: '#ef4444',
-            brushSize: 3,
+            color: '#2563eb',
+            brushSize: 2,
             points: [
-              { x: 100, y: 100 },
-              { x: 150, y: 120 },
-              { x: 200, y: 140 }
+              { x: 120, y: 80 }, { x: 125, y: 85 }, { x: 130, y: 90 }, { x: 135, y: 95 },
+              { x: 140, y: 100 }, { x: 145, y: 105 }, { x: 150, y: 110 }
             ]
+          },
+          {
+            type: 'stroke',
+            tool: 'pen',
+            color: '#2563eb',
+            brushSize: 2,
+            points: [
+              { x: 100, y: 120 }, { x: 110, y: 130 }, { x: 120, y: 140 }, { x: 130, y: 150 }
+            ]
+          },
+          {
+            type: 'stroke',
+            tool: 'highlighter',
+            color: '#fbbf24',
+            brushSize: 4,
+            points: [
+              { x: 200, y: 150 }, { x: 250, y: 150 }, { x: 300, y: 150 }
+            ]
+          },
+          {
+            type: 'stroke',
+            tool: 'highlighter',
+            color: '#fbbf24',
+            brushSize: 4,
+            points: [
+              { x: 80, y: 200 }, { x: 120, y: 200 }, { x: 160, y: 200 }
+            ]
+          },
+          {
+            type: 'text',
+            content: '이 부분이 이해가 안 돼요',
+            x: 180,
+            y: 200,
+            color: '#dc2626',
+            fontSize: 14
+          },
+          {
+            type: 'text',
+            content: '2x + 3 = 7',
+            x: 100,
+            y: 180,
+            color: '#2563eb',
+            fontSize: 16
+          },
+          {
+            type: 'text',
+            content: 'x = 2',
+            x: 100,
+            y: 220,
+            color: '#059669',
+            fontSize: 16
+          },
+          {
+            type: 'stroke',
+            tool: 'pen',
+            color: '#dc2626',
+            brushSize: 1,
+            points: [
+              { x: 300, y: 100 }, { x: 320, y: 120 }, { x: 340, y: 140 }
+            ]
+          },
+          {
+            type: 'text',
+            content: '???',
+            x: 350,
+            y: 160,
+            color: '#dc2626',
+            fontSize: 18
           }
         ],
         audioUrl: '/sample-audio.wav',
-        feedback: null
+        feedback: null,
+        pageNumber: 23,
+        problemNumber: 5
       },
       {
         id: 2,
         studentId: 'student2',
-        studentName: '이학생',
-        bookTitle: '소마 프리미어 교재 2(첨삭)',
+        studentName: '이지은',
+        bookTitle: '중1 1학기 수학 개념 진도북 - 2단원',
         bookUrl: '/somapremier.pdf',
         submittedAt: '2024-01-15T10:15:00Z',
         status: 'graded',
@@ -49,20 +118,98 @@ const TeacherSubmissionPage = ({ onBackToBookList, onViewSubmission }) => {
           {
             type: 'stroke',
             tool: 'pen',
-            color: '#3b82f6',
+            color: '#059669',
             brushSize: 3,
             points: [
-              { x: 200, y: 200 },
-              { x: 250, y: 220 },
-              { x: 300, y: 240 }
+              { x: 100, y: 120 }, { x: 120, y: 140 }, { x: 140, y: 160 },
+              { x: 160, y: 180 }, { x: 180, y: 200 }
             ]
+          },
+          {
+            type: 'stroke',
+            tool: 'pen',
+            color: '#059669',
+            brushSize: 2,
+            points: [
+              { x: 80, y: 100 }, { x: 90, y: 110 }, { x: 100, y: 120 }
+            ]
+          },
+          {
+            type: 'shape',
+            shapeType: 'circle',
+            color: '#7c3aed',
+            brushSize: 2,
+            startX: 250,
+            startY: 100,
+            endX: 300,
+            endY: 150
+          },
+          {
+            type: 'stroke',
+            tool: 'highlighter',
+            color: '#fbbf24',
+            brushSize: 5,
+            points: [
+              { x: 200, y: 80 }, { x: 250, y: 80 }, { x: 300, y: 80 }
+            ]
+          },
+          {
+            type: 'text',
+            content: '정답: 15',
+            x: 220,
+            y: 250,
+            color: '#059669',
+            fontSize: 16
+          },
+          {
+            type: 'text',
+            content: '원의 넓이 = πr²',
+            x: 80,
+            y: 80,
+            color: '#059669',
+            fontSize: 14
+          },
+          {
+            type: 'text',
+            content: 'r = 3',
+            x: 80,
+            y: 100,
+            color: '#059669',
+            fontSize: 14
+          },
+          {
+            type: 'text',
+            content: '넓이 = π × 3² = 9π',
+            x: 80,
+            y: 120,
+            color: '#059669',
+            fontSize: 14
+          },
+          {
+            type: 'stroke',
+            tool: 'pen',
+            color: '#7c3aed',
+            brushSize: 1,
+            points: [
+              { x: 320, y: 200 }, { x: 340, y: 220 }, { x: 360, y: 240 }
+            ]
+          },
+          {
+            type: 'text',
+            content: '검산: 9π ≈ 28.27',
+            x: 320,
+            y: 260,
+            color: '#7c3aed',
+            fontSize: 12
           }
         ],
-        audioUrl: '/sample-audio2.wav',
+        audioUrl: '/sample-audio.wav',
         feedback: {
           id: 1,
           teacherId: 'teacher1',
-          teacherName: '선생님',
+          teacherName: '박선생님',
+          score: 92,
+          comment: '정답을 맞혔지만 풀이 과정을 더 자세히 써주세요. 원의 넓이 공식을 사용한 이유도 설명해보세요.',
           feedbackStrokeData: [
             {
               type: 'stroke',
@@ -70,20 +217,20 @@ const TeacherSubmissionPage = ({ onBackToBookList, onViewSubmission }) => {
               color: '#10b981',
               brushSize: 2,
               points: [
-                { x: 200, y: 200 },
-                { x: 250, y: 220 },
-                { x: 300, y: 240 }
+                { x: 100, y: 120 }, { x: 120, y: 140 }, { x: 140, y: 160 }
               ]
             }
           ],
           gradedAt: '2024-01-15T16:45:00Z'
-        }
+        },
+        pageNumber: 45,
+        problemNumber: 12
       },
       {
         id: 3,
         studentId: 'student3',
-        studentName: '박학생',
-        bookTitle: '소마 프리미어 교재 1',
+        studentName: '박서준',
+        bookTitle: '중1 1학기 수학 개념 진도북 - 3단원',
         bookUrl: '/somapremier.pdf',
         submittedAt: '2024-01-14T16:20:00Z',
         status: 'pending',
@@ -93,17 +240,363 @@ const TeacherSubmissionPage = ({ onBackToBookList, onViewSubmission }) => {
           {
             type: 'stroke',
             tool: 'pen',
-            color: '#8b5cf6',
+            color: '#dc2626',
+            brushSize: 2,
+            points: [
+              { x: 80, y: 90 }, { x: 90, y: 100 }, { x: 100, y: 110 },
+              { x: 110, y: 120 }, { x: 120, y: 130 }
+            ]
+          },
+          {
+            type: 'stroke',
+            tool: 'pen',
+            color: '#dc2626',
+            brushSize: 1,
+            points: [
+              { x: 50, y: 80 }, { x: 60, y: 90 }, { x: 70, y: 100 }
+            ]
+          },
+          {
+            type: 'stroke',
+            tool: 'highlighter',
+            color: '#f59e0b',
+            brushSize: 5,
+            points: [
+              { x: 150, y: 180 }, { x: 200, y: 180 }, { x: 250, y: 180 },
+              { x: 300, y: 180 }, { x: 350, y: 180 }
+            ]
+          },
+          {
+            type: 'stroke',
+            tool: 'highlighter',
+            color: '#f59e0b',
             brushSize: 4,
             points: [
-              { x: 300, y: 300 },
-              { x: 350, y: 320 },
-              { x: 400, y: 340 }
+              { x: 100, y: 60 }, { x: 150, y: 60 }, { x: 200, y: 60 }
             ]
+          },
+          {
+            type: 'text',
+            content: '???',
+            x: 200,
+            y: 220,
+            color: '#dc2626',
+            fontSize: 18
+          },
+          {
+            type: 'text',
+            content: '이 문제는 어떻게 풀어야 하나요?',
+            x: 120,
+            y: 280,
+            color: '#374151',
+            fontSize: 12
+          },
+          {
+            type: 'text',
+            content: '3x - 2 = 10',
+            x: 50,
+            y: 50,
+            color: '#dc2626',
+            fontSize: 16
+          },
+          {
+            type: 'text',
+            content: 'x = ?',
+            x: 50,
+            y: 70,
+            color: '#dc2626',
+            fontSize: 16
+          },
+          {
+            type: 'stroke',
+            tool: 'pen',
+            color: '#8b5cf6',
+            brushSize: 1,
+            points: [
+              { x: 300, y: 100 }, { x: 320, y: 120 }, { x: 340, y: 140 }
+            ]
+          },
+          {
+            type: 'text',
+            content: '모르겠어요...',
+            x: 300,
+            y: 160,
+            color: '#8b5cf6',
+            fontSize: 14
+          },
+          {
+            type: 'stroke',
+            tool: 'pen',
+            color: '#dc2626',
+            brushSize: 2,
+            points: [
+              { x: 400, y: 200 }, { x: 420, y: 220 }, { x: 440, y: 240 }
+            ]
+          },
+          {
+            type: 'text',
+            content: '도와주세요!',
+            x: 400,
+            y: 260,
+            color: '#dc2626',
+            fontSize: 14
           }
         ],
         audioUrl: null,
-        feedback: null
+        feedback: null,
+        pageNumber: 67,
+        problemNumber: 8
+      },
+      {
+        id: 4,
+        studentId: 'student4',
+        studentName: '최유진',
+        bookTitle: '중1 1학기 수학 개념 진도북 - 4단원',
+        bookUrl: '/somapremier.pdf',
+        submittedAt: '2024-01-14T13:45:00Z',
+        status: 'graded',
+        hasAudio: true,
+        hasDrawing: true,
+        strokeData: [
+          {
+            type: 'stroke',
+            tool: 'pen',
+            color: '#1d4ed8',
+            brushSize: 2,
+            points: [
+              { x: 100, y: 100 }, { x: 150, y: 120 }, { x: 200, y: 140 },
+              { x: 250, y: 160 }, { x: 300, y: 180 }
+            ]
+          },
+          {
+            type: 'stroke',
+            tool: 'pen',
+            color: '#1d4ed8',
+            brushSize: 1,
+            points: [
+              { x: 80, y: 80 }, { x: 90, y: 90 }, { x: 100, y: 100 }
+            ]
+          },
+          {
+            type: 'shape',
+            shapeType: 'rectangle',
+            color: '#059669',
+            brushSize: 2,
+            startX: 120,
+            startY: 200,
+            endX: 280,
+            endY: 250
+          },
+          {
+            type: 'stroke',
+            tool: 'highlighter',
+            color: '#fbbf24',
+            brushSize: 4,
+            points: [
+              { x: 100, y: 50 }, { x: 150, y: 50 }, { x: 200, y: 50 }
+            ]
+          },
+          {
+            type: 'text',
+            content: '가로: 8cm, 세로: 5cm',
+            x: 130,
+            y: 230,
+            color: '#059669',
+            fontSize: 14
+          },
+          {
+            type: 'text',
+            content: '넓이 = 8 × 5 = 40cm²',
+            x: 130,
+            y: 260,
+            color: '#1d4ed8',
+            fontSize: 14
+          },
+          {
+            type: 'text',
+            content: '직사각형의 넓이',
+            x: 80,
+            y: 50,
+            color: '#1d4ed8',
+            fontSize: 14
+          },
+          {
+            type: 'text',
+            content: '넓이 = 가로 × 세로',
+            x: 80,
+            y: 70,
+            color: '#059669',
+            fontSize: 12
+          },
+          {
+            type: 'stroke',
+            tool: 'pen',
+            color: '#7c3aed',
+            brushSize: 1,
+            points: [
+              { x: 320, y: 100 }, { x: 340, y: 120 }, { x: 360, y: 140 }
+            ]
+          },
+          {
+            type: 'text',
+            content: '검산: 8×5=40',
+            x: 320,
+            y: 160,
+            color: '#7c3aed',
+            fontSize: 12
+          },
+          {
+            type: 'stroke',
+            tool: 'pen',
+            color: '#059669',
+            brushSize: 2,
+            points: [
+              { x: 400, y: 200 }, { x: 420, y: 220 }, { x: 440, y: 240 }
+            ]
+          },
+          {
+            type: 'text',
+            content: '정답!',
+            x: 400,
+            y: 260,
+            color: '#059669',
+            fontSize: 16
+          }
+        ],
+        audioUrl: '/sample-audio.wav',
+        feedback: {
+          id: 2,
+          teacherId: 'teacher1',
+          teacherName: '박선생님',
+          score: 88,
+          comment: '계산은 정확하지만 단위를 빼먹지 말고, 공식도 함께 써주세요. 직사각형의 넓이 = 가로 × 세로',
+          feedbackStrokeData: [
+            {
+              type: 'stroke',
+              tool: 'pen',
+              color: '#10b981',
+              brushSize: 2,
+              points: [
+                { x: 100, y: 100 }, { x: 150, y: 120 }, { x: 200, y: 140 }
+              ]
+            }
+          ],
+          gradedAt: '2024-01-14T18:30:00Z'
+        },
+        pageNumber: 89,
+        problemNumber: 15
+      },
+      {
+        id: 5,
+        studentId: 'student5',
+        studentName: '정다은',
+        bookTitle: '중1 1학기 수학 개념 진도북 - 5단원',
+        bookUrl: '/somapremier.pdf',
+        submittedAt: '2024-01-13T15:10:00Z',
+        status: 'graded',
+        hasAudio: true,
+        hasDrawing: true,
+        strokeData: [
+          {
+            type: 'stroke',
+            tool: 'pen',
+            color: '#7c3aed',
+            brushSize: 3,
+            points: [
+              { x: 90, y: 80 }, { x: 110, y: 100 }, { x: 130, y: 120 },
+              { x: 150, y: 140 }, { x: 170, y: 160 }
+            ]
+          },
+          {
+            type: 'stroke',
+            tool: 'highlighter',
+            color: '#fbbf24',
+            brushSize: 4,
+            points: [
+              { x: 200, y: 120 }, { x: 250, y: 120 }, { x: 300, y: 120 }
+            ]
+          },
+          {
+            type: 'text',
+            content: 'x = 3',
+            x: 180,
+            y: 200,
+            color: '#7c3aed',
+            fontSize: 16
+          },
+          {
+            type: 'text',
+            content: '검산: 2×3 + 1 = 7 ✓',
+            x: 180,
+            y: 230,
+            color: '#059669',
+            fontSize: 12
+          }
+        ],
+        audioUrl: '/sample-audio.wav',
+        feedback: {
+          id: 3,
+          teacherId: 'teacher1',
+          teacherName: '박선생님',
+          score: 95,
+          comment: '완벽합니다! 검산까지 해서 정말 좋아요. 이렇게 꼼꼼하게 푸는 습관을 계속 유지해주세요.',
+          feedbackStrokeData: [
+            {
+              type: 'stroke',
+              tool: 'pen',
+              color: '#10b981',
+              brushSize: 2,
+              points: [
+                { x: 90, y: 80 }, { x: 110, y: 100 }, { x: 130, y: 120 }
+              ]
+            }
+          ],
+          gradedAt: '2024-01-13T17:20:00Z'
+        },
+        pageNumber: 112,
+        problemNumber: 7
+      },
+      {
+        id: 6,
+        studentId: 'student6',
+        studentName: '한지호',
+        bookTitle: '중1 1학기 수학 개념 진도북 - 6단원',
+        bookUrl: '/somapremier.pdf',
+        submittedAt: '2024-01-12T11:30:00Z',
+        status: 'pending',
+        hasAudio: false,
+        hasDrawing: true,
+        strokeData: [
+          {
+            type: 'stroke',
+            tool: 'pen',
+            color: '#dc2626',
+            brushSize: 2,
+            points: [
+              { x: 100, y: 100 }, { x: 120, y: 120 }, { x: 140, y: 140 }
+            ]
+          },
+          {
+            type: 'text',
+            content: '모르겠어요...',
+            x: 160,
+            y: 180,
+            color: '#dc2626',
+            fontSize: 14
+          },
+          {
+            type: 'text',
+            content: '선생님 도와주세요',
+            x: 160,
+            y: 210,
+            color: '#6b7280',
+            fontSize: 12
+          }
+        ],
+        audioUrl: null,
+        feedback: null,
+        pageNumber: 134,
+        problemNumber: 3
       }
     ];
     
