@@ -68,7 +68,7 @@ const LandingPage = ({ onSelectUserType }) => {
     {
       id: 'student',
       title: '학습 & 문제풀이',
-      subtitle: '학생 체험',
+      subtitle: '학생 데모',
       description: '교재 학습, 문제 풀이, 필기 연습',
       icon: (
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -78,8 +78,8 @@ const LandingPage = ({ onSelectUserType }) => {
         </svg>
       ),
       color: '#F59E0B', // 주황색
-      badge: null,
-      isPrimary: true
+      badge: 'Demo',
+      isPrimary: false
     }
   ];
 
