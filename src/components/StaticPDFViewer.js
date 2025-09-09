@@ -54,33 +54,23 @@ const StaticPDFViewer = ({
         console.log('PDF 로딩 시작:', pdfFileName);
         
         // 정적 경로로 PDF 로드 (PUBLIC_URL 포함)
-        const pdfUrl = `${process.env.PUBLIC_URL}/static/${pdfFileName}`;
+        const pdfUrl = `${process.env.PUBLIC_URL}/${pdfFileName}`;
         console.log('PDF URL:', pdfUrl);
         console.log('PUBLIC_URL:', process.env.PUBLIC_URL);
         console.log('pdfFileName:', pdfFileName);
         
-        // 먼저 fetch로 PDF 파일을 가져와서 ArrayBuffer로 변환
-        const response = await fetch(pdfUrl);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const arrayBuffer = await response.arrayBuffer();
-        console.log('PDF 파일 다운로드 완료, 크기:', arrayBuffer.byteLength);
-        
-        // 첫 100바이트를 확인해서 실제 PDF인지 검증
-        const firstBytes = new Uint8Array(arrayBuffer.slice(0, 100));
-        const firstString = String.fromCharCode.apply(null, firstBytes);
-        console.log('파일 시작 부분:', firstString);
-        
-        if (!firstString.startsWith('%PDF')) {
-          throw new Error('다운로드된 파일이 PDF가 아닙니다. HTML 에러 페이지일 가능성이 있습니다.');
-        }
-        
+        // PDF.js로 직접 로드 (최적화된 방식)
         const loadingTask = pdfjsLib.getDocument({
-          data: arrayBuffer,
+          url: pdfUrl,
           cMapUrl: 'https://unpkg.com/pdfjs-dist@5.4.149/cmaps/',
           cMapPacked: true,
-          verbosity: 0
+          verbosity: 0,
+          disableAutoFetch: false,
+          disableStream: false,
+          // 성능 최적화 옵션
+          maxImageSize: 1024 * 1024, // 1MB로 이미지 크기 제한
+          isEvalSupported: false, // eval 사용 비활성화
+          useSystemFonts: true // 시스템 폰트 사용
         });
         
         const pdf = await loadingTask.promise;
@@ -189,15 +179,19 @@ const StaticPDFViewer = ({
     
     // 새로운 렌더링 작업 시작
     const task = page.render(renderContext);
+    setRenderTask(task); // 현재 작업 저장
     
     try {
       await task.promise;
+      setRenderTask(null); // 완료되면 null로 설정
     } catch (error) {
       if (error.name === 'RenderingCancelledException') {
         console.log('렌더링이 취소되었습니다');
+        setRenderTask(null);
         return task;
       }
       console.error('페이지 렌더링 오류:', error);
+      setRenderTask(null);
     }
     
     return task;
@@ -277,10 +271,18 @@ const StaticPDFViewer = ({
   // 렌더링 작업 상태 초기화
   useEffect(() => {
     return () => {
+      // 컴포넌트 언마운트 시 진행 중인 렌더링 작업 취소
+      if (renderTask) {
+        try {
+          renderTask.cancel();
+        } catch (error) {
+          console.log('렌더링 작업 취소됨');
+        }
+      }
       setRenderTask(null);
       setPageRendering(false);
     };
-  }, []);
+  }, [renderTask]);
 
   // 썸네일 생성 함수 (메모리 최적화)
   const generateThumbnail = useCallback(async (page, pageNumber) => {
@@ -640,7 +642,15 @@ const StaticPDFViewer = ({
               borderRadius: '50%',
               animation: 'spin 1s linear infinite'
             }}></div>
-            <span style={{ color: '#6b7280', fontSize: '1rem' }}>PDF 로딩 중...</span>
+            <span style={{ color: '#6b7280', fontSize: '1rem' }}>PDF 로딩 중... 잠시만 기다려주세요</span>
+            <div style={{ 
+              color: '#9ca3af', 
+              fontSize: '0.875rem',
+              textAlign: 'center',
+              maxWidth: '300px'
+            }}>
+              교재를 불러오는 중입니다. 네트워크 상태에 따라 시간이 걸릴 수 있습니다.
+            </div>
           </div>
         )}
         
