@@ -24,12 +24,15 @@ const StaticPDFViewer = ({
   const canvasRef = useRef(null);
   const markupCanvasRef = useRef(null);
   const containerRef = useRef(null);
+  const canvasKeyRef = useRef(0);
   
   const [pdfDoc, setPdfDoc] = useState(null);
   const [pageRendering, setPageRendering] = useState(false);
   const [savedDrawings, setSavedDrawings] = useState([]);
   const [totalPages, setTotalPages] = useState(0);
   const [renderTask, setRenderTask] = useState(null);
+  const [isRendering, setIsRendering] = useState(false);
+  const renderTaskRef = useRef(null);
   
   // PDF 페이지 제한 (성능 최적화)
   const MAX_PAGES = 5; // 최대 5페이지만 표시
@@ -147,144 +150,192 @@ const StaticPDFViewer = ({
     });
   }, [savedDrawings, isTeacherMode, studentStrokeData, isStudentMode, teacherFeedbackData, showTeacherFeedback]);
 
-  // 페이지 렌더링 (안전한 렌더링 관리)
-  const renderPage = useCallback(async (page, canvas, scale) => {
-    // 이전 렌더링 작업이 있다면 완전히 취소하고 대기
-    const currentRenderTask = renderTask;
-    if (currentRenderTask) {
-      try {
-        currentRenderTask.cancel();
-        // 취소 완료까지 잠시 대기
-        await new Promise(resolve => setTimeout(resolve, 50));
-      } catch (error) {
-        console.log('이전 렌더링 작업 취소됨');
-      }
-      setRenderTask(null);
+  // 캔버스 재생성 (강제 초기화)
+  const recreateCanvas = useCallback(() => {
+    const canvas = canvasRef.current;
+    const markupCanvas = markupCanvasRef.current;
+    
+    if (canvas) {
+      // 캔버스 완전 초기화
+      const context = canvas.getContext('2d');
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      canvas.width = 0;
+      canvas.height = 0;
+      
+      // 캔버스 키 변경으로 강제 재렌더링
+      canvasKeyRef.current += 1;
     }
     
-    // 캔버스 초기화
-    const context = canvas.getContext('2d');
-    context.clearRect(0, 0, canvas.width, canvas.height);
+    if (markupCanvas) {
+      const markupContext = markupCanvas.getContext('2d');
+      markupContext.clearRect(0, 0, markupCanvas.width, markupCanvas.height);
+      markupCanvas.width = 0;
+      markupCanvas.height = 0;
+    }
+  }, []);
+
+  // 안전한 렌더링 작업 취소
+  const cancelCurrentRenderTask = useCallback(async () => {
+    const currentTask = renderTaskRef.current;
+    if (currentTask) {
+      try {
+        currentTask.cancel();
+        console.log('현재 렌더링 작업 취소됨');
+      } catch (error) {
+        console.log('렌더링 작업 취소 중 오류:', error);
+      }
+      renderTaskRef.current = null;
+    }
     
-    const viewport = page.getViewport({ scale });
+    // 상태 초기화
+    setIsRendering(false);
+    setRenderTask(null);
     
-    // 캔버스 크기 설정
-    canvas.height = viewport.height;
-    canvas.width = viewport.width;
+    // 캔버스 재생성
+    recreateCanvas();
     
-    const renderContext = {
-      canvasContext: context,
-      viewport: viewport
-    };
+    // 취소 완료까지 대기
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }, [recreateCanvas]);
+
+  // 페이지 렌더링 (단순하고 안전한 버전)
+  const renderPage = useCallback(async (page, canvas, scale) => {
+    console.log('🔄 페이지 렌더링 시작:', { pageNum: page.pageNumber, scale });
     
-    // 새로운 렌더링 작업 시작
-    const task = page.render(renderContext);
-    setRenderTask(task); // 현재 작업 저장
+    // 현재 작업 취소
+    const currentTask = renderTaskRef.current;
+    if (currentTask) {
+      try {
+        currentTask.cancel();
+        console.log('✅ 이전 렌더링 작업 취소됨');
+      } catch (error) {
+        console.log('⚠️ 렌더링 작업 취소 중 오류:', error);
+      }
+      renderTaskRef.current = null;
+    }
+    
+    // 잠시 대기
+    await new Promise(resolve => setTimeout(resolve, 100));
     
     try {
+      // 캔버스 초기화
+      const context = canvas.getContext('2d');
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      
+      const viewport = page.getViewport({ scale });
+      canvas.height = viewport.height;
+      canvas.width = viewport.width;
+      
+      console.log('📐 캔버스 크기 설정:', { width: canvas.width, height: canvas.height });
+      
+      const renderContext = {
+        canvasContext: context,
+        viewport: viewport
+      };
+      
+      // 새로운 렌더링 작업
+      console.log('🎨 PDF 렌더링 작업 시작');
+      const task = page.render(renderContext);
+      renderTaskRef.current = task;
+      setRenderTask(task);
+      setIsRendering(true);
+      
       await task.promise;
-      setRenderTask(null); // 완료되면 null로 설정
+      
+      console.log('✅ 페이지 렌더링 완료');
+      renderTaskRef.current = null;
+      setRenderTask(null);
+      setIsRendering(false);
+      
+      return task;
     } catch (error) {
       if (error.name === 'RenderingCancelledException') {
-        console.log('렌더링이 취소되었습니다');
+        console.log('⏹️ 렌더링이 취소되었습니다');
+        renderTaskRef.current = null;
         setRenderTask(null);
-        return task;
+        setIsRendering(false);
+        return null;
       }
-      console.error('페이지 렌더링 오류:', error);
+      console.error('❌ 페이지 렌더링 오류:', error);
+      renderTaskRef.current = null;
       setRenderTask(null);
+      setIsRendering(false);
+      throw error;
     }
-    
-    return task;
-  }, [renderTask]);
+  }, []);
 
-  // 페이지 변경 시 렌더링 (안전한 렌더링 + 페이지 제한)
+  // 페이지 변경 시 렌더링 (단순화된 안전한 렌더링)
   useEffect(() => {
+    console.log('📄 페이지 변경 감지:', { pdfDoc: !!pdfDoc, pageNum, MAX_PAGES });
+    
     if (pdfDoc && pageNum && pageNum <= MAX_PAGES) {
+      console.log('🚀 페이지 렌더링 시작');
       setPageRendering(true);
-      
-      // 이전 렌더링 작업 취소
-      const currentRenderTask = renderTask;
-      if (currentRenderTask) {
-        currentRenderTask.cancel();
-        setRenderTask(null);
-      }
       
       // 렌더링 작업을 순차적으로 처리
       const renderCurrentPage = async () => {
         try {
+          console.log('📖 PDF 페이지 가져오기:', pageNum);
           const page = await pdfDoc.getPage(pageNum);
           const canvas = canvasRef.current;
           const markupCanvas = markupCanvasRef.current;
           
+          console.log('🎯 캔버스 상태:', { 
+            canvas: !!canvas, 
+            markupCanvas: !!markupCanvas,
+            canvasSize: canvas ? { width: canvas.width, height: canvas.height } : null
+          });
+          
           if (canvas && markupCanvas) {
             const scale = zoomScale || 1.0;
-            
-            // 캔버스 클리어
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            console.log('⚙️ 렌더링 설정:', { scale });
             
             // PDF 렌더링
-            const task = await renderPage(page, canvas, scale);
-            setRenderTask(task);
+            await renderPage(page, canvas, scale);
             
             // 마크업 캔버스 크기 조정
             markupCanvas.height = canvas.height;
             markupCanvas.width = canvas.width;
+            console.log('📐 마크업 캔버스 크기 조정 완료');
             
             // 마크업 다시 그리기 (지연 실행으로 성능 최적화)
             setTimeout(() => {
+              console.log('🎨 마크업 다시 그리기');
               redrawMarkups();
-            }, 50);
+            }, 100);
+          } else {
+            console.warn('⚠️ 캔버스가 준비되지 않음');
           }
         } catch (error) {
-          console.error('페이지 렌더링 오류:', error);
+          console.error('❌ 페이지 렌더링 오류:', error);
         } finally {
+          console.log('✅ 페이지 렌더링 완료');
           setPageRendering(false);
         }
       };
       
+      // 렌더링 시작
       renderCurrentPage();
     } else if (pageNum > MAX_PAGES) {
       // 제한된 페이지 범위를 벗어나면 첫 페이지로 이동
-      console.log(`페이지 ${pageNum}은 제한 범위(${MAX_PAGES}페이지)를 벗어납니다.`);
+      console.log(`⚠️ 페이지 ${pageNum}은 제한 범위(${MAX_PAGES}페이지)를 벗어납니다.`);
       if (onPageChange) {
         onPageChange(1);
       }
+    } else {
+      console.log('⏸️ PDF 문서가 로드되지 않음 또는 페이지 번호가 유효하지 않음');
     }
-  }, [pdfDoc, pageNum, zoomScale, redrawMarkups, MAX_PAGES, onPageChange, renderPage, renderTask]);
+  }, [pdfDoc, pageNum, zoomScale, redrawMarkups, MAX_PAGES, onPageChange, renderPage]);
 
   // 컴포넌트 언마운트 시 렌더링 작업 정리
   useEffect(() => {
     return () => {
-      if (renderTask) {
-        try {
-          renderTask.cancel();
-          setRenderTask(null);
-        } catch (error) {
-          // 렌더링 취소 에러는 무시
-          console.log('컴포넌트 언마운트 시 렌더링 작업 취소됨');
-        }
-      }
+      // 렌더링 작업 취소
+      cancelCurrentRenderTask();
     };
-  }, [renderTask]);
+  }, [cancelCurrentRenderTask]);
 
-  // 렌더링 작업 상태 초기화
-  useEffect(() => {
-    return () => {
-      // 컴포넌트 언마운트 시 진행 중인 렌더링 작업 취소
-      if (renderTask) {
-        try {
-          renderTask.cancel();
-        } catch (error) {
-          console.log('렌더링 작업 취소됨');
-        }
-      }
-      setRenderTask(null);
-      setPageRendering(false);
-    };
-  }, [renderTask]);
-
-  // 썸네일 생성 함수 (메모리 최적화)
+  // 썸네일 생성 함수 (메모리 최적화 + 안전한 렌더링)
   const generateThumbnail = useCallback(async (page, pageNumber) => {
     try {
       const viewport = page.getViewport({ scale: 0.15 }); // 더 작은 스케일로 메모리 절약
@@ -295,29 +346,24 @@ const StaticPDFViewer = ({
       const maxWidth = 150;
       const maxHeight = 200;
       
+      let finalViewport = viewport;
+      
       if (viewport.width > maxWidth || viewport.height > maxHeight) {
         const scale = Math.min(maxWidth / viewport.width, maxHeight / viewport.height);
-        const scaledViewport = page.getViewport({ scale: 0.15 * scale });
-        canvas.width = scaledViewport.width;
-        canvas.height = scaledViewport.height;
-        
-        const renderContext = {
-          canvasContext: context,
-          viewport: scaledViewport
-        };
-        
-        await page.render(renderContext).promise;
-      } else {
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-        
-        const renderContext = {
-          canvasContext: context,
-          viewport: viewport
-        };
-        
-        await page.render(renderContext).promise;
+        finalViewport = page.getViewport({ scale: 0.15 * scale });
       }
+      
+      canvas.width = finalViewport.width;
+      canvas.height = finalViewport.height;
+      
+      const renderContext = {
+        canvasContext: context,
+        viewport: finalViewport
+      };
+      
+      // 썸네일용 별도 렌더링 작업
+      const thumbnailTask = page.render(renderContext);
+      await thumbnailTask.promise;
       
       // JPEG로 압축해서 메모리 사용량 줄이기
       const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
@@ -331,6 +377,10 @@ const StaticPDFViewer = ({
       canvas.width = 0;
       canvas.height = 0;
     } catch (error) {
+      if (error.name === 'RenderingCancelledException') {
+        console.log(`썸네일 생성 취소됨 (페이지 ${pageNumber})`);
+        return;
+      }
       console.error(`썸네일 생성 오류 (페이지 ${pageNumber}):`, error);
     }
   }, []);
@@ -625,7 +675,7 @@ const StaticPDFViewer = ({
           position: 'relative'
         }}
       >
-        {pageRendering && (
+        {(pageRendering || isRendering) && (
           <div style={{
             display: 'flex',
             alignItems: 'center',
@@ -642,20 +692,25 @@ const StaticPDFViewer = ({
               borderRadius: '50%',
               animation: 'spin 1s linear infinite'
             }}></div>
-            <span style={{ color: '#6b7280', fontSize: '1rem' }}>PDF 로딩 중... 잠시만 기다려주세요</span>
+            <span style={{ color: '#6b7280', fontSize: '1rem' }}>
+              {isRendering ? '페이지 렌더링 중...' : 'PDF 로딩 중...'} 잠시만 기다려주세요
+            </span>
             <div style={{ 
               color: '#9ca3af', 
               fontSize: '0.875rem',
               textAlign: 'center',
               maxWidth: '300px'
             }}>
-              교재를 불러오는 중입니다. 네트워크 상태에 따라 시간이 걸릴 수 있습니다.
+              {isRendering 
+                ? '페이지를 안전하게 렌더링하고 있습니다.' 
+                : '교재를 불러오는 중입니다. 네트워크 상태에 따라 시간이 걸릴 수 있습니다.'
+              }
             </div>
           </div>
         )}
         
         <div style={{
-          display: pageRendering ? 'none' : 'flex',
+          display: (pageRendering || isRendering) ? 'none' : 'flex',
           justifyContent: 'center',
           alignItems: 'center',
           position: 'relative',
@@ -666,6 +721,7 @@ const StaticPDFViewer = ({
             display: 'inline-block'
           }}>
             <canvas
+              key={`pdf-canvas-${canvasKeyRef.current}`}
               ref={canvasRef}
               style={{
                 border: '2px solid #e2e8f0',
@@ -680,6 +736,7 @@ const StaticPDFViewer = ({
               }}
             />
             <canvas
+              key={`markup-canvas-${canvasKeyRef.current}`}
               ref={markupCanvasRef}
               style={{
                 position: 'absolute',
