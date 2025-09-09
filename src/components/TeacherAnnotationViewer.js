@@ -65,48 +65,100 @@ const TeacherAnnotationViewer = ({
     ctx.fillText('2x + 3y = 12', 50, 180);
     ctx.fillText('x - y = 1', 50, 210);
     
-    // 학생 필기 시뮬레이션 (회색으로)
+    // 학생 필기 시뮬레이션 (더 현실적으로 - 흔들린 선, 지워진 흔적 등)
     ctx.strokeStyle = '#6b7280';
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 2;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     
-    // 학생이 그린 선들
+    // 학생이 그린 선들 (흔들린 느낌)
     ctx.beginPath();
     ctx.moveTo(100, 250);
+    ctx.lineTo(120, 248);
+    ctx.lineTo(140, 252);
+    ctx.lineTo(160, 249);
+    ctx.lineTo(180, 251);
     ctx.lineTo(200, 250);
     ctx.stroke();
     
+    // 지워진 흔적 (연한 회색)
+    ctx.strokeStyle = '#d1d5db';
+    ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.moveTo(100, 280);
-    ctx.lineTo(300, 280);
+    ctx.lineTo(200, 280);
     ctx.stroke();
     
-    // 학생이 쓴 답
+    // 다시 쓴 선 (더 진한 회색)
+    ctx.strokeStyle = '#6b7280';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(100, 280);
+    ctx.lineTo(250, 280);
+    ctx.stroke();
+    
+    // 학생이 쓴 답 (흔들린 글씨)
     ctx.fillStyle = '#6b7280';
-    ctx.font = '16px Arial';
-    ctx.fillText('x = 3, y = 2', 100, 320);
+    ctx.font = '14px Arial';
+    ctx.fillText('x = 3', 100, 320);
+    ctx.fillText('y = 2', 100, 340);
     
     // 추가 문제
     ctx.fillStyle = '#374151';
     ctx.font = '18px Arial';
     ctx.fillText('문제 2. 그래프를 그리시오.', 50, 400);
     
-    // 학생이 그린 그래프 (간단한 선)
+    // 학생이 그린 그래프 (더 현실적으로 - 흔들린 선, 불완전한 축)
     ctx.strokeStyle = '#6b7280';
     ctx.lineWidth = 2;
+    
+    // x축 (흔들린 선)
     ctx.beginPath();
     ctx.moveTo(100, 500);
-    ctx.lineTo(300, 500);
-    ctx.moveTo(200, 400);
-    ctx.lineTo(200, 600);
+    ctx.lineTo(120, 498);
+    ctx.lineTo(140, 502);
+    ctx.lineTo(160, 499);
+    ctx.lineTo(180, 501);
+    ctx.lineTo(200, 500);
+    ctx.lineTo(220, 502);
+    ctx.lineTo(240, 499);
+    ctx.lineTo(260, 501);
+    ctx.lineTo(280, 500);
+    ctx.lineTo(300, 502);
     ctx.stroke();
     
-    // 좌표축 라벨
+    // y축 (흔들린 선)
+    ctx.beginPath();
+    ctx.moveTo(200, 400);
+    ctx.lineTo(198, 420);
+    ctx.lineTo(202, 440);
+    ctx.lineTo(199, 460);
+    ctx.lineTo(201, 480);
+    ctx.lineTo(200, 500);
+    ctx.lineTo(202, 520);
+    ctx.lineTo(199, 540);
+    ctx.lineTo(201, 560);
+    ctx.lineTo(200, 580);
+    ctx.lineTo(202, 600);
+    ctx.stroke();
+    
+    // 불완전한 좌표축 라벨 (흔들린 글씨)
     ctx.fillStyle = '#6b7280';
-    ctx.font = '14px Arial';
-    ctx.fillText('x', 310, 500);
-    ctx.fillText('y', 200, 390);
+    ctx.font = '10px Arial';
+    ctx.fillText('x', 305, 505);
+    ctx.fillText('y', 205, 395);
+    
+    // 학생이 그린 함수 그래프 (간단하고 흔들린)
+    ctx.strokeStyle = '#ef4444';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(150, 450);
+    ctx.lineTo(170, 440);
+    ctx.lineTo(190, 430);
+    ctx.lineTo(210, 420);
+    ctx.lineTo(230, 430);
+    ctx.lineTo(250, 440);
+    ctx.stroke();
     
     return canvas.toDataURL();
   }, [submission]);

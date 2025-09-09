@@ -46,6 +46,9 @@ const EnhancedPDFViewer = React.memo(({
   const [isAddingText, setIsAddingText] = useState(false);
   const [textInput, setTextInput] = useState('');
   const [textPosition, setTextPosition] = useState({ x: 0, y: 0 });
+  
+  // 동영상 모달 상태
+  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
 
   // PDF 문서 로드
   useEffect(() => {
@@ -707,6 +710,45 @@ const EnhancedPDFViewer = React.memo(({
               backfaceVisibility: 'hidden'
             }}
           />
+          
+            {/* 동영상 버튼 - 2페이지에만 표시 */}
+            {pageNum === 2 && (
+              <button
+                onClick={() => setIsVideoModalOpen(true)}
+                style={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '64px',
+                  height: '64px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 4px 16px rgba(249, 115, 22, 0.4)',
+                  transition: 'all 0.3s ease',
+                  zIndex: 10,
+                  pointerEvents: 'auto'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.transform = 'translate(-50%, -50%) scale(1.1)';
+                  e.target.style.boxShadow = '0 6px 24px rgba(249, 115, 22, 0.6)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.transform = 'translate(-50%, -50%) scale(1)';
+                  e.target.style.boxShadow = '0 4px 16px rgba(249, 115, 22, 0.4)';
+                }}
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M8 5v14l11-7z"/>
+                </svg>
+              </button>
+            )}
         </div>
       </div>
       
@@ -768,6 +810,111 @@ const EnhancedPDFViewer = React.memo(({
             >
               추가
             </button>
+          </div>
+        </div>
+      )}
+      
+      {/* 동영상 모달 */}
+      {isVideoModalOpen && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '2rem'
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            padding: '2rem',
+            maxWidth: '90vw',
+            maxHeight: '90vh',
+            position: 'relative',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+          }}>
+            {/* 닫기 버튼 */}
+            <button
+              onClick={() => setIsVideoModalOpen(false)}
+              style={{
+                position: 'absolute',
+                top: '1rem',
+                right: '1rem',
+                background: 'rgba(0, 0, 0, 0.1)',
+                border: 'none',
+                borderRadius: '50%',
+                width: '40px',
+                height: '40px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '20px',
+                color: '#6b7280',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.background = 'rgba(0, 0, 0, 0.2)';
+                e.target.style.color = '#374151';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.background = 'rgba(0, 0, 0, 0.1)';
+                e.target.style.color = '#6b7280';
+              }}
+            >
+              ✕
+            </button>
+            
+            {/* 동영상 제목 */}
+            <h3 style={{
+              fontSize: '1.5rem',
+              fontWeight: 'bold',
+              color: '#1f2937',
+              marginBottom: '1rem',
+              textAlign: 'center'
+            }}>
+              교재 설명 동영상
+            </h3>
+            
+            {/* YouTube 동영상 임베드 */}
+            <div style={{
+              position: 'relative',
+              width: '100%',
+              height: '0',
+              paddingBottom: '56.25%', // 16:9 비율
+              marginBottom: '1rem'
+            }}>
+              <iframe
+                src="https://www.youtube.com/embed/Fw9IrzJtgQo?si=bz3hFvmjEkcYKHMg&autoplay=1"
+                title="교재 설명 동영상"
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  border: 'none',
+                  borderRadius: '8px'
+                }}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
+            
+            {/* 동영상 설명 */}
+            <p style={{
+              fontSize: '1rem',
+              color: '#6b7280',
+              textAlign: 'center',
+              margin: 0
+            }}>
+              이 동영상을 통해 교재 내용을 더 자세히 학습할 수 있습니다.
+            </p>
           </div>
         </div>
       )}

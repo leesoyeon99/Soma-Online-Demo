@@ -1,10 +1,26 @@
 import React, { useState } from 'react';
 import StudentFeedbackViewer from './StudentFeedbackViewer';
 
-const BookListPage = ({ files, onBookSelect, onBackToLogin, feedbackAlert, setFeedbackAlert, setTeacherFeedback, notifications, setNotifications }) => {
+const BookListPage = ({ 
+  files, 
+  onBookSelect, 
+  onBackToLogin, 
+  feedbackAlert, 
+  setFeedbackAlert, 
+  setTeacherFeedback, 
+  notifications, 
+  setNotifications,
+  teacherFeedback,
+  teacherFeedbacks,
+  strokeData,
+  audioUrl,
+  currentPdfUrl,
+  activeFileIndex,
+  setSelectedSubmission,
+  setCurrentPage
+}) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [favorites, setFavorites] = useState(new Set());
-  const [activeTab, setActiveTab] = useState('books'); // 'books' 또는 'notifications'
   const [showFeedbackViewer, setShowFeedbackViewer] = useState(false);
   const [selectedFeedback, setSelectedFeedback] = useState(null);
 
@@ -158,7 +174,8 @@ const BookListPage = ({ files, onBookSelect, onBackToLogin, feedbackAlert, setFe
             </h1>
           </div>
           
-          {/* 알림 탭 */}
+          
+          {/* 탭 네비게이션 */}
           <div style={{
             display: 'flex',
             alignItems: 'center',
@@ -169,10 +186,9 @@ const BookListPage = ({ files, onBookSelect, onBackToLogin, feedbackAlert, setFe
             border: '1px solid rgba(249, 115, 22, 0.2)'
           }}>
             <button
-              onClick={() => setActiveTab('books')}
               style={{
-                background: activeTab === 'books' ? 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)' : 'transparent',
-                color: activeTab === 'books' ? 'white' : '#64748b',
+                background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+                color: 'white',
                 border: 'none',
                 borderRadius: '8px',
                 padding: '0.5rem 1rem',
@@ -186,10 +202,10 @@ const BookListPage = ({ files, onBookSelect, onBackToLogin, feedbackAlert, setFe
               교재
             </button>
             <button
-              onClick={() => setActiveTab('notifications')}
+              onClick={() => setCurrentPage('teacherFeedbackCards')}
               style={{
-                background: activeTab === 'notifications' ? 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)' : 'transparent',
-                color: activeTab === 'notifications' ? 'white' : '#64748b',
+                background: 'transparent',
+                color: '#64748b',
                 border: 'none',
                 borderRadius: '8px',
                 padding: '0.5rem 1rem',
@@ -200,14 +216,22 @@ const BookListPage = ({ files, onBookSelect, onBackToLogin, feedbackAlert, setFe
                 transition: 'all 0.2s ease',
                 position: 'relative'
               }}
+              onMouseEnter={(e) => {
+                e.target.style.background = 'rgba(249, 115, 22, 0.1)';
+                e.target.style.color = '#f97316';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.background = 'transparent';
+                e.target.style.color = '#64748b';
+              }}
             >
-              알림
-              {notifications.length > 0 && (
+              선생님 첨삭 확인
+              {(teacherFeedback || (teacherFeedbacks && teacherFeedbacks.length > 0)) && (
                 <span style={{
                   position: 'absolute',
                   top: '-4px',
                   right: '-4px',
-                  background: '#ef4444',
+                  background: '#f59e0b',
                   color: 'white',
                   borderRadius: '50%',
                   width: '18px',
@@ -218,7 +242,7 @@ const BookListPage = ({ files, onBookSelect, onBackToLogin, feedbackAlert, setFe
                   justifyContent: 'center',
                   fontWeight: 'bold'
                 }}>
-                  {notifications.length}
+                  {teacherFeedbacks ? teacherFeedbacks.length : 1}
                 </span>
               )}
             </button>
@@ -232,7 +256,7 @@ const BookListPage = ({ files, onBookSelect, onBackToLogin, feedbackAlert, setFe
         margin: '0 auto',
         padding: '2rem'
       }}>
-        {activeTab === 'books' ? (
+        {/* 교재 목록 */}
           <>
             {/* 검색 및 필터 */}
             <div style={{
@@ -479,273 +503,7 @@ const BookListPage = ({ files, onBookSelect, onBackToLogin, feedbackAlert, setFe
               </div>
             )}
           </>
-        ) : (
-          /* 알림 탭 */
-          <div style={{
-            background: 'rgba(255, 255, 255, 0.95)',
-            backdropFilter: 'blur(10px)',
-            borderRadius: '16px',
-            padding: '2rem',
-            boxShadow: '0 8px 32px rgba(30, 58, 138, 0.2)',
-            border: '1px solid rgba(59, 130, 246, 0.2)'
-          }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '1rem',
-              marginBottom: '2rem'
-            }}>
-              <div style={{
-                width: '50px',
-                height: '50px',
-                background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
-                borderRadius: '12px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
-                  <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
-                </svg>
-              </div>
-              <div>
-                <h2 style={{
-                  fontFamily: "'SEBANG Gothic', sans-serif",
-                  fontWeight: '700',
-                  fontSize: '1.5rem',
-                  color: '#1e293b',
-                  margin: '0 0 0.25rem 0'
-                }}>
-                  알림 센터
-                </h2>
-                <p style={{
-                  fontFamily: "'SEBANG Gothic', sans-serif",
-                  fontSize: '0.875rem',
-                  color: '#64748b',
-                  margin: '0'
-                }}>
-                  선생님과의 소통 내역을 확인하세요
-                </p>
-              </div>
-            </div>
 
-            {/* 알림 목록 */}
-            <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '1rem'
-            }}>
-              {/* 샘플 알림들 */}
-              <div style={{
-                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                color: 'white',
-                padding: '1.5rem',
-                borderRadius: '12px',
-                boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
-                border: '1px solid rgba(16, 185, 129, 0.2)'
-              }}>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '1rem',
-                  marginBottom: '0.5rem'
-                }}>
-                  <div style={{
-                    background: 'rgba(255, 255, 255, 0.2)',
-                    borderRadius: '50%',
-                    width: '40px',
-                    height: '40px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 style={{
-                      fontFamily: "'SEBANG Gothic', sans-serif",
-                      fontWeight: '600',
-                      fontSize: '1rem',
-                      margin: '0 0 0.25rem 0'
-                    }}>
-                      선생님 첨삭 도착
-                    </h3>
-                    <p style={{
-                      fontFamily: "'SEBANG Gothic', sans-serif",
-                      fontSize: '0.875rem',
-                      opacity: 0.9,
-                      margin: '0'
-                    }}>
-                      "셋카드 놀이를 해 봅시다" 교재에 대한 첨삭이 도착했습니다
-                    </p>
-                  </div>
-                </div>
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginTop: '1rem'
-                }}>
-                  <span style={{
-                    fontFamily: "'SEBANG Gothic', sans-serif",
-                    fontSize: '0.75rem',
-                    opacity: 0.8
-                  }}>
-                    2024.01.15 14:30
-                  </span>
-                  <button
-                    onClick={() => {
-                      // 첨삭 확인 로직
-                      setSelectedFeedback({
-                        bookTitle: '소마 프리미어 교재',
-                        studentName: '김학생',
-                        problemNumber: '문제 3',
-                        teacherName: '이선생님',
-                        feedbackDate: '2024.01.15',
-                        score: 85,
-                        comments: [
-                          {
-                            type: 'correct',
-                            text: '정답을 정확히 맞혔습니다!',
-                            position: { x: 200, y: 300 }
-                          },
-                          {
-                            type: 'improvement',
-                            text: '그래프를 더 정확하게 그려보세요.',
-                            position: { x: 150, y: 450 }
-                          },
-                          {
-                            type: 'encouragement',
-                            text: '계속 열심히 해주세요!',
-                            position: { x: 100, y: 600 }
-                          }
-                        ]
-                      });
-                      setShowFeedbackViewer(true);
-                    }}
-                    style={{
-                      background: 'rgba(255, 255, 255, 0.2)',
-                      border: 'none',
-                      color: 'white',
-                      padding: '0.5rem 1rem',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      fontSize: '0.875rem',
-                      fontFamily: "'SEBANG Gothic', sans-serif",
-                      fontWeight: '500'
-                    }}
-                  >
-                    확인하기
-                  </button>
-                </div>
-              </div>
-
-              <div style={{
-                background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                color: 'white',
-                padding: '1.5rem',
-                borderRadius: '12px',
-                boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)',
-                border: '1px solid rgba(59, 130, 246, 0.2)'
-              }}>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '1rem',
-                  marginBottom: '0.5rem'
-                }}>
-                  <div style={{
-                    background: 'rgba(255, 255, 255, 0.2)',
-                    borderRadius: '50%',
-                    width: '40px',
-                    height: '40px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 style={{
-                      fontFamily: "'SEBANG Gothic', sans-serif",
-                      fontWeight: '600',
-                      fontSize: '1rem',
-                      margin: '0 0 0.25rem 0'
-                    }}>
-                      과제 제출 완료
-                    </h3>
-                    <p style={{
-                      fontFamily: "'SEBANG Gothic', sans-serif",
-                      fontSize: '0.875rem',
-                      opacity: 0.9,
-                      margin: '0'
-                    }}>
-                      "21년 1학기 과학 - 동물들의 생활" 과제가 선생님에게 전송되었습니다
-                    </p>
-                  </div>
-                </div>
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginTop: '1rem'
-                }}>
-                  <span style={{
-                    fontFamily: "'SEBANG Gothic', sans-serif",
-                    fontSize: '0.75rem',
-                    opacity: 0.8
-                  }}>
-                    2024.01.15 10:15
-                  </span>
-                  <span style={{
-                    background: 'rgba(255, 255, 255, 0.2)',
-                    padding: '0.25rem 0.75rem',
-                    borderRadius: '12px',
-                    fontSize: '0.75rem',
-                    fontFamily: "'SEBANG Gothic', sans-serif",
-                    fontWeight: '500'
-                  }}>
-                    전송 완료
-                  </span>
-                </div>
-              </div>
-
-              {/* 빈 상태 */}
-              {notifications.length === 0 && (
-                <div style={{
-                  textAlign: 'center',
-                  padding: '3rem',
-                  color: '#64748b'
-                }}>
-                  <svg width="64" height="64" viewBox="0 0 24 24" fill="#cbd5e1" style={{ marginBottom: '1rem' }}>
-                    <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
-                  </svg>
-                  <h3 style={{
-                    fontFamily: "'SEBANG Gothic', sans-serif",
-                    fontSize: '1.25rem',
-                    fontWeight: '600',
-                    marginBottom: '0.5rem',
-                    color: '#374151'
-                  }}>
-                    새로운 알림이 없습니다
-                  </h3>
-                  <p style={{
-                    fontFamily: "'SEBANG Gothic', sans-serif",
-                    fontSize: '1rem',
-                    margin: '0',
-                    color: '#64748b'
-                  }}>
-                    선생님과의 소통 내역이 여기에 표시됩니다
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

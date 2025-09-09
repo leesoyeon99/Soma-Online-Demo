@@ -9,17 +9,212 @@ import AIChatbot from './components/AIChatbot';
 import TeacherLoginPage from './components/TeacherLoginPage';
 import TeacherBookListPage from './components/TeacherBookListPage';
 import TeacherAnnotationViewer from './components/TeacherAnnotationViewer';
+import TeacherSubmissionViewer from './components/TeacherSubmissionViewer';
+import TeacherFeedbackCards from './components/TeacherFeedbackCards';
 import AdminPage from './components/AdminPage';
 
 function App() {
   console.log('App 컴포넌트 렌더링 시작');
   
   // 페이지 상태 관리
-  const [currentPage, setCurrentPage] = useState('landing'); // 'landing', 'login', 'bookList', 'detail', 'teacherAnnotation'
+  const [currentPage, setCurrentPage] = useState('landing'); // 'landing', 'login', 'bookList', 'detail', 'teacherAnnotation', 'teacherFeedbackCards', 'teacherSubmission'
   // const [userType, setUserType] = useState(null); // 'admin', 'teacher', 'student' - 현재 사용하지 않음
   const [isAIChatbotOpen, setIsAIChatbotOpen] = useState(false);
   // const [isLoggedIn, setIsLoggedIn] = useState(false); // 현재 사용하지 않음
   const [selectedSubmission, setSelectedSubmission] = useState(null);
+  
+  // 기존 선생님 첨삭 데이터 로드
+  React.useEffect(() => {
+    const savedFeedback = localStorage.getItem('teacherFeedback');
+    const savedFeedbacks = localStorage.getItem('teacherFeedbacks');
+    
+    if (savedFeedback) {
+      try {
+        const feedbackData = JSON.parse(savedFeedback);
+        setTeacherFeedback(feedbackData);
+      } catch (error) {
+        console.error('선생님 첨삭 데이터 로드 실패:', error);
+      }
+    }
+    
+    if (savedFeedbacks) {
+      try {
+        const feedbacksData = JSON.parse(savedFeedbacks);
+        setTeacherFeedbacks(feedbacksData);
+      } catch (error) {
+        console.error('선생님 첨삭 목록 로드 실패:', error);
+      }
+    } else {
+      // 데모용 샘플 첨삭 데이터 생성
+      const demoFeedbacks = [
+        {
+          id: Date.now() - 86400000, // 1일 전
+          teacherId: 'teacher1',
+          teacherName: '김선생님',
+          timestamp: new Date(Date.now() - 86400000).toISOString(),
+          feedbackStrokeData: [
+            {
+              type: 'stroke',
+              tool: 'pen',
+              color: '#ef4444',
+              brushSize: 3,
+              points: [
+                { x: 100, y: 200 },
+                { x: 150, y: 200 },
+                { x: 200, y: 200 }
+              ],
+              timestamp: new Date(Date.now() - 86400000).toISOString()
+            },
+            {
+              type: 'text',
+              content: '아주 잘했어요!',
+              color: '#ef4444',
+              x: 100,
+              y: 220,
+              fontSize: 16,
+              timestamp: new Date(Date.now() - 86400000).toISOString()
+            },
+            {
+              type: 'text',
+              content: '눈금을 그리면 더 좋을 것 같아요',
+              color: '#ef4444',
+              x: 100,
+              y: 250,
+              fontSize: 14,
+              timestamp: new Date(Date.now() - 86400000).toISOString()
+            },
+            {
+              type: 'stroke',
+              tool: 'highlighter',
+              color: '#fbbf24',
+              brushSize: 5,
+              points: [
+                { x: 120, y: 280 },
+                { x: 180, y: 280 }
+              ],
+              timestamp: new Date(Date.now() - 86400000).toISOString()
+            }
+          ],
+          studentSubmissionId: 'demo1',
+          bookTitle: '소마 프리미어 교재 1',
+          bookUrl: '/somapremier.pdf'
+        },
+        {
+          id: Date.now() - 172800000, // 2일 전
+          teacherId: 'teacher2',
+          teacherName: '이선생님',
+          timestamp: new Date(Date.now() - 172800000).toISOString(),
+          feedbackStrokeData: [
+            {
+              type: 'stroke',
+              tool: 'pen',
+              color: '#3b82f6',
+              brushSize: 2,
+              points: [
+                { x: 80, y: 180 },
+                { x: 120, y: 180 },
+                { x: 160, y: 180 },
+                { x: 200, y: 180 }
+              ],
+              timestamp: new Date(Date.now() - 172800000).toISOString()
+            },
+            {
+              type: 'text',
+              content: '정답입니다!',
+              color: '#3b82f6',
+              x: 80,
+              y: 200,
+              fontSize: 16,
+              timestamp: new Date(Date.now() - 172800000).toISOString()
+            },
+            {
+              type: 'text',
+              content: '계속 열심히 해주세요',
+              color: '#3b82f6',
+              x: 80,
+              y: 230,
+              fontSize: 14,
+              timestamp: new Date(Date.now() - 172800000).toISOString()
+            }
+          ],
+          studentSubmissionId: 'demo2',
+          bookTitle: '소마 프리미어 교재 2(첨삭)',
+          bookUrl: '/somapremier.pdf'
+        },
+        {
+          id: Date.now() - 3600000, // 1시간 전 (신규)
+          teacherId: 'teacher1',
+          teacherName: '김선생님',
+          timestamp: new Date(Date.now() - 3600000).toISOString(),
+          feedbackStrokeData: [
+            {
+              type: 'stroke',
+              tool: 'pen',
+              color: '#10b981',
+              brushSize: 4,
+              points: [
+                { x: 90, y: 220 },
+                { x: 140, y: 220 },
+                { x: 190, y: 220 }
+              ],
+              timestamp: new Date(Date.now() - 3600000).toISOString()
+            },
+            {
+              type: 'stroke',
+              tool: 'highlighter',
+              color: '#f59e0b',
+              brushSize: 6,
+              points: [
+                { x: 100, y: 280 },
+                { x: 200, y: 280 }
+              ],
+              timestamp: new Date(Date.now() - 3600000).toISOString()
+            },
+            {
+              type: 'stroke',
+              tool: 'pen',
+              color: '#8b5cf6',
+              brushSize: 3,
+              points: [
+                { x: 110, y: 320 },
+                { x: 160, y: 320 },
+                { x: 210, y: 320 }
+              ],
+              timestamp: new Date(Date.now() - 3600000).toISOString()
+            },
+            {
+              type: 'text',
+              content: '훌륭해요!',
+              color: '#10b981',
+              x: 90,
+              y: 240,
+              fontSize: 16,
+              timestamp: new Date(Date.now() - 3600000).toISOString()
+            },
+            {
+              type: 'text',
+              content: '이 부분을 더 자세히 설명해보세요',
+              color: '#10b981',
+              x: 90,
+              y: 270,
+              fontSize: 14,
+              timestamp: new Date(Date.now() - 3600000).toISOString()
+            }
+          ],
+          studentSubmissionId: 'demo3',
+          bookTitle: '소마 프리미어 교재 1',
+          bookUrl: '/somapremier.pdf'
+        }
+      ];
+      
+      setTeacherFeedbacks(demoFeedbacks);
+      localStorage.setItem('teacherFeedbacks', JSON.stringify(demoFeedbacks));
+      
+      // 가장 최신 첨삭을 단일 첨삭으로도 설정
+      setTeacherFeedback(demoFeedbacks[0]);
+      localStorage.setItem('teacherFeedback', JSON.stringify(demoFeedbacks[0]));
+    }
+  }, []);
   
   // 파일 목록 - 소마 프리미어 교재들
   const files = [
@@ -64,7 +259,8 @@ function App() {
   
   // 학생-선생님 소통 관련 상태
   const [studentSubmission, setStudentSubmission] = useState(null); // 학생 제출 데이터
-  const [teacherFeedback, setTeacherFeedback] = useState(null); // 선생님 첨삭 데이터
+  const [teacherFeedback, setTeacherFeedback] = useState(null); // 선생님 첨삭 데이터 (단일)
+  const [teacherFeedbacks, setTeacherFeedbacks] = useState([]); // 선생님 첨삭 목록 (다중)
   const [showTeacherFeedback, setShowTeacherFeedback] = useState(false); // 학생이 선생님 첨삭 보기/숨기기
   const [submissionAlert, setSubmissionAlert] = useState(false); // 선생님에게 제출 알림
   const [feedbackAlert, setFeedbackAlert] = useState(false); // 학생에게 첨삭 알림
@@ -129,7 +325,7 @@ function App() {
   const handleGoToSubmissions = (submission) => {
     console.log('제출물 보기:', submission);
     setSelectedSubmission(submission);
-    setCurrentPage('teacherAnnotation');
+    setCurrentPage('teacherSubmission');
   };
 
 
@@ -258,6 +454,70 @@ function App() {
     
     // 선생님에게 알림 표시
     setSubmissionAlert(true);
+    
+    // 데모용: 자동으로 선생님 첨삭 생성 (3초 후)
+    setTimeout(() => {
+      const mockTeacherFeedback = {
+        id: Date.now(),
+        teacherId: 'teacher1',
+        teacherName: '선생님',
+        timestamp: new Date().toISOString(),
+        feedbackStrokeData: [
+          {
+            type: 'stroke',
+            tool: 'pen',
+            color: '#ef4444',
+            brushSize: 3,
+            points: [
+              { x: 100, y: 200 },
+              { x: 150, y: 200 },
+              { x: 200, y: 200 }
+            ],
+            timestamp: new Date().toISOString()
+          },
+          {
+            type: 'stroke',
+            tool: 'highlighter',
+            color: '#fbbf24',
+            brushSize: 5,
+            points: [
+              { x: 120, y: 250 },
+              { x: 180, y: 250 }
+            ],
+            timestamp: new Date().toISOString()
+          }
+        ],
+        studentSubmissionId: submission.id,
+        bookTitle: submission.bookTitle,
+        bookUrl: submission.bookUrl
+      };
+      
+      // 단일 첨삭 상태 업데이트 (기존 호환성)
+      setTeacherFeedback(mockTeacherFeedback);
+      localStorage.setItem('teacherFeedback', JSON.stringify(mockTeacherFeedback));
+      
+      // 다중 첨삭 목록에 추가
+      setTeacherFeedbacks(prev => {
+        const newFeedbacks = [mockTeacherFeedback, ...prev];
+        localStorage.setItem('teacherFeedbacks', JSON.stringify(newFeedbacks));
+        return newFeedbacks;
+      });
+      
+      // 학생에게 첨삭 알림 표시
+      setFeedbackAlert(true);
+      
+      // 알림 추가
+      const feedbackNotification = {
+        id: Date.now(),
+        type: 'feedback',
+        title: '선생님 첨삭 도착',
+        message: `"${submission.bookTitle}" 과제에 선생님 첨삭이 도착했습니다`,
+        timestamp: new Date().toISOString(),
+        isRead: false
+      };
+      
+      setNotifications(prev => [feedbackNotification, ...prev]);
+    }, 3000);
     
   };
 
@@ -490,6 +750,14 @@ function App() {
       setTeacherFeedback={setTeacherFeedback}
       notifications={notifications}
       setNotifications={setNotifications}
+      teacherFeedback={teacherFeedback}
+      teacherFeedbacks={teacherFeedbacks}
+      strokeData={strokeData}
+      audioUrl={audioUrl}
+      currentPdfUrl={currentPdfUrl}
+      activeFileIndex={activeFileIndex}
+      setSelectedSubmission={setSelectedSubmission}
+      setCurrentPage={setCurrentPage}
     />;
   }
 
@@ -512,12 +780,57 @@ function App() {
     return <AdminPage />;
   }
 
+  // 선생님 첨삭 카드 목록 페이지
+  if (currentPage === 'teacherFeedbackCards') {
+    return (
+      <TeacherFeedbackCards 
+        feedbacks={teacherFeedbacks}
+        onSelectFeedback={(feedback) => {
+          // 선택된 첨삭을 단일 첨삭으로 설정하고 상세 페이지로 이동
+          setTeacherFeedback(feedback);
+          const mockSubmission = {
+            id: Date.now(),
+            studentId: 'student1',
+            studentName: '학생',
+            timestamp: new Date().toISOString(),
+            strokeData: [],
+            audioUrl: null,
+            bookTitle: feedback.bookTitle,
+            bookUrl: feedback.bookUrl,
+            submittedAt: new Date().toISOString()
+          };
+          setSelectedSubmission(mockSubmission);
+          setCurrentPage('teacherAnnotation');
+        }}
+        onBackToBookList={() => setCurrentPage('bookList')}
+      />
+    );
+  }
+
   // 강사용 첨삭 페이지
   if (currentPage === 'teacherAnnotation') {
     return (
       <TeacherAnnotationViewer 
         submission={selectedSubmission}
-        onBack={() => setCurrentPage('teacherBookList')}
+        onBackToSubmissions={() => setCurrentPage('teacherFeedbackCards')}
+        onSaveFeedback={(feedback) => {
+          setTeacherFeedback(feedback);
+          setCurrentPage('bookList');
+        }}
+      />
+    );
+  }
+
+  // 강사용 제출물 첨삭 페이지
+  if (currentPage === 'teacherSubmission') {
+    return (
+      <TeacherSubmissionViewer 
+        submission={selectedSubmission}
+        onBackToSubmissions={() => setCurrentPage('teacherBookList')}
+        onSaveFeedback={(feedback) => {
+          // 강사 데모에서는 첨삭 저장 후 제출물 목록으로 돌아감
+          setCurrentPage('teacherBookList');
+        }}
       />
     );
   }
@@ -2008,6 +2321,61 @@ function App() {
                 </svg>
                 <span style={{ fontSize: '0.875rem', fontFamily: 'var(--font-ui)' }}>
                   {showTeacherFeedback ? '첨삭 숨기기' : '첨삭 보기'}
+                </span>
+              </button>
+            </div>
+          )}
+
+          {/* 선생님 첨삭 확인 섹션 */}
+          {(teacherFeedback || teacherFeedbacks.length > 0) && (
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.75rem',
+              marginBottom: '1rem'
+            }}>
+              <div style={{
+                fontSize: '0.875rem',
+                fontWeight: '600',
+                color: '#f3f4f6',
+                marginBottom: '0.5rem',
+                fontFamily: 'var(--font-ui)'
+              }}>
+                📝 선생님 첨삭
+              </div>
+
+              <button
+                onClick={() => {
+                  // 선생님 첨삭 카드 목록으로 이동
+                  setCurrentPage('teacherFeedbackCards');
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  padding: '0.75rem 1rem',
+                  borderRadius: '12px',
+                  backgroundColor: '#1f2937',
+                  border: '2px solid #3b82f6',
+                  color: '#60a5fa',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  width: '100%'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.backgroundColor = '#111827';
+                  e.target.style.borderColor = '#60a5fa';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = '#1f2937';
+                  e.target.style.borderColor = '#3b82f6';
+                }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                </svg>
+                <span style={{ fontSize: '0.875rem', fontFamily: 'var(--font-ui)' }}>
+                  선생님 첨삭 확인
                 </span>
               </button>
             </div>
