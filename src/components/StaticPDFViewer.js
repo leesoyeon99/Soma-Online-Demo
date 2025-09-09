@@ -201,7 +201,7 @@ const StaticPDFViewer = ({
     }
     
     return task;
-  }, []);
+  }, [renderTask]);
 
   // 페이지 변경 시 렌더링 (안전한 렌더링 + 페이지 제한)
   useEffect(() => {
@@ -257,7 +257,7 @@ const StaticPDFViewer = ({
         onPageChange(1);
       }
     }
-  }, [pdfDoc, pageNum, zoomScale, redrawMarkups, MAX_PAGES, onPageChange]);
+  }, [pdfDoc, pageNum, zoomScale, redrawMarkups, MAX_PAGES, onPageChange, renderPage, renderTask]);
 
   // 컴포넌트 언마운트 시 렌더링 작업 정리
   useEffect(() => {
@@ -497,7 +497,7 @@ const StaticPDFViewer = ({
     
     setIsDrawing(false);
     setCurrentPath([]);
-  }, [isDrawing, currentPath, selectedTool, selectedColor, brushSize, isRecording, onStrokeDataChange, redrawMarkups]);
+  }, [isDrawing, currentPath, selectedTool, selectedColor, brushSize, isRecording, onStrokeDataChange]);
 
   return (
     <div style={{ display: 'flex', height: '100%', gap: '1rem' }}>

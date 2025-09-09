@@ -144,43 +144,43 @@ const TeacherSubmissionViewer = ({
   }, [imageLoaded, createStudentWorkImage]);
 
   // 첨삭 그리기
-  const drawAnnotations = useCallback(() => {
-    // 빈 함수 - 나중에 구현 예정
-  }, []);
+  // const drawAnnotations = useCallback(() => {
+  //   // 빈 함수 - 나중에 구현 예정
+  // }, []);
 
   // 선생님 첨삭 그리기
-  const drawTeacherAnnotations = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    
-    const context = canvas.getContext('2d');
-    
-    teacherAnnotations.forEach(annotation => {
-      if (annotation.type === 'stroke') {
-        context.save();
-        context.strokeStyle = annotation.color;
-        context.lineWidth = annotation.brushSize;
-        context.lineCap = 'round';
-        context.lineJoin = 'round';
-        
-        if (annotation.tool === 'highlighter') {
-          context.globalAlpha = 0.3;
-          context.globalCompositeOperation = 'multiply';
-        } else {
-          context.globalAlpha = 1;
-          context.globalCompositeOperation = 'source-over';
-        }
-        
-        context.beginPath();
-        context.moveTo(annotation.points[0].x, annotation.points[0].y);
-        for (let i = 1; i < annotation.points.length; i++) {
-          context.lineTo(annotation.points[i].x, annotation.points[i].y);
-        }
-        context.stroke();
-        context.restore();
-      }
-    });
-  }, [teacherAnnotations]);
+  // const drawTeacherAnnotations = useCallback(() => {
+  //   const canvas = canvasRef.current;
+  //   if (!canvas) return;
+  //   
+  //   const context = canvas.getContext('2d');
+  //   
+  //   teacherAnnotations.forEach(annotation => {
+  //     if (annotation.type === 'stroke') {
+  //       context.save();
+  //       context.strokeStyle = annotation.color;
+  //       context.lineWidth = annotation.brushSize;
+  //       context.lineCap = 'round';
+  //       context.lineJoin = 'round';
+  //       
+  //       if (annotation.tool === 'highlighter') {
+  //         context.globalAlpha = 0.3;
+  //         context.globalCompositeOperation = 'multiply';
+  //       } else {
+  //         context.globalAlpha = 1;
+  //         context.globalCompositeOperation = 'source-over';
+  //       }
+  //       
+  //       context.beginPath();
+  //       context.moveTo(annotation.points[0].x, annotation.points[0].y);
+  //       for (let i = 1; i < annotation.points.length; i++) {
+  //         context.lineTo(annotation.points[i].x, annotation.points[i].y);
+  //       }
+  //       context.stroke();
+  //       context.restore();
+  //     }
+  //   });
+  // }, [teacherAnnotations]);
 
   // 마우스 이벤트 핸들러
   const handleMouseDown = (e) => {
