@@ -22,7 +22,7 @@ const BookListPage = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [favorites, setFavorites] = useState(new Set());
   const [showFeedbackViewer, setShowFeedbackViewer] = useState(false);
-  const [selectedFeedback, setSelectedFeedback] = useState(null);
+  // const [selectedFeedback, setSelectedFeedback] = useState(null);
 
   // 검색 필터링
   const filteredFiles = files.filter(file =>
@@ -54,7 +54,7 @@ const BookListPage = ({
   if (showFeedbackViewer) {
     return (
       <StudentFeedbackViewer
-        feedback={selectedFeedback}
+        feedback={null}
         onBackToStudentPage={() => setShowFeedbackViewer(false)}
       />
     );

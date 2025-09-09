@@ -2326,60 +2326,6 @@ function App() {
             </div>
           )}
 
-          {/* 선생님 첨삭 확인 섹션 */}
-          {(teacherFeedback || teacherFeedbacks.length > 0) && (
-            <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.75rem',
-              marginBottom: '1rem'
-            }}>
-              <div style={{
-                fontSize: '0.875rem',
-                fontWeight: '600',
-                color: '#f3f4f6',
-                marginBottom: '0.5rem',
-                fontFamily: 'var(--font-ui)'
-              }}>
-                📝 선생님 첨삭
-              </div>
-
-              <button
-                onClick={() => {
-                  // 선생님 첨삭 카드 목록으로 이동
-                  setCurrentPage('teacherFeedbackCards');
-                }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                  padding: '0.75rem 1rem',
-                  borderRadius: '12px',
-                  backgroundColor: '#1f2937',
-                  border: '2px solid #3b82f6',
-                  color: '#60a5fa',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  width: '100%'
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.backgroundColor = '#111827';
-                  e.target.style.borderColor = '#60a5fa';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.backgroundColor = '#1f2937';
-                  e.target.style.borderColor = '#3b82f6';
-                }}
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
-                </svg>
-                <span style={{ fontSize: '0.875rem', fontFamily: 'var(--font-ui)' }}>
-                  선생님 첨삭 확인
-                </span>
-              </button>
-            </div>
-          )}
 
           {/* AI 섹션 */}
           <div style={{

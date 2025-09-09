@@ -8,7 +8,7 @@ const TeacherSubmissionViewer = ({
   const canvasRef = useRef(null);
   const markupCanvasRef = useRef(null);
   const audioRef = useRef(null);
-  const imageRef = useRef(null);
+  // const imageRef = useRef(null);
   
   const [imageLoaded, setImageLoaded] = useState(false);
   const [zoomScale, setZoomScale] = useState(1.0);
@@ -127,7 +127,7 @@ const TeacherSubmissionViewer = ({
     
     const img = new Image();
     img.onload = () => {
-      const ctx = canvas.getContext('2d');
+      // const ctx = canvas.getContext('2d');
       const rect = canvas.getBoundingClientRect();
       const width = rect.width;
       const height = rect.height;
@@ -144,25 +144,25 @@ const TeacherSubmissionViewer = ({
   }, [imageLoaded, createStudentWorkImage]);
 
   // 첨삭 그리기
-  const drawAnnotations = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    
-    const context = canvas.getContext('2d');
-    context.clearRect(0, 0, canvas.width, canvas.height);
-    
-    if (showStudentWork) {
-      // 학생 필기 그리기
-      const img = new Image();
-      img.onload = () => {
-        context.drawImage(img, 0, 0, canvas.width, canvas.height);
-        drawTeacherAnnotations();
-      };
-      img.src = createStudentWorkImage();
-    } else {
-      drawTeacherAnnotations();
-    }
-  }, [showStudentWork, createStudentWorkImage]);
+  // const drawAnnotations = useCallback(() => {
+  //   const canvas = canvasRef.current;
+  //   if (!canvas) return;
+  //   
+  //   const context = canvas.getContext('2d');
+  //   context.clearRect(0, 0, canvas.width, canvas.height);
+  //   
+  //   if (showStudentWork) {
+  //     // 학생 필기 그리기
+  //     const img = new Image();
+  //     img.onload = () => {
+  //       context.drawImage(img, 0, 0, canvas.width, canvas.height);
+  //       drawTeacherAnnotations();
+  //     };
+  //     img.src = createStudentWorkImage();
+  //   } else {
+  //     drawTeacherAnnotations();
+  //   }
+  // }, [showStudentWork, createStudentWorkImage]);
 
   // 선생님 첨삭 그리기
   const drawTeacherAnnotations = useCallback(() => {
