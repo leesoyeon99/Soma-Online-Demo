@@ -431,19 +431,36 @@ const StaticPDFViewer = ({
     if (canvas) {
       const context = canvas.getContext('2d');
       
-      // 그리기 설정을 한 번만 설정
-      context.save();
-      context.beginPath();
-      context.lineWidth = brushSize;
-      context.strokeStyle = selectedColor;
-      context.lineCap = 'round';
-      context.lineJoin = 'round';
-      context.globalCompositeOperation = 'source-over';
-      
-      context.moveTo(lastPos.x, lastPos.y);
-      context.lineTo(pos.x, pos.y);
-      context.stroke();
-      context.restore();
+      if (selectedTool === 'eraser') {
+        // 지우개 기능
+        context.save();
+        context.globalCompositeOperation = 'destination-out';
+        context.beginPath();
+        context.arc(pos.x, pos.y, brushSize, 0, 2 * Math.PI);
+        context.fill();
+        context.restore();
+      } else if (['pen', 'highlighter'].includes(selectedTool)) {
+        // 펜/하이라이터 기능
+        context.save();
+        context.beginPath();
+        context.lineWidth = brushSize;
+        context.strokeStyle = selectedColor;
+        context.lineCap = 'round';
+        context.lineJoin = 'round';
+        
+        if (selectedTool === 'highlighter') {
+          context.globalAlpha = 0.3;
+          context.globalCompositeOperation = 'multiply';
+        } else {
+          context.globalAlpha = 1;
+          context.globalCompositeOperation = 'source-over';
+        }
+        
+        context.moveTo(lastPos.x, lastPos.y);
+        context.lineTo(pos.x, pos.y);
+        context.stroke();
+        context.restore();
+      }
     }
   }, [isDrawing, selectedTool, getEventPos, lastPos, brushSize, selectedColor]);
 
