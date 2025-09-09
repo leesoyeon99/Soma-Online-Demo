@@ -144,25 +144,9 @@ const TeacherSubmissionViewer = ({
   }, [imageLoaded, createStudentWorkImage]);
 
   // 첨삭 그리기
-  // const drawAnnotations = useCallback(() => {
-  //   const canvas = canvasRef.current;
-  //   if (!canvas) return;
-  //   
-  //   const context = canvas.getContext('2d');
-  //   context.clearRect(0, 0, canvas.width, canvas.height);
-  //   
-  //   if (showStudentWork) {
-  //     // 학생 필기 그리기
-  //     const img = new Image();
-  //     img.onload = () => {
-  //       context.drawImage(img, 0, 0, canvas.width, canvas.height);
-  //       drawTeacherAnnotations();
-  //     };
-  //     img.src = createStudentWorkImage();
-  //   } else {
-  //     drawTeacherAnnotations();
-  //   }
-  // }, [showStudentWork, createStudentWorkImage]);
+  const drawAnnotations = useCallback(() => {
+    // 빈 함수 - 나중에 구현 예정
+  }, []);
 
   // 선생님 첨삭 그리기
   const drawTeacherAnnotations = useCallback(() => {

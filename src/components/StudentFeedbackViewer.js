@@ -5,8 +5,8 @@ const StudentFeedbackViewer = ({
   onBackToStudentPage 
 }) => {
   const canvasRef = useRef(null);
-  const audioRef = useRef(null);
-  const imageRef = useRef(null);
+  // const audioRef = useRef(null);
+  // const imageRef = useRef(null);
   
   const [imageLoaded, setImageLoaded] = useState(false);
   const [zoomScale, setZoomScale] = useState(1.0);
@@ -16,9 +16,9 @@ const StudentFeedbackViewer = ({
   const [showTeacherFeedback, setShowTeacherFeedback] = useState(true);
   
   // 오디오 재생 상태
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
+  // const [isPlaying, setIsPlaying] = useState(false);
+  // const [currentTime, setCurrentTime] = useState(0);
+  // const [duration, setDuration] = useState(0);
 
   // 가상의 학생 필기 + 선생님 첨삭 이미지 생성
   const createFeedbackImage = useCallback(() => {
@@ -206,50 +206,50 @@ const StudentFeedbackViewer = ({
   };
 
   // 오디오 재생 핸들러
-  const handleAudioPlay = () => {
-    const audio = audioRef.current;
-    if (audio) {
-      if (isPlaying) {
-        audio.pause();
-        setIsPlaying(false);
-      } else {
-        audio.play();
-        setIsPlaying(true);
-      }
-    }
-  };
+  // const handleAudioPlay = () => {
+  //   const audio = audioRef.current;
+  //   if (audio) {
+  //     if (isPlaying) {
+  //       audio.pause();
+  //       setIsPlaying(false);
+  //     } else {
+  //       audio.play();
+  //       setIsPlaying(true);
+  //     }
+  //   }
+  // };
 
   // 오디오 시간 업데이트
-  const handleTimeUpdate = () => {
-    const audio = audioRef.current;
-    if (audio) {
-      setCurrentTime(audio.currentTime);
-    }
-  };
+  // const handleTimeUpdate = () => {
+  //   const audio = audioRef.current;
+  //   if (audio) {
+  //     setCurrentTime(audio.currentTime);
+  //   }
+  // };
 
   // 오디오 로드 완료
-  const handleLoadedMetadata = () => {
-    const audio = audioRef.current;
-    if (audio) {
-      setDuration(audio.duration);
-    }
-  };
+  // const handleLoadedMetadata = () => {
+  //   const audio = audioRef.current;
+  //   if (audio) {
+  //     setDuration(audio.duration);
+  //   }
+  // };
 
   // 오디오 종료
-  const handleAudioEnded = () => {
-    setIsPlaying(false);
-    setCurrentTime(0);
-  };
+  // const handleAudioEnded = () => {
+  //   setIsPlaying(false);
+  //   setCurrentTime(0);
+  // };
 
   // 시간 포맷팅
-  const formatTime = (seconds) => {
-    if (isNaN(seconds) || !isFinite(seconds) || seconds < 0) {
-      return '0:00';
-    }
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
+  // const formatTime = (seconds) => {
+  //   if (isNaN(seconds) || !isFinite(seconds) || seconds < 0) {
+  //     return '0:00';
+  //   }
+  //   const mins = Math.floor(seconds / 60);
+  //   const secs = Math.floor(seconds % 60);
+  //   return `${mins}:${secs.toString().padStart(2, '0')}`;
+  // };
 
   if (!feedback) {
     return (

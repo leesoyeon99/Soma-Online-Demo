@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 
 const TeacherSubmissionPage = ({ onBackToBookList, onViewSubmission }) => {
   const [submissions, setSubmissions] = useState([]);
-  const [selectedSubmission, setSelectedSubmission] = useState(null);
+  // const [selectedSubmission, setSelectedSubmission] = useState(null);
   const [filterStatus, setFilterStatus] = useState('all'); // 'all', 'pending', 'graded'
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -637,7 +637,7 @@ const TeacherSubmissionPage = ({ onBackToBookList, onViewSubmission }) => {
 
   // 제출물 상세 보기
   const handleViewSubmission = (submission) => {
-    setSelectedSubmission(submission);
+    // setSelectedSubmission(submission);
     if (onViewSubmission) {
       onViewSubmission(submission);
     }

@@ -8,7 +8,7 @@ const TeacherAnnotationViewer = ({
   const canvasRef = useRef(null);
   const markupCanvasRef = useRef(null);
   const audioRef = useRef(null);
-  const imageRef = useRef(null);
+  // const imageRef = useRef(null);
   
   const [imageLoaded, setImageLoaded] = useState(false);
   const [zoomScale, setZoomScale] = useState(1.0);

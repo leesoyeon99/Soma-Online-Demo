@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import MathProblemImage from "./MathProblemImage";
 
 // Mock data
@@ -83,9 +83,9 @@ export default function AdminPage() {
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   
   // 페이지 선택 UI 개선을 위한 새로운 상태들
-  const [currentPageRange, setCurrentPageRange] = useState({ start: 1, end: 20 });
+  // const [currentPageRange, setCurrentPageRange] = useState({ start: 1, end: 20 });
   const [pageSearchQuery, setPageSearchQuery] = useState('');
-  const [showPageNavigator, setShowPageNavigator] = useState(false);
+  // const [showPageNavigator, setShowPageNavigator] = useState(false);
   const [selectedPageSection, setSelectedPageSection] = useState(1);
 
   // 페이지 섹션 계산 (20페이지씩 그룹화)
@@ -118,10 +118,10 @@ export default function AdminPage() {
   };
 
   // 페이지 섹션 변경
-  const changePageSection = (sectionId) => {
+  const changePageSection = useCallback((sectionId) => {
     setSelectedPageSection(sectionId);
     setPageSearchQuery('');
-  };
+  }, []);
 
   // 페이지 범위 점프
   const jumpToPageRange = (startPage) => {
@@ -131,7 +131,7 @@ export default function AdminPage() {
   };
 
   // 전체 선택/해제
-  const toggleAllPages = () => {
+  const toggleAllPages = useCallback(() => {
     if (selectedPages.length >= 20) {
       setSelectedPages([]);
     } else {
@@ -140,7 +140,7 @@ export default function AdminPage() {
       const pagesToAdd = availablePages.slice(0, remainingSlots);
       setSelectedPages(prev => [...prev, ...pagesToAdd]);
     }
-  };
+  }, [selectedPages, filteredPages]);
 
   // 키보드 단축키 지원
   React.useEffect(() => {
@@ -167,6 +167,9 @@ export default function AdminPage() {
               if (selectedPageSection < pageSections.length) {
                 changePageSection(selectedPageSection + 1);
               }
+              break;
+            default:
+              // 다른 키는 처리하지 않음
               break;
           }
         } else if (e.key === 'Escape') {
