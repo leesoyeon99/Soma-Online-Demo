@@ -220,14 +220,20 @@ function App() {
   const files = [
     { 
       id: 1, 
-      title: '소마 프리미어 교재 1', 
-      url: '/somapremier.pdf',
+      title: '2023 프리미어 초급2-내지 DEMO', 
+      url: '/assets/pdf/2023-프리미어 초급2-내지_DEMO_compressed.pdf',
       type: 'pdf'
     },
     { 
       id: 2, 
-      title: '소마 프리미어 교재 2(첨삭)', 
-      url: '/somapremier.pdf',
+      title: '2023 프리미어 초급2-내지 DEMO (첨삭)', 
+      url: '/assets/pdf/2023-프리미어 초급2-내지_DEMO_compressed.pdf',
+      type: 'pdf'
+    },
+    { 
+      id: 3, 
+      title: '2023 프리미어 초급2-내지 DEMO (학습)', 
+      url: '/assets/pdf/2023-프리미어 초급2-내지_DEMO_compressed.pdf',
       type: 'pdf'
     }
   ];

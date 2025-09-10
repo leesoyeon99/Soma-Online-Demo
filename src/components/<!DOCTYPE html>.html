@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF 뷰어</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .page-canvas {
+            border: 1px solid #e2e8f0;
+            margin: 0 auto;
+            display: block;
+        }
+        .file-item {
+            cursor: pointer;
+            padding: 8px 12px;
+            border-radius: 8px;
+            transition: background-color 0.2s;
+        }
+        .file-item:hover {
+            background-color: #f1f5f9;
+        }
+        .active-file {
+            background-color: #e2e8f0;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <div class="flex h-screen overflow-hidden">
+        <!-- Sidebar -->
+        <aside class="w-72 bg-white border-r border-slate-200 p-4 flex flex-col shadow-lg">
+            <h1 class="text-2xl font-bold mb-6 text-center">파일 목록</h1>
+            <div id="file-list" class="flex-grow overflow-y-auto space-y-2">
+                <!-- 파일 목록이 여기에 동적으로 추가됩니다 -->
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 flex flex-col p-6 overflow-hidden">
+            <!-- Toolbar -->
+            <div class="bg-white rounded-xl shadow-md p-3 mb-6 flex items-center justify-between space-x-4">
+                <div class="flex items-center space-x-2">
+                    <button id="prev-page-btn" class="p-2 bg-slate-100 hover:bg-slate-200 rounded-full transition"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" /></svg></button>
+                    <input type="number" id="page-num-input" class="w-16 p-1 border border-slate-300 rounded-md text-center focus:outline-none focus:ring-2 focus:ring-blue-500" value="1">
+                    <span id="page-count" class="text-slate-500">/ 0</span>
+                    <button id="next-page-btn" class="p-2 bg-slate-100 hover:bg-slate-200 rounded-full transition"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg></button>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button id="zoom-out-btn" class="p-2 bg-slate-100 hover:bg-slate-200 rounded-full transition"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5 10a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z" clip-rule="evenodd" /></svg></button>
+                    <span id="zoom-level" class="w-12 text-center text-sm font-semibold">100%</span>
+                    <button id="zoom-in-btn" class="p-2 bg-slate-100 hover:bg-slate-200 rounded-full transition"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" /></svg></button>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button id="pen-mode-btn" class="p-2 bg-slate-100 hover:bg-slate-200 rounded-full transition"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-7.293 7.293A1 1 0 018.32 14H6a1 1 0 01-1-1v-2.32a1 1 0 01.293-.707l7.293-7.293z" /><path fill-rule="evenodd" d="M6 16h4v2H6a2 2 0 01-2-2v-2h2v2zm12-4v2a2 2 0 01-2 2h-4v-2h4v-2zm-2-8a2 2 0 012-2h-4v2h4v2zm-2 12v-2a2 2 0 012-2h2v-2h-2a2 2 0 01-2 2v2zm-4-8H6v-2h8v2zM12 4h2a2 2 0 012 2v2a2 2 0 01-2 2h-2v-2h2V6h-2z" clip-rule="evenodd" /></svg></button>
+                    <button id="erase-mode-btn" class="p-2 bg-slate-100 hover:bg-slate-200 rounded-full transition"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9.999 1.5a8.5 8.5 0 100 17 8.5 8.5 0 000-17zM7.293 6.707a1 1 0 011.414 0L10 8.586l1.293-1.293a1 1 0 111.414 1.414L11.414 10l1.293 1.293a1 1 0 01-1.414 1.414L10 11.414l-1.293 1.293a1 1 0 01-1.414-1.414L8.586 10 7.293 8.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg></button>
+                </div>
+            </div>
+
+            <!-- PDF Container -->
+            <div id="pdf-container" class="flex-1 overflow-auto bg-slate-100 rounded-xl shadow-inner p-4">
+                <div id="page-wrapper" class="relative">
+                    <canvas id="pdf-canvas" class="page-canvas"></canvas>
+                    <canvas id="markup-canvas" class="absolute top-0 left-0 page-canvas"></canvas>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+
+        const fileListElement = document.getElementById('file-list');
+        const pageNumInput = document.getElementById('page-num-input');
+        const pageCountSpan = document.getElementById('page-count');
+        const prevPageBtn = document.getElementById('prev-page-btn');
+        const nextPageBtn = document.getElementById('next-page-btn');
+        const zoomInBtn = document.getElementById('zoom-in-btn');
+        const zoomOutBtn = document.getElementById('zoom-out-btn');
+        const zoomLevelSpan = document.getElementById('zoom-level');
+        const penModeBtn = document.getElementById('pen-mode-btn');
+        const eraseModeBtn = document.getElementById('erase-mode-btn');
+        const pdfCanvas = document.getElementById('pdf-canvas');
+        const markupCanvas = document.getElementById('markup-canvas');
+        const pageWrapper = document.getElementById('page-wrapper');
+        
+        let pdfDoc = null;
+        let pageNum = 1;
+        let pageRendering = false;
+        let pageNumPending = null;
+        let scale = 1.0;
+        let zoomScale = 1.0;
+        let activeFileIndex = -1;
+
+        let drawingMode = 'pen';
+        let isDrawing = false;
+        let lastX = 0;
+        let lastY = 0;
+
+        const files = [
+            { id: 1, title: '21년 1학기 과학 - 동물들의 생활', url: 'https://cdn.glitch.global/c6b4859a-1150-4813-8686-353d7191316b/animals.pdf' },
+            { id: 2, title: '22년 1학기 수학 - 개념 셀프북', url: 'https://cdn.glitch.global/c6b4859a-1150-4813-8686-353d7191316b/math_concept_book.pdf' },
+            { id: 3, title: '21년 2학기 과학 - 물의 여행', url: 'https://cdn.glitch.global/c6b4859a-1150-4813-8686-353d7191316b/water_cycle.pdf' },
+        ];
+
+        const savedDrawings = {};
+
+        // 파일 목록을 동적으로 생성
+        function renderFileList() {
+            fileListElement.innerHTML = '';
+            files.forEach((file, index) => {
+                const fileItem = document.createElement('div');
+                fileItem.className = `file-item rounded-lg ${index === activeFileIndex ? 'active-file' : ''}`;
+                fileItem.innerHTML = `
+                    <div class="flex items-center space-x-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd" /></svg>
+                        <span class="text-sm font-medium">${file.title}</span>
+                    </div>
+                `;
+                fileItem.addEventListener('click', () => {
+                    loadDocument(file.url, index);
+                });
+                fileListElement.appendChild(fileItem);
+            });
+        }
+
+        // PDF 문서 로드
+        function loadDocument(url, index) {
+            if (activeFileIndex === index) return;
+            activeFileIndex = index;
+            renderFileList();
+            pdfjsLib.getDocument(url).promise.then(pdf => {
+                pdfDoc = pdf;
+                pageCountSpan.textContent = `/ ${pdf.numPages}`;
+                pageNum = 1;
+                renderPage(pageNum);
+            }).catch(error => {
+                console.error('PDF 로드 오류:', error);
+                alert('PDF 파일을 로드하는 데 실패했습니다. 콘솔을 확인해주세요.');
+            });
+        }
+
+        // 페이지 렌더링
+        function renderPage(num) {
+            pageRendering = true;
+            pageNumInput.value = num;
+
+            pdfDoc.getPage(num).then(page => {
+                const viewport = page.getViewport({ scale: 1.0 });
+                scale = pageWrapper.clientWidth / viewport.width;
+
+                pdfCanvas.height = viewport.height * scale;
+                pdfCanvas.width = viewport.width * scale;
+
+                markupCanvas.height = viewport.height * scale;
+                markupCanvas.width = viewport.width * scale;
+
+                pageWrapper.style.height = `${pdfCanvas.height}px`;
+
+                const renderContext = {
+                    canvasContext: pdfCanvas.getContext('2d'),
+                    viewport: page.getViewport({ scale: scale * zoomScale }),
+                };
+                
+                const renderTask = page.render(renderContext);
+                renderTask.promise.then(() => {
+                    pageRendering = false;
+                    if (pageNumPending !== null) {
+                        renderPage(pageNumPending);
+                        pageNumPending = null;
+                    }
+                    redrawMarkups(num);
+                });
+            });
+        }
+
+        // 페이지 렌더링 대기
+        function queueRenderPage(num) {
+            if (pageRendering) {
+                pageNumPending = num;
+            } else {
+                renderPage(num);
+            }
+        }
+
+        // 페이지 이동 함수
+        function onPrevPage() {
+            if (pageNum <= 1) return;
+            pageNum--;
+            queueRenderPage(pageNum);
+        }
+
+        function onNextPage() {
+            if (pageNum >= pdfDoc.numPages) return;
+            pageNum++;
+            queueRenderPage(pageNum);
+        }
+
+        function onZoomIn() {
+            zoomScale += 0.1;
+            zoomLevelSpan.textContent = `${Math.round(zoomScale * 100)}%`;
+            queueRenderPage(pageNum);
+        }
+
+        function onZoomOut() {
+            if (zoomScale <= 0.1) return;
+            zoomScale -= 0.1;
+            zoomLevelSpan.textContent = `${Math.round(zoomScale * 100)}%`;
+            queueRenderPage(pageNum);
+        }
+
+        // 마크업 기능
+        const markupCtx = markupCanvas.getContext('2d');
+        markupCtx.lineWidth = 3;
+        markupCtx.lineCap = 'round';
+        markupCtx.strokeStyle = 'rgba(255, 0, 0, 0.8)';
+        
+        function getMousePos(canvas, evt) {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                x: evt.clientX - rect.left,
+                y: evt.clientY - rect.top
+            };
+        }
+
+        function getTouchPos(canvas, evt) {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                x: evt.touches[0].clientX - rect.left,
+                y: evt.touches[0].clientY - rect.top
+            };
+        }
+
+        function startDrawing(e) {
+            if (drawingMode === 'pen') {
+                isDrawing = true;
+                const pos = e.type.startsWith('mouse') ? getMousePos(markupCanvas, e) : getTouchPos(markupCanvas, e);
+                [lastX, lastY] = [pos.x, pos.y];
+                if (!savedDrawings[pageNum]) {
+                    savedDrawings[pageNum] = [];
+                }
+                savedDrawings[pageNum].push({ type: 'start', x: lastX, y: lastY });
+            }
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            const pos = e.type.startsWith('mouse') ? getMousePos(markupCanvas, e) : getTouchPos(markupCanvas, e);
+            const [x, y] = [pos.x, pos.y];
+
+            if (drawingMode === 'pen') {
+                markupCtx.beginPath();
+                markupCtx.moveTo(lastX, lastY);
+                markupCtx.lineTo(x, y);
+                markupCtx.stroke();
+                
+                if (savedDrawings[pageNum]) {
+                    savedDrawings[pageNum].push({ type: 'draw', x: x, y: y });
+                }
+
+                [lastX, lastY] = [x, y];
+            } else if (drawingMode === 'erase') {
+                const eraseSize = 10;
+                markupCtx.clearRect(x - eraseSize / 2, y - eraseSize / 2, eraseSize, eraseSize);
+
+                // For simplicity, we just clear the canvas. A more robust solution would track and remove strokes.
+                // Re-draw all strokes except the erased ones.
+                const allStrokes = savedDrawings[pageNum] || [];
+                const newStrokes = allStrokes.filter(stroke => {
+                    // This is a very basic check. A real eraser would be more complex.
+                    const dist = Math.sqrt(Math.pow(stroke.x - x, 2) + Math.pow(stroke.y - y, 2));
+                    return dist > 10; // Simple distance check
+                });
+                savedDrawings[pageNum] = newStrokes;
+                redrawMarkups(pageNum);
+            }
+        }
+
+        function stopDrawing() {
+            isDrawing = false;
+        }
+
+        function redrawMarkups(page) {
+            markupCtx.clearRect(0, 0, markupCanvas.width, markupCanvas.height);
+            const strokes = savedDrawings[page] || [];
+            
+            let isPathStarted = false;
+
+            for (let i = 0; i < strokes.length; i++) {
+                const stroke = strokes[i];
+                if (stroke.type === 'start') {
+                    if (isPathStarted) {
+                        markupCtx.stroke();
+                    }
+                    markupCtx.beginPath();
+                    markupCtx.moveTo(stroke.x, stroke.y);
+                    isPathStarted = true;
+                } else if (stroke.type === 'draw') {
+                    markupCtx.lineTo(stroke.x, stroke.y);
+                }
+            }
+            if (isPathStarted) {
+                markupCtx.stroke();
+            }
+        }
+        
+        // 이벤트 리스너 설정
+        prevPageBtn.addEventListener('click', onPrevPage);
+        nextPageBtn.addEventListener('click', onNextPage);
+        zoomInBtn.addEventListener('click', onZoomIn);
+        zoomOutBtn.addEventListener('click', onZoomOut);
+        
+        pageNumInput.addEventListener('change', () => {
+            const page = parseInt(pageNumInput.value, 10);
+            if (page > 0 && page <= pdfDoc.numPages) {
+                pageNum = page;
+                queueRenderPage(pageNum);
+            }
+        });
+
+        penModeBtn.addEventListener('click', () => { drawingMode = 'pen'; penModeBtn.classList.add('bg-blue-200'); eraseModeBtn.classList.remove('bg-red-200'); });
+        eraseModeBtn.addEventListener('click', () => { drawingMode = 'erase'; eraseModeBtn.classList.add('bg-red-200'); penModeBtn.classList.remove('bg-blue-200'); });
+        
+        markupCanvas.addEventListener('mousedown', startDrawing);
+        markupCanvas.addEventListener('mousemove', draw);
+        markupCanvas.addEventListener('mouseup', stopDrawing);
+        markupCanvas.addEventListener('mouseout', stopDrawing);
+
+        markupCanvas.addEventListener('touchstart', startDrawing);
+        markupCanvas.addEventListener('touchmove', draw);
+        markupCanvas.addEventListener('touchend', stopDrawing);
+
+        // 초기화
+        renderFileList();
+        loadDocument(files[0].url, 0);
+
+        // 창 크기 변경 시 캔버스 크기 재조정
+        window.addEventListener('resize', () => {
+            if (pdfDoc) {
+                queueRenderPage(pageNum);
+            }
+        });
+
+    </script>
+
+</body>
+</html>

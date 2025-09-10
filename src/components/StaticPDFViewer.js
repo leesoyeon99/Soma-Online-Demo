@@ -34,8 +34,8 @@ const StaticPDFViewer = ({
   const [isRendering, setIsRendering] = useState(false);
   const renderTaskRef = useRef(null);
   
-  // PDF 페이지 제한 (성능 최적화)
-  const MAX_PAGES = 5; // 최대 5페이지만 표시
+  // PDF 페이지 제한 제거 - 전체 페이지 표시
+  // const MAX_PAGES = 5; // 최대 5페이지만 표시
   // 썸네일 기능 임시 비활성화 (성능 최적화)
   const [thumbnails, setThumbnails] = useState({});
   const [showThumbnails, setShowThumbnails] = useState(false);
@@ -79,14 +79,13 @@ const StaticPDFViewer = ({
         const pdf = await loadingTask.promise;
         
         setPdfDoc(pdf);
-        // 실제 페이지 수와 표시할 페이지 수 중 작은 값 사용
-        const displayPages = Math.min(pdf.numPages, MAX_PAGES);
-        setTotalPages(displayPages);
+        // 전체 페이지 수 표시
+        setTotalPages(pdf.numPages);
         if (onPageCountChange) {
-          onPageCountChange(displayPages);
+          onPageCountChange(pdf.numPages);
         }
         
-        console.log(`PDF 로드 완료: 전체 ${pdf.numPages}페이지 중 ${displayPages}페이지만 표시`);
+        console.log(`PDF 로드 완료: 전체 ${pdf.numPages}페이지 표시`);
         
         console.log('PDF 로드 완료:', pdf.numPages, '페이지');
         setPageRendering(false);
@@ -266,9 +265,9 @@ const StaticPDFViewer = ({
 
   // 페이지 변경 시 렌더링 (단순화된 안전한 렌더링)
   useEffect(() => {
-    console.log('📄 페이지 변경 감지:', { pdfDoc: !!pdfDoc, pageNum, MAX_PAGES });
+    console.log('📄 페이지 변경 감지:', { pdfDoc: !!pdfDoc, pageNum, totalPages });
     
-    if (pdfDoc && pageNum && pageNum <= MAX_PAGES) {
+    if (pdfDoc && pageNum && pageNum <= totalPages) {
       console.log('🚀 페이지 렌더링 시작');
       setPageRendering(true);
       
@@ -316,16 +315,16 @@ const StaticPDFViewer = ({
       
       // 렌더링 시작
       renderCurrentPage();
-    } else if (pageNum > MAX_PAGES) {
-      // 제한된 페이지 범위를 벗어나면 첫 페이지로 이동
-      console.log(`⚠️ 페이지 ${pageNum}은 제한 범위(${MAX_PAGES}페이지)를 벗어납니다.`);
+    } else if (pageNum > totalPages) {
+      // 페이지 범위를 벗어나면 첫 페이지로 이동
+      console.log(`⚠️ 페이지 ${pageNum}은 전체 페이지 수(${totalPages}페이지)를 벗어납니다.`);
       if (onPageChange) {
         onPageChange(1);
       }
     } else {
       console.log('⏸️ PDF 문서가 로드되지 않음 또는 페이지 번호가 유효하지 않음');
     }
-  }, [pdfDoc, pageNum, zoomScale, redrawMarkups, MAX_PAGES, onPageChange, renderPage]);
+  }, [pdfDoc, pageNum, zoomScale, redrawMarkups, totalPages, onPageChange, renderPage]);
 
   // 컴포넌트 언마운트 시 렌더링 작업 정리
   useEffect(() => {
@@ -765,15 +764,14 @@ const StaticPDFViewer = ({
                 onClick={() => setIsVideoModalOpen(true)}
                 style={{
                   position: 'absolute',
-                  top: '50%',
-                  left: '50%',
-                  transform: 'translate(-50%, -50%)',
+                  top: '17%',
+                  left: '40%',
                   background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
                   color: 'white',
                   border: 'none',
                   borderRadius: '50%',
-                  width: '64px',
-                  height: '64px',
+                  width: '56px',
+                  height: '56px',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
@@ -781,19 +779,66 @@ const StaticPDFViewer = ({
                   boxShadow: '0 4px 16px rgba(249, 115, 22, 0.4)',
                   transition: 'all 0.3s ease',
                   zIndex: 10,
-                  pointerEvents: 'auto'
+                  pointerEvents: 'auto',
+                  opacity: 0.9
                 }}
                 onMouseEnter={(e) => {
-                  e.target.style.transform = 'translate(-50%, -50%) scale(1.1)';
+                  e.target.style.transform = 'scale(1.1)';
                   e.target.style.boxShadow = '0 6px 24px rgba(249, 115, 22, 0.6)';
+                  e.target.style.opacity = '1';
                 }}
                 onMouseLeave={(e) => {
-                  e.target.style.transform = 'translate(-50%, -50%) scale(1)';
+                  e.target.style.transform = 'scale(1)';
                   e.target.style.boxShadow = '0 4px 16px rgba(249, 115, 22, 0.4)';
+                  e.target.style.opacity = '0.9';
                 }}
               >
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M8 5v14l11-7z"/>
+                </svg>
+              </button>
+            )}
+
+            {/* 음성 버튼 - 2페이지에만 표시 */}
+            {pageNum === 2 && (
+              <button
+                onClick={() => {
+                  // 음성 재생 기능 (임시)
+                  alert('음성 재생 기능입니다!');
+                }}
+                style={{
+                  position: 'absolute',
+                  top: '17%',
+                  left: '45%',
+                  background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '56px',
+                  height: '56px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 4px 16px rgba(249, 115, 22, 0.4)',
+                  transition: 'all 0.3s ease',
+                  zIndex: 10,
+                  pointerEvents: 'auto',
+                  opacity: 0.9
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.transform = 'scale(1.1)';
+                  e.target.style.boxShadow = '0 6px 24px rgba(249, 115, 22, 0.6)';
+                  e.target.style.opacity = '1';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.transform = 'scale(1)';
+                  e.target.style.boxShadow = '0 4px 16px rgba(249, 115, 22, 0.4)';
+                  e.target.style.opacity = '0.9';
+                }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 1c-4.97 0-9 4.03-9 9v7c0 1.66 1.34 3 3 3h3v-8H5v-2c0-3.87 3.13-7 7-7s7 3.13 7 7v2h-4v8h4c1.66 0 3-1.34 3-3v-7c0-4.97-4.03-9-9-9z"/>
                 </svg>
               </button>
             )}
