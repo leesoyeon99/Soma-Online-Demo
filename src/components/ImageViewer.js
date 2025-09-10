@@ -309,7 +309,12 @@ const ImageViewer = ({
           flexDirection: 'column',
           gap: '1rem'
         }}>
-          <span style={{ color: '#ef4444', fontSize: '1.2rem' }}>⚠️ 이미지를 불러올 수 없습니다</span>
+          <span style={{ color: '#ef4444', fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+            </svg>
+            이미지를 불러올 수 없습니다
+          </span>
           <span style={{ color: '#6b7280', fontSize: '0.9rem' }}>이미지 URL을 확인해주세요</span>
         </div>
       )}

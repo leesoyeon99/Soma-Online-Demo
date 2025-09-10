@@ -28,11 +28,13 @@ const StaticPDFViewer = ({
   
   const [pdfDoc, setPdfDoc] = useState(null);
   const [pageRendering, setPageRendering] = useState(false);
-  const [savedDrawings, setSavedDrawings] = useState([]);
+  const [savedDrawings, setSavedDrawings] = useState({}); // 페이지별 필기 데이터 저장
+  const [currentPageDrawings, setCurrentPageDrawings] = useState([]); // 현재 페이지의 필기
   const [totalPages, setTotalPages] = useState(0);
   const [renderTask, setRenderTask] = useState(null);
   const [isRendering, setIsRendering] = useState(false);
   const renderTaskRef = useRef(null);
+  const scrollPositionRef = useRef({ x: 0, y: 0 }); // 스크롤 위치 저장
   
   // PDF 페이지 제한 제거 - 전체 페이지 표시
   // const MAX_PAGES = 5; // 최대 5페이지만 표시
@@ -85,6 +87,20 @@ const StaticPDFViewer = ({
           onPageCountChange(pdf.numPages);
         }
         
+        // 강사 모드에서 저장된 첨삭 데이터 로드
+        if (isTeacherMode) {
+          const savedTeacherFeedback = localStorage.getItem(`teacherFeedback_${pdfFileName}`);
+          if (savedTeacherFeedback) {
+            try {
+              const feedbackData = JSON.parse(savedTeacherFeedback);
+              setSavedDrawings(feedbackData);
+              console.log('저장된 강사 첨삭 데이터 로드됨:', feedbackData);
+            } catch (error) {
+              console.error('강사 첨삭 데이터 로드 실패:', error);
+            }
+          }
+        }
+        
         console.log(`PDF 로드 완료: 전체 ${pdf.numPages}페이지 표시`);
         
         console.log('PDF 로드 완료:', pdf.numPages, '페이지');
@@ -98,7 +114,7 @@ const StaticPDFViewer = ({
     if (pdfFileName) {
       loadPDF();
     }
-  }, [pdfFileName, onPageCountChange]);
+  }, [pdfFileName, onPageCountChange, isTeacherMode]);
 
   // 스트로크 그리기
   const drawStroke = (context, drawing) => {
@@ -143,11 +159,103 @@ const StaticPDFViewer = ({
       });
     }
     
-    // 현재 저장된 그림들 그리기
-    savedDrawings.forEach(drawing => {
+    // 현재 페이지의 필기 데이터 그리기
+    const pageDrawings = savedDrawings[pageNum] || [];
+    pageDrawings.forEach(drawing => {
       drawStroke(context, drawing);
     });
-  }, [savedDrawings, isTeacherMode, studentStrokeData, isStudentMode, teacherFeedbackData, showTeacherFeedback]);
+  }, [savedDrawings, pageNum, isTeacherMode, studentStrokeData, isStudentMode, teacherFeedbackData, showTeacherFeedback]);
+
+  // 전체 삭제 이벤트 리스너
+  useEffect(() => {
+    const handleClearAll = () => {
+      setSavedDrawings({});
+      setCurrentPageDrawings([]);
+      if (onStrokeDataChange) {
+        onStrokeDataChange([]);
+      }
+      
+      // 강사 모드에서 로컬 스토리지도 삭제
+      if (isTeacherMode) {
+        localStorage.removeItem(`teacherFeedback_${pdfFileName}`);
+      }
+      
+      // 캔버스 다시 그리기
+      redrawMarkups();
+    };
+    
+    window.addEventListener('clearAllDrawings', handleClearAll);
+    return () => window.removeEventListener('clearAllDrawings', handleClearAll);
+  }, [onStrokeDataChange, isTeacherMode, pdfFileName, redrawMarkups]);
+
+  // 채점 표시 이벤트 리스너
+  useEffect(() => {
+    const handleAddGradingMarks = (event) => {
+      const { marks } = event.detail;
+      
+      // 각 표시를 빨간펜으로 그리기
+      marks.forEach((mark, index) => {
+        const canvas = markupCanvasRef.current;
+        if (!canvas) return;
+        
+        const context = canvas.getContext('2d');
+        context.save();
+        
+        if (mark.type === 'correct') {
+          // O 그리기 (초록색)
+          context.strokeStyle = '#10b981';
+          context.fillStyle = 'rgba(16, 185, 129, 0.1)';
+          context.lineWidth = 4;
+          context.beginPath();
+          context.arc(mark.x, mark.y, 20, 0, 2 * Math.PI);
+          context.fill();
+          context.stroke();
+          
+          // 체크마크 그리기
+          context.strokeStyle = '#10b981';
+          context.lineWidth = 3;
+          context.lineCap = 'round';
+          context.beginPath();
+          context.moveTo(mark.x - 8, mark.y);
+          context.lineTo(mark.x - 2, mark.y + 6);
+          context.lineTo(mark.x + 8, mark.y - 6);
+          context.stroke();
+        } else {
+          // X 그리기 (빨간색)
+          context.strokeStyle = '#ef4444';
+          context.fillStyle = 'rgba(239, 68, 68, 0.1)';
+          context.lineWidth = 4;
+          context.beginPath();
+          context.arc(mark.x, mark.y, 20, 0, 2 * Math.PI);
+          context.fill();
+          context.stroke();
+          
+          // X 표시 그리기
+          context.strokeStyle = '#ef4444';
+          context.lineWidth = 3;
+          context.lineCap = 'round';
+          context.beginPath();
+          context.moveTo(mark.x - 12, mark.y - 12);
+          context.lineTo(mark.x + 12, mark.y + 12);
+          context.moveTo(mark.x + 12, mark.y - 12);
+          context.lineTo(mark.x - 12, mark.y + 12);
+          context.stroke();
+        }
+        
+        // 점수 표시 (선택사항)
+        context.fillStyle = mark.type === 'correct' ? '#10b981' : '#ef4444';
+        context.font = 'bold 12px Arial';
+        context.textAlign = 'center';
+        context.textBaseline = 'top';
+        context.fillText(`${mark.score}/${mark.maxScore}`, mark.x, mark.y + 25);
+        
+        context.restore();
+      });
+    };
+    
+    window.addEventListener('addGradingMarks', handleAddGradingMarks);
+    return () => window.removeEventListener('addGradingMarks', handleAddGradingMarks);
+  }, []);
 
   // 캔버스 재생성 (강제 초기화)
   const recreateCanvas = useCallback(() => {
@@ -208,7 +316,7 @@ const StaticPDFViewer = ({
         currentTask.cancel();
         console.log('✅ 이전 렌더링 작업 취소됨');
       } catch (error) {
-        console.log('⚠️ 렌더링 작업 취소 중 오류:', error);
+        console.log('렌더링 작업 취소 중 오류:', error);
       }
       renderTaskRef.current = null;
     }
@@ -233,7 +341,7 @@ const StaticPDFViewer = ({
       };
       
       // 새로운 렌더링 작업
-      console.log('🎨 PDF 렌더링 작업 시작');
+      console.log('PDF 렌더링 작업 시작');
       const task = page.render(renderContext);
       renderTaskRef.current = task;
       setRenderTask(task);
@@ -249,7 +357,7 @@ const StaticPDFViewer = ({
       return task;
     } catch (error) {
       if (error.name === 'RenderingCancelledException') {
-        console.log('⏹️ 렌더링이 취소되었습니다');
+        console.log('렌더링이 취소되었습니다');
         renderTaskRef.current = null;
         setRenderTask(null);
         setIsRendering(false);
@@ -265,11 +373,15 @@ const StaticPDFViewer = ({
 
   // 페이지 변경 시 렌더링 (단순화된 안전한 렌더링)
   useEffect(() => {
-    console.log('📄 페이지 변경 감지:', { pdfDoc: !!pdfDoc, pageNum, totalPages });
+    console.log('페이지 변경 감지:', { pdfDoc: !!pdfDoc, pageNum, totalPages });
     
     if (pdfDoc && pageNum && pageNum <= totalPages) {
       console.log('🚀 페이지 렌더링 시작');
       setPageRendering(true);
+      
+      // 현재 페이지의 필기 데이터 로드
+      const pageDrawings = savedDrawings[pageNum] || [];
+      setCurrentPageDrawings(pageDrawings);
       
       // 렌더링 작업을 순차적으로 처리
       const renderCurrentPage = async () => {
@@ -287,7 +399,7 @@ const StaticPDFViewer = ({
           
           if (canvas && markupCanvas) {
             const scale = zoomScale || 1.0;
-            console.log('⚙️ 렌더링 설정:', { scale });
+            console.log('렌더링 설정:', { scale });
             
             // PDF 렌더링
             await renderPage(page, canvas, scale);
@@ -299,11 +411,27 @@ const StaticPDFViewer = ({
             
             // 마크업 다시 그리기 (지연 실행으로 성능 최적화)
             setTimeout(() => {
-              console.log('🎨 마크업 다시 그리기');
-              redrawMarkups();
+              console.log('마크업 다시 그리기');
+              
+              // 현재 페이지의 필기 데이터 그리기
+              const markupCanvas = markupCanvasRef.current;
+              if (markupCanvas) {
+                const context = markupCanvas.getContext('2d');
+                const pageDrawings = savedDrawings[pageNum] || [];
+                pageDrawings.forEach(drawing => {
+                  drawStroke(context, drawing);
+                });
+              }
+              
+              // 스크롤 위치 복원 (리렌더링 후 위치 유지)
+              const container = containerRef.current;
+              if (container && scrollPositionRef.current) {
+                container.scrollLeft = scrollPositionRef.current.x;
+                container.scrollTop = scrollPositionRef.current.y;
+              }
             }, 100);
           } else {
-            console.warn('⚠️ 캔버스가 준비되지 않음');
+            console.warn('캔버스가 준비되지 않음');
           }
         } catch (error) {
           console.error('❌ 페이지 렌더링 오류:', error);
@@ -317,14 +445,14 @@ const StaticPDFViewer = ({
       renderCurrentPage();
     } else if (pageNum > totalPages) {
       // 페이지 범위를 벗어나면 첫 페이지로 이동
-      console.log(`⚠️ 페이지 ${pageNum}은 전체 페이지 수(${totalPages}페이지)를 벗어납니다.`);
+      console.log(`페이지 ${pageNum}은 전체 페이지 수(${totalPages}페이지)를 벗어납니다.`);
       if (onPageChange) {
         onPageChange(1);
       }
     } else {
-      console.log('⏸️ PDF 문서가 로드되지 않음 또는 페이지 번호가 유효하지 않음');
+      console.log('PDF 문서가 로드되지 않음 또는 페이지 번호가 유효하지 않음');
     }
-  }, [pdfDoc, pageNum, zoomScale, redrawMarkups, totalPages, onPageChange, renderPage]);
+  }, [pdfDoc, pageNum, zoomScale, totalPages, onPageChange, renderPage]);
 
   // 컴포넌트 언마운트 시 렌더링 작업 정리
   useEffect(() => {
@@ -473,6 +601,15 @@ const StaticPDFViewer = ({
     e.preventDefault();
     e.stopPropagation();
     
+    // 스크롤 위치 저장 (리렌더링 방지)
+    const container = containerRef.current;
+    if (container) {
+      scrollPositionRef.current = {
+        x: container.scrollLeft,
+        y: container.scrollTop
+      };
+    }
+    
     const pos = getEventPos(e);
     setLastPos(pos);
     setCurrentPath(prev => [...prev, pos]);
@@ -483,29 +620,66 @@ const StaticPDFViewer = ({
       const context = canvas.getContext('2d');
       
       if (selectedTool === 'eraser') {
-        // 지우개 기능
-        context.save();
-        context.globalCompositeOperation = 'destination-out';
-        context.beginPath();
-        context.arc(pos.x, pos.y, brushSize, 0, 2 * Math.PI);
-        context.fill();
-        context.restore();
-      } else if (['pen', 'highlighter'].includes(selectedTool)) {
-        // 펜/하이라이터 기능
+        // 지우개 기능 - 스트로크 단위로 지우기
+        const currentPageDrawings = savedDrawings[pageNum] || [];
+        const threshold = brushSize * 3; // 지우개 크기의 3배 범위 내에서 스트로크 찾기
+        
+        for (let i = currentPageDrawings.length - 1; i >= 0; i--) {
+          const stroke = currentPageDrawings[i];
+          if (stroke.points && stroke.points.length > 0) {
+            // 스트로크의 각 점들과 마우스 위치 비교
+            for (let j = 0; j < stroke.points.length; j++) {
+              const point = stroke.points[j];
+              const distance = Math.sqrt(
+                Math.pow(point.x - pos.x, 2) + Math.pow(point.y - pos.y, 2)
+              );
+              
+              if (distance <= threshold) {
+                // 해당 스트로크를 삭제
+                const updatedPageDrawings = currentPageDrawings.filter((_, index) => index !== i);
+                setSavedDrawings(prev => ({
+                  ...prev,
+                  [pageNum]: updatedPageDrawings
+                }));
+                
+                // 현재 페이지 필기 상태도 업데이트
+                setCurrentPageDrawings(updatedPageDrawings);
+                
+                // 부모 컴포넌트에 전체 스트로크 데이터 전달
+                if (onStrokeDataChange) {
+                  const allDrawings = Object.values({
+                    ...savedDrawings,
+                    [pageNum]: updatedPageDrawings
+                  }).flat();
+                  onStrokeDataChange(allDrawings);
+                }
+                
+                // 강사 모드에서 로컬 스토리지에 자동 저장
+                if (isTeacherMode) {
+                  const updatedDrawings = {
+                    ...savedDrawings,
+                    [pageNum]: updatedPageDrawings
+                  };
+                  localStorage.setItem(`teacherFeedback_${pdfFileName}`, JSON.stringify(updatedDrawings));
+                }
+                
+                // 캔버스 다시 그리기
+                redrawMarkups();
+                return;
+              }
+            }
+          }
+        }
+      } else if (selectedTool === 'pen') {
+        // 펜 기능
         context.save();
         context.beginPath();
         context.lineWidth = brushSize;
         context.strokeStyle = selectedColor;
         context.lineCap = 'round';
         context.lineJoin = 'round';
-        
-        if (selectedTool === 'highlighter') {
-          context.globalAlpha = 0.3;
-          context.globalCompositeOperation = 'multiply';
-        } else {
-          context.globalAlpha = 1;
-          context.globalCompositeOperation = 'source-over';
-        }
+        context.globalAlpha = 1;
+        context.globalCompositeOperation = 'source-over';
         
         context.moveTo(lastPos.x, lastPos.y);
         context.lineTo(pos.x, pos.y);
@@ -534,21 +708,35 @@ const StaticPDFViewer = ({
         isRecording: isRecording
       };
       
+      // 현재 페이지의 필기 데이터에 추가
       setSavedDrawings(prev => {
-        const updatedDrawings = [...prev, newDrawing];
-        // 부모 컴포넌트에 스트로크 데이터 전달
-        if (onStrokeDataChange) {
-          onStrokeDataChange(updatedDrawings);
+        const updatedPageDrawings = {
+          ...prev,
+          [pageNum]: [...(prev[pageNum] || []), newDrawing]
+        };
+        
+        // 강사 모드에서 로컬 스토리지에 자동 저장
+        if (isTeacherMode) {
+          localStorage.setItem(`teacherFeedback_${pdfFileName}`, JSON.stringify(updatedPageDrawings));
+          console.log('강사 첨삭 데이터 자동 저장됨:', updatedPageDrawings);
         }
-        return updatedDrawings;
+        
+        // 부모 컴포넌트에 전체 스트로크 데이터 전달 (모든 페이지의 필기)
+        if (onStrokeDataChange) {
+          const allDrawings = Object.values(updatedPageDrawings).flat();
+          onStrokeDataChange(allDrawings);
+        }
+        
+        return updatedPageDrawings;
       });
       
-      // 그리기 완료 후 마크업 다시 그리기 제거 (성능 최적화)
+      // 현재 페이지 필기 상태도 업데이트
+      setCurrentPageDrawings(prev => [...prev, newDrawing]);
     }
     
     setIsDrawing(false);
     setCurrentPath([]);
-  }, [isDrawing, currentPath, selectedTool, selectedColor, brushSize, isRecording, onStrokeDataChange]);
+  }, [isDrawing, currentPath, selectedTool, selectedColor, brushSize, isRecording, onStrokeDataChange, pageNum]);
 
   return (
     <div style={{ display: 'flex', height: '100%', gap: '1rem' }}>
@@ -575,7 +763,10 @@ const StaticPDFViewer = ({
               marginBottom: '1rem',
               textAlign: 'center'
             }}>
-              📄 페이지 미리보기
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style={{ marginRight: '8px' }}>
+                <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+              </svg>
+              페이지 미리보기
             </div>
             
             <div style={{

@@ -134,7 +134,9 @@ const ReactPDFViewer = ({
             fontWeight: '500'
           }}
         >
-          🔍-
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+          </svg>
         </button>
         
         <span style={{ 
@@ -160,7 +162,9 @@ const ReactPDFViewer = ({
             fontWeight: '500'
           }}
         >
-          🔍+
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M19 13H5v-2h14v2z"/>
+          </svg>
         </button>
       </div>
 
@@ -191,7 +195,12 @@ const ReactPDFViewer = ({
               textAlign: 'center',
               color: '#ef4444'
             }}>
-              ⚠️ PDF 파일을 불러올 수 없습니다
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+                </svg>
+                PDF 파일을 불러올 수 없습니다
+              </div>
             </div>
           }
         >

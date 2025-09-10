@@ -1,16 +1,13 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import StaticPDFViewer from './StaticPDFViewer';
 
 const TeacherSubmissionViewer = ({ 
   submission, 
   onBackToSubmissions, 
   onSaveFeedback 
 }) => {
-  const canvasRef = useRef(null);
-  const markupCanvasRef = useRef(null);
   const audioRef = useRef(null);
-  // const imageRef = useRef(null);
   
-  const [imageLoaded, setImageLoaded] = useState(false);
   const [zoomScale, setZoomScale] = useState(1.0);
   
   // 첨삭 도구 상태
@@ -18,130 +15,23 @@ const TeacherSubmissionViewer = ({
   const [selectedColor, setSelectedColor] = useState('#ef4444');
   const [brushSize, setBrushSize] = useState(3);
   
-  // 그리기 상태
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [lastPos, setLastPos] = useState({ x: 0, y: 0 });
-  const [currentPath, setCurrentPath] = useState([]);
-  
   // 첨삭 데이터
   const [teacherAnnotations, setTeacherAnnotations] = useState([]);
-  const [showStudentWork, setShowStudentWork] = useState(true);
-  const [showTeacherAnnotations, setShowTeacherAnnotations] = useState(true);
   
   // 오디오 재생 상태
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
 
-  // 가상의 학생 필기 이미지 생성
-  const createStudentWorkImage = useCallback(() => {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    
-    // 캔버스 크기 설정 (A4 비율)
-    canvas.width = 800;
-    canvas.height = 1000;
-    
-    // 배경 (흰색)
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    // 교재 제목
-    ctx.fillStyle = '#1e3a8a';
-    ctx.font = 'bold 24px "SEBANG Gothic", sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(submission?.bookTitle || '소마 프리미어 교재', canvas.width / 2, 50);
-    
-    // 문제 번호
-    ctx.fillStyle = '#374151';
-    ctx.font = '18px "SEBANG Gothic", sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText('문제 3', 50, 100);
-    
-    // 문제 내용
-    ctx.fillStyle = '#1f2937';
-    ctx.font = '16px "SEBANG Gothic", sans-serif';
-    ctx.fillText('다음 그래프를 보고 답하세요.', 50, 130);
-    
-    // 그래프 그리기
-    ctx.strokeStyle = '#3b82f6';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(100, 200);
-    ctx.lineTo(100, 400);
-    ctx.lineTo(500, 400);
-    ctx.stroke();
-    
-    // X축 라벨
-    ctx.fillStyle = '#6b7280';
-    ctx.font = '14px "SEBANG Gothic", sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('시간 (분)', 300, 420);
-    
-    // Y축 라벨
-    ctx.save();
-    ctx.translate(80, 300);
-    ctx.rotate(-Math.PI / 2);
-    ctx.fillText('온도 (°C)', 0, 0);
-    ctx.restore();
-    
-    // 학생 답안 (가상의 필기)
-    ctx.strokeStyle = '#1f2937';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(150, 350);
-    ctx.lineTo(200, 350);
-    ctx.lineTo(250, 300);
-    ctx.lineTo(300, 250);
-    ctx.lineTo(350, 200);
-    ctx.stroke();
-    
-    // 학생 이름과 제출 시간
-    ctx.fillStyle = '#6b7280';
-    ctx.font = '14px "SEBANG Gothic", sans-serif';
-    ctx.textAlign = 'right';
-    ctx.fillText(`학생: ${submission?.studentName || '김학생'}`, canvas.width - 50, canvas.height - 50);
-    ctx.fillText(`제출: ${submission?.submittedAt ? new Date(submission.submittedAt).toLocaleString() : '2024.01.15 14:30'}`, canvas.width - 50, canvas.height - 30);
-    
-    return canvas.toDataURL();
-  }, [submission]);
-
-  // 이미지 로드
-  useEffect(() => {
-    if (submission) {
-      const img = new Image();
-      img.onload = () => {
-        setImageLoaded(true);
-        drawStudentWork();
-      };
-      img.src = createStudentWorkImage();
+  // PDF 파일명 추출
+  const getPdfFileName = () => {
+    if (!submission?.bookUrl) return 'somapremier.pdf';
+    const url = submission.bookUrl;
+    if (url.includes('/')) {
+      return url.split('/').pop();
     }
-  }, [submission, createStudentWorkImage]);
-
-  // 학생 필기 그리기
-  const drawStudentWork = useCallback(() => {
-    if (!imageLoaded) return;
-    
-    const canvas = markupCanvasRef.current;
-    if (!canvas) return;
-    
-    const img = new Image();
-    img.onload = () => {
-      // const ctx = canvas.getContext('2d');
-      const rect = canvas.getBoundingClientRect();
-      const width = rect.width;
-      const height = rect.height;
-      
-      canvas.width = width;
-      canvas.height = height;
-      
-      const context = canvas.getContext('2d');
-      context.imageSmoothingEnabled = true;
-      context.imageSmoothingQuality = 'high';
-      context.drawImage(img, 0, 0, width, height);
-    };
-    img.src = createStudentWorkImage();
-  }, [imageLoaded, createStudentWorkImage]);
+    return url;
+  };
 
   // 첨삭 그리기
   // const drawAnnotations = useCallback(() => {
@@ -182,82 +72,15 @@ const TeacherSubmissionViewer = ({
   //   });
   // }, [teacherAnnotations]);
 
-  // 마우스 이벤트 핸들러
-  const handleMouseDown = (e) => {
-    if (selectedTool === 'eraser') return;
-    
-    const rect = canvasRef.current.getBoundingClientRect();
-    const x = (e.clientX - rect.left) * zoomScale;
-    const y = (e.clientY - rect.top) * zoomScale;
-    
-    setIsDrawing(true);
-    setLastPos({ x, y });
-    setCurrentPath([{ x, y }]);
-  };
 
-  const handleMouseMove = (e) => {
-    if (!isDrawing) return;
-    
-    const rect = canvasRef.current.getBoundingClientRect();
-    const x = (e.clientX - rect.left) * zoomScale;
-    const y = (e.clientY - rect.top) * zoomScale;
-    
-    const pos = { x, y };
-    
-    if (selectedTool === 'pen' || selectedTool === 'highlighter') {
-      drawStroke(pos);
+  // 전체 삭제
+  const handleClearAll = () => {
+    if (window.confirm('현재 페이지의 모든 첨삭을 삭제하시겠습니까?')) {
+      setTeacherAnnotations([]);
+      // StaticPDFViewer의 전체 삭제 이벤트 발생
+      const event = new CustomEvent('clearAllDrawings');
+      window.dispatchEvent(event);
     }
-    
-    setLastPos(pos);
-    setCurrentPath(prev => [...prev, pos]);
-  };
-
-  const handleMouseUp = () => {
-    if (!isDrawing) return;
-    
-    setIsDrawing(false);
-    
-    if (currentPath.length > 0) {
-      const newAnnotation = {
-        type: 'stroke',
-        tool: selectedTool,
-        color: selectedColor,
-        brushSize: brushSize,
-        points: currentPath,
-        timestamp: new Date().toISOString()
-      };
-      
-      setTeacherAnnotations(prev => [...prev, newAnnotation]);
-    }
-    
-    setCurrentPath([]);
-  };
-
-  // 스트로크 그리기
-  const drawStroke = (pos) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    
-    const context = canvas.getContext('2d');
-    context.save();
-    context.lineWidth = brushSize;
-    context.lineCap = 'round';
-    context.lineJoin = 'round';
-    
-    if (selectedTool === 'highlighter') {
-      context.globalAlpha = 0.3;
-      context.globalCompositeOperation = 'multiply';
-    } else {
-      context.globalAlpha = 1;
-      context.globalCompositeOperation = 'source-over';
-    }
-    
-    context.strokeStyle = selectedColor;
-    context.beginPath();
-    context.moveTo(lastPos.x, lastPos.y);
-    context.lineTo(pos.x, pos.y);
-    context.stroke();
-    context.restore();
   };
 
   // 첨삭 저장
@@ -354,27 +177,31 @@ const TeacherSubmissionViewer = ({
       }}>
         <div style={{
           display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
+          flexDirection: 'column',
+          gap: '1rem',
           marginBottom: '1rem'
         }}>
-          <button
-            onClick={onBackToSubmissions}
-            style={{
-              background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              padding: '0.5rem 1rem',
-              cursor: 'pointer',
-              fontSize: '0.9rem',
-              fontWeight: '600',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            ← 제출물 목록으로
-          </button>
+          {/* 뒤로가기 버튼 */}
+          <div style={{ alignSelf: 'flex-start' }}>
+            <button
+              onClick={onBackToSubmissions}
+              style={{
+                background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '0.5rem 1rem',
+                cursor: 'pointer',
+                fontSize: '0.9rem',
+                fontWeight: '600',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              ← 제출물 목록으로
+            </button>
+          </div>
           
+          {/* 제목과 학생 정보 */}
           <div>
             <h1 style={{
               color: '#1e3a8a',
@@ -400,7 +227,9 @@ const TeacherSubmissionViewer = ({
           display: 'flex',
           gap: '1rem',
           alignItems: 'center',
-          flexWrap: 'wrap'
+          flexWrap: 'nowrap',
+          overflowX: 'auto',
+          paddingBottom: '0.5rem'
         }}>
           <div style={{
             display: 'flex',
@@ -414,7 +243,7 @@ const TeacherSubmissionViewer = ({
             }}>
               도구:
             </span>
-            {['pen', 'highlighter', 'eraser'].map(tool => (
+            {['pen', 'eraser'].map(tool => (
               <button
                 key={tool}
                 onClick={() => setSelectedTool(tool)}
@@ -427,10 +256,11 @@ const TeacherSubmissionViewer = ({
                   cursor: 'pointer',
                   fontSize: '0.875rem',
                   fontWeight: '500',
-                  transition: 'all 0.2s ease'
+                  transition: 'all 0.2s ease',
+                  whiteSpace: 'nowrap'
                 }}
               >
-                {tool === 'pen' ? '펜' : tool === 'highlighter' ? '하이라이터' : '지우개'}
+                {tool === 'pen' ? '펜' : '지우개'}
               </button>
             ))}
           </div>
@@ -494,44 +324,6 @@ const TeacherSubmissionViewer = ({
             </span>
           </div>
 
-          <div style={{
-            display: 'flex',
-            gap: '0.5rem',
-            alignItems: 'center'
-          }}>
-            <button
-              onClick={() => setShowStudentWork(!showStudentWork)}
-              style={{
-                background: showStudentWork ? '#10b981' : '#6b7280',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                padding: '0.5rem 1rem',
-                cursor: 'pointer',
-                fontSize: '0.875rem',
-                fontWeight: '500',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              {showStudentWork ? '학생 필기 숨기기' : '학생 필기 보기'}
-            </button>
-            <button
-              onClick={() => setShowTeacherAnnotations(!showTeacherAnnotations)}
-              style={{
-                background: showTeacherAnnotations ? '#10b981' : '#6b7280',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                padding: '0.5rem 1rem',
-                cursor: 'pointer',
-                fontSize: '0.875rem',
-                fontWeight: '500',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              {showTeacherAnnotations ? '첨삭 숨기기' : '첨삭 보기'}
-            </button>
-          </div>
         </div>
       </div>
 
@@ -541,7 +333,7 @@ const TeacherSubmissionViewer = ({
         gap: '2rem',
         height: 'calc(100vh - 200px)'
       }}>
-        {/* 캔버스 영역 */}
+        {/* PDF 뷰어 영역 */}
         <div style={{
           flex: 1,
           background: 'white',
@@ -552,6 +344,22 @@ const TeacherSubmissionViewer = ({
           position: 'relative',
           overflow: 'hidden'
         }}>
+          <StaticPDFViewer
+            pdfFileName={getPdfFileName()}
+            pageNum={1}
+            zoomScale={zoomScale}
+            selectedTool={selectedTool}
+            selectedColor={selectedColor}
+            brushSize={brushSize}
+            onStrokeDataChange={(strokeData) => {
+              setTeacherAnnotations(strokeData);
+            }}
+            isTeacherMode={true}
+            onPageCountChange={() => {}}
+            onPageChange={() => {}}
+          />
+          
+          {/* 줌 컨트롤 */}
           <div style={{
             position: 'absolute',
             top: '1rem',
@@ -599,33 +407,6 @@ const TeacherSubmissionViewer = ({
               +
             </button>
           </div>
-
-          <canvas
-            ref={canvasRef}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
-            style={{
-              width: '100%',
-              height: '100%',
-              cursor: selectedTool === 'eraser' ? 'crosshair' : 'crosshair',
-              border: '1px solid #e5e7eb',
-              borderRadius: '8px'
-            }}
-          />
-          <canvas
-            ref={markupCanvasRef}
-            style={{
-              position: 'absolute',
-              top: '1rem',
-              left: '1rem',
-              width: 'calc(100% - 2rem)',
-              height: 'calc(100% - 2rem)',
-              pointerEvents: 'none',
-              zIndex: 1
-            }}
-          />
         </div>
 
         {/* 사이드바 */}
@@ -746,7 +527,15 @@ const TeacherSubmissionViewer = ({
                     fontWeight: '500'
                   }}
                 >
-                  {isPlaying ? '⏸️' : '▶️'}
+{isPlaying ? (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
+                    </svg>
+                  ) : (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M8 5v14l11-7z"/>
+                    </svg>
+                  )}
                 </button>
                 <div style={{
                   flex: 1,
@@ -778,7 +567,8 @@ const TeacherSubmissionViewer = ({
               cursor: 'pointer',
               fontSize: '1rem',
               fontWeight: '600',
-              transition: 'all 0.2s ease'
+              transition: 'all 0.2s ease',
+              marginBottom: '1rem'
             }}
             onMouseEnter={(e) => {
               e.target.style.transform = 'translateY(-1px)';
@@ -790,6 +580,34 @@ const TeacherSubmissionViewer = ({
             }}
           >
             첨삭 저장하기
+          </button>
+
+          {/* 전체삭제 버튼 */}
+          <button
+            onClick={handleClearAll}
+            style={{
+              width: '100%',
+              padding: '0.75rem 1rem',
+              borderRadius: '8px',
+              border: '2px solid #ef4444',
+              background: 'rgba(239, 68, 68, 0.1)',
+              color: '#dc2626',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              fontSize: '1rem',
+              fontWeight: '600'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.transform = 'translateY(-1px)';
+              e.target.style.boxShadow = '0 4px 12px rgba(239, 68, 68, 0.4)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.transform = 'translateY(0)';
+              e.target.style.boxShadow = 'none';
+            }}
+            title="전체삭제"
+          >
+            전체삭제
           </button>
         </div>
       </div>

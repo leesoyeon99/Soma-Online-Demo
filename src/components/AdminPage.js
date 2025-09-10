@@ -661,7 +661,11 @@ export default function AdminPage() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontSize: '24px'
-              }}>📄</div>
+              }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+                </svg>
+              </div>
               <div style={{ flex: 1 }}>
                 <h2 style={{ fontSize: '24px', fontWeight: 'bold', margin: 0, color: '#1f2937' }}>
                   페이지 선택
@@ -1042,7 +1046,11 @@ export default function AdminPage() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontSize: '24px'
-              }}>✏️</div>
+              }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                </svg>
+              </div>
               <div>
                 <h2 style={{ fontSize: '24px', fontWeight: 'bold', margin: 0, color: '#1f2937' }}>
                   문제편집 & AI 분석

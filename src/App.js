@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import './App.css';
 import LandingPage from './components/LandingPage';
 import LoginPage from './components/LoginPage';
@@ -23,10 +23,16 @@ function App() {
   // const [isLoggedIn, setIsLoggedIn] = useState(false); // 현재 사용하지 않음
   const [selectedSubmission, setSelectedSubmission] = useState(null);
   
+  // AI 채점 관련 상태
+  const [isAIGrading, setIsAIGrading] = useState(false);
+  const [gradingResult, setGradingResult] = useState(null);
+  const [gradingProgress, setGradingProgress] = useState(0);
+  
   // 기존 선생님 첨삭 데이터 로드
   React.useEffect(() => {
     const savedFeedback = localStorage.getItem('teacherFeedback');
     const savedFeedbacks = localStorage.getItem('teacherFeedbacks');
+    const savedTeacherFeedbackData = localStorage.getItem('teacherFeedbackData');
     
     if (savedFeedback) {
       try {
@@ -34,6 +40,17 @@ function App() {
         setTeacherFeedback(feedbackData);
       } catch (error) {
         console.error('선생님 첨삭 데이터 로드 실패:', error);
+      }
+    }
+    
+    // 강사 첨삭 데이터 로드 (페이지별 필기 포함)
+    if (savedTeacherFeedbackData) {
+      try {
+        const teacherData = JSON.parse(savedTeacherFeedbackData);
+        console.log('저장된 강사 첨삭 데이터 로드됨:', teacherData);
+        // 필요시 추가 처리
+      } catch (error) {
+        console.error('강사 첨삭 데이터 로드 실패:', error);
       }
     }
     
@@ -83,17 +100,6 @@ function App() {
               fontSize: 14,
               timestamp: new Date(Date.now() - 86400000).toISOString()
             },
-            {
-              type: 'stroke',
-              tool: 'highlighter',
-              color: '#fbbf24',
-              brushSize: 5,
-              points: [
-                { x: 120, y: 280 },
-                { x: 180, y: 280 }
-              ],
-              timestamp: new Date(Date.now() - 86400000).toISOString()
-            }
           ],
           studentSubmissionId: 'demo1',
           bookTitle: '소마 프리미어 교재 1',
@@ -156,17 +162,6 @@ function App() {
                 { x: 90, y: 220 },
                 { x: 140, y: 220 },
                 { x: 190, y: 220 }
-              ],
-              timestamp: new Date(Date.now() - 3600000).toISOString()
-            },
-            {
-              type: 'stroke',
-              tool: 'highlighter',
-              color: '#f59e0b',
-              brushSize: 6,
-              points: [
-                { x: 100, y: 280 },
-                { x: 200, y: 280 }
               ],
               timestamp: new Date(Date.now() - 3600000).toISOString()
             },
@@ -242,9 +237,9 @@ function App() {
   const [currentPdfUrl, setCurrentPdfUrl] = useState(files[0].url); // 첫 번째 파일을 기본으로
   const [activeFileIndex, setActiveFileIndex] = useState(0);
   
-  // 현재 선택된 파일 정보
-  const currentFile = files[activeFileIndex];
-  const isCurrentFilePDF = currentFile && currentFile.type === 'pdf';
+  // 현재 선택된 파일 정보 (메모이제이션)
+  const currentFile = useMemo(() => files[activeFileIndex], [files, activeFileIndex]);
+  const isCurrentFilePDF = useMemo(() => currentFile && currentFile.type === 'pdf', [currentFile]);
   const [pageCount, setPageCount] = useState(1);
   const [currentPageNum, setCurrentPageNum] = useState(1);
   const [zoomScale, setZoomScale] = useState(2.0);
@@ -337,17 +332,17 @@ function App() {
 
 
 
-  const handlePrevPage = () => {
+  const handlePrevPage = useCallback(() => {
     if (currentPageNum > 1) {
       setCurrentPageNum(currentPageNum - 1);
     }
-  };
+  }, [currentPageNum]);
 
-  const handleNextPage = () => {
+  const handleNextPage = useCallback(() => {
     if (currentPageNum < pageCount) {
       setCurrentPageNum(currentPageNum + 1);
     }
-  };
+  }, [currentPageNum, pageCount]);
 
   // 줌 핸들러 (향후 툴바에 추가할 때 사용)
   // const handleZoomIn = () => {
@@ -362,10 +357,10 @@ function App() {
   //   }
   // };
 
-  // 도구 및 설정 핸들러
-  const handleToolChange = (tool) => setSelectedTool(tool);
-  const handleColorChange = (color) => setSelectedColor(color);
-  const handleBrushSizeChange = (size) => setBrushSize(size);
+  // 도구 및 설정 핸들러 (메모이제이션)
+  const handleToolChange = useCallback((tool) => setSelectedTool(tool), []);
+  const handleColorChange = useCallback((color) => setSelectedColor(color), []);
+  const handleBrushSizeChange = useCallback((size) => setBrushSize(size), []);
 
   // 녹음 핸들러
   const handleRecordingToggle = async () => {
@@ -481,17 +476,6 @@ function App() {
             ],
             timestamp: new Date().toISOString()
           },
-          {
-            type: 'stroke',
-            tool: 'highlighter',
-            color: '#fbbf24',
-            brushSize: 5,
-            points: [
-              { x: 120, y: 250 },
-              { x: 180, y: 250 }
-            ],
-            timestamp: new Date().toISOString()
-          }
         ],
         studentSubmissionId: submission.id,
         bookTitle: submission.bookTitle,
@@ -548,6 +532,21 @@ function App() {
     // 로컬 스토리지에 저장 (실제로는 서버로 전송)
     localStorage.setItem('teacherFeedback', JSON.stringify(feedback));
     
+    // 강사 첨삭 데이터도 별도로 저장 (페이지별 필기 포함)
+    const teacherFeedbackData = {
+      id: Date.now(),
+      teacherId: 'teacher1',
+      teacherName: '선생님',
+      timestamp: new Date().toISOString(),
+      feedbackStrokeData: [...strokeData],
+      studentSubmissionId: studentSubmission?.id,
+      bookTitle: studentSubmission?.bookTitle || '교재',
+      bookUrl: studentSubmission?.bookUrl || currentPdfUrl,
+      savedDrawings: strokeData // 페이지별 필기 데이터도 포함
+    };
+    
+    localStorage.setItem('teacherFeedbackData', JSON.stringify(teacherFeedbackData));
+    
     // 알림 추가
     const newNotification = {
       id: Date.now(),
@@ -564,6 +563,69 @@ function App() {
     setFeedbackAlert(true);
     
     alert('학생에게 첨삭이 전송되었습니다!');
+  };
+
+  // AI 채점 함수
+  const handleAIGrading = async () => {
+    if (strokeData.length === 0) {
+      alert('채점할 필기 내용이 없습니다. 먼저 문제를 풀어보세요!');
+      return;
+    }
+    
+    setIsAIGrading(true);
+    setGradingProgress(0);
+    setGradingResult(null);
+    
+    // 채점 진행 시뮬레이션
+    const progressInterval = setInterval(() => {
+      setGradingProgress(prev => {
+        if (prev >= 100) {
+          clearInterval(progressInterval);
+          return 100;
+        }
+        return prev + Math.random() * 15;
+      });
+    }, 200);
+    
+    // 3초 후 채점 완료
+    setTimeout(() => {
+      clearInterval(progressInterval);
+      setGradingProgress(100);
+      
+      // 가상의 채점 결과 생성
+      const mockGradingResult = {
+        totalScore: Math.floor(Math.random() * 30) + 70, // 70-100점
+        maxScore: 100,
+        details: [
+          {
+            question: "문제 1: 기본 개념 이해",
+            score: Math.floor(Math.random() * 15) + 15, // 15-30점
+            maxScore: 30,
+            feedback: "개념을 잘 이해하고 있습니다. 더 정확한 표현을 사용하면 좋겠습니다.",
+            isCorrect: true
+          },
+          {
+            question: "문제 2: 계산 과정",
+            score: Math.floor(Math.random() * 20) + 20, // 20-40점
+            maxScore: 40,
+            feedback: "계산 과정이 명확합니다. 단위를 꼭 표시해주세요.",
+            isCorrect: true
+          },
+          {
+            question: "문제 3: 응용 문제",
+            score: Math.floor(Math.random() * 15) + 15, // 15-30점
+            maxScore: 30,
+            feedback: "문제 해결 과정이 체계적입니다. 더 다양한 접근 방법을 시도해보세요.",
+            isCorrect: true
+          }
+        ],
+        overallFeedback: "전반적으로 잘 풀었습니다! 특히 기본 개념 이해가 뛰어납니다. 응용 문제에서 더 다양한 해결 방법을 시도해보면 좋겠습니다.",
+        timestamp: new Date().toISOString()
+      };
+      
+      setGradingResult(mockGradingResult);
+      setIsAIGrading(false);
+    }, 3000);
   };
 
   // 통합 중지 핸들러 (음성 + 필기 재생 중지)
@@ -718,10 +780,15 @@ function App() {
     }
   };
 
-  // 스트로크 데이터 변경 핸들러
-  const handleStrokeDataChange = (newStrokeData) => {
+  // 스트로크 데이터 변경 핸들러 (메모이제이션)
+  const handleStrokeDataChange = useCallback((newStrokeData) => {
     setStrokeData(newStrokeData);
-  };
+  }, []);
+
+  // 페이지 카운트 변경 핸들러 (메모이제이션)
+  const handlePageCountChange = useCallback((count) => {
+    setPageCount(count);
+  }, []);
 
   
   // Undo/Redo 핸들러
@@ -835,7 +902,7 @@ function App() {
         onBackToSubmissions={() => setCurrentPage('teacherBookList')}
         onSaveFeedback={(feedback) => {
           // 강사 데모에서는 첨삭 저장 후 제출물 목록으로 돌아감
-          setCurrentPage('teacherBookList');
+          setCurrentPage('teacherFeedbackCards');
         }}
       />
     );
@@ -973,7 +1040,7 @@ function App() {
                   e.target.style.boxShadow = 'none';
                 }}
               >
-                📚 교재목록
+                교재목록
               </button>
               <h1 style={{ 
                 color: '#1e3a8a', 
@@ -1161,7 +1228,7 @@ function App() {
                 showTeacherFeedback={showTeacherFeedback}
                 isTeacherMode={true}
                 isStudentMode={false}
-                onPageCountChange={setPageCount}
+                onPageCountChange={handlePageCountChange}
               />
             ) : (
               <ImageViewer
@@ -1392,7 +1459,10 @@ function App() {
                 marginBottom: '0.5rem',
                 fontFamily: 'var(--font-ui)'
               }}>
-                📊 성적 관리
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style={{ marginRight: '8px' }}>
+                  <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/>
+                </svg>
+                성적 관리
               </div>
 
               <button
@@ -1558,7 +1628,7 @@ function App() {
               onMouseEnter={(e) => e.target.style.transform = 'translateY(-1px)'}
               onMouseLeave={(e) => e.target.style.transform = 'translateY(0)'}
             >
-              📚 교재목록
+              교재목록
             </button>
             <h1 style={{
               fontFamily: "'SEBANG Gothic', sans-serif",
@@ -1724,6 +1794,54 @@ function App() {
                 <option value={12}>12px</option>
               </select>
             </div>
+            
+            {/* AI 채점 버튼 */}
+            <button
+              onClick={handleAIGrading}
+              disabled={isAIGrading}
+              style={{
+                padding: '0.5rem 1rem',
+                borderRadius: '8px',
+                border: '2px solid #10b981',
+                background: isAIGrading 
+                  ? 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)'
+                  : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                color: 'white',
+                cursor: isAIGrading ? 'not-allowed' : 'pointer',
+                fontSize: '0.875rem',
+                fontWeight: '600',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                opacity: isAIGrading ? 0.7 : 1
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.transform = 'translateY(-1px)';
+                e.target.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.4)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.boxShadow = 'none';
+              }}
+              title={isAIGrading ? "AI 채점 중..." : "AI 채점"}
+            >
+              {isAIGrading ? (
+                <>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style={{ animation: 'spin 1s linear infinite' }}>
+                    <path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/>
+                  </svg>
+                  채점 중... ({Math.round(gradingProgress)}%)
+                </>
+              ) : (
+                <>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                  </svg>
+                  AI 채점
+                </>
+              )}
+            </button>
           </div>
           
           {/* 오른쪽: 학습 모드 표시 */}
@@ -1773,7 +1891,7 @@ function App() {
               showTeacherFeedback={showTeacherFeedback}
               isTeacherMode={false}
               isStudentMode={true}
-              onPageCountChange={setPageCount}
+              onPageCountChange={handlePageCountChange}
             />
           ) : (
             <ImageViewer 
@@ -1794,6 +1912,273 @@ function App() {
           )}
         </main>
       </div>
+      
+      {/* AI 채점 결과 모달 */}
+      {gradingResult && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 2000,
+          padding: '1rem'
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '16px',
+            padding: '2rem',
+            maxWidth: '600px',
+            width: '100%',
+            maxHeight: '80vh',
+            overflow: 'auto',
+            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+            position: 'relative'
+          }}>
+            {/* 닫기 버튼 */}
+            <button
+              onClick={() => setGradingResult(null)}
+              style={{
+                position: 'absolute',
+                top: '1rem',
+                right: '1rem',
+                background: 'none',
+                border: 'none',
+                fontSize: '1.5rem',
+                cursor: 'pointer',
+                color: '#6b7280',
+                width: '32px',
+                height: '32px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '50%',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.background = '#f3f4f6';
+                e.target.style.color = '#374151';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.background = 'none';
+                e.target.style.color = '#6b7280';
+              }}
+            >
+              ×
+            </button>
+            
+            {/* 채점 결과 헤더 */}
+            <div style={{
+              textAlign: 'center',
+              marginBottom: '2rem',
+              paddingRight: '2rem'
+            }}>
+              <div style={{
+                fontSize: '2rem',
+                fontWeight: 'bold',
+                color: '#1f2937',
+                marginBottom: '0.5rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem'
+              }}>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor" style={{ color: '#10b981' }}>
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                </svg>
+                AI 채점 완료
+              </div>
+              <div style={{
+                fontSize: '3rem',
+                fontWeight: 'bold',
+                color: '#10b981',
+                marginBottom: '0.5rem'
+              }}>
+                {gradingResult.totalScore}점
+              </div>
+              <div style={{
+                fontSize: '1rem',
+                color: '#6b7280'
+              }}>
+                총 {gradingResult.maxScore}점 만점
+              </div>
+            </div>
+            
+            {/* 상세 채점 결과 */}
+            <div style={{
+              marginBottom: '2rem'
+            }}>
+              <h3 style={{
+                fontSize: '1.25rem',
+                fontWeight: 'bold',
+                color: '#1f2937',
+                marginBottom: '1rem'
+              }}>
+                상세 채점 결과
+              </h3>
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '1rem'
+              }}>
+                {gradingResult.details.map((detail, index) => (
+                  <div key={index} style={{
+                    background: '#f9fafb',
+                    borderRadius: '8px',
+                    padding: '1rem',
+                    border: '1px solid #e5e7eb'
+                  }}>
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginBottom: '0.5rem'
+                    }}>
+                      <div style={{
+                        fontSize: '1rem',
+                        fontWeight: '600',
+                        color: '#374151'
+                      }}>
+                        {detail.question}
+                      </div>
+                      <div style={{
+                        fontSize: '1.25rem',
+                        fontWeight: 'bold',
+                        color: detail.isCorrect ? '#10b981' : '#ef4444'
+                      }}>
+                        {detail.score}/{detail.maxScore}점
+                      </div>
+                    </div>
+                    <div style={{
+                      fontSize: '0.875rem',
+                      color: '#6b7280',
+                      lineHeight: '1.5'
+                    }}>
+                      {detail.feedback}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            {/* 전체 피드백 */}
+            <div style={{
+              background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
+              borderRadius: '8px',
+              padding: '1.5rem',
+              border: '1px solid #0ea5e9',
+              marginBottom: '2rem'
+            }}>
+              <h4 style={{
+                fontSize: '1.125rem',
+                fontWeight: 'bold',
+                color: '#0c4a6e',
+                marginBottom: '0.75rem'
+              }}>
+                전체 피드백
+              </h4>
+              <p style={{
+                fontSize: '1rem',
+                color: '#0c4a6e',
+                lineHeight: '1.6',
+                margin: 0
+              }}>
+                {gradingResult.overallFeedback}
+              </p>
+            </div>
+            
+            {/* 버튼들 */}
+            <div style={{
+              display: 'flex',
+              gap: '1rem',
+              justifyContent: 'center',
+              flexWrap: 'nowrap',
+              overflowX: 'auto',
+              paddingBottom: '0.5rem'
+            }}>
+              <button
+                onClick={() => {
+                  // 채점 결과를 기반으로 O, X 표시 생성
+                  const marks = gradingResult.details.map((detail, index) => ({
+                    type: detail.isCorrect ? 'correct' : 'incorrect',
+                    x: 200 + (index * 50), // 문제별로 좌우로 배치
+                    y: 150 + (index * 100), // 문제별로 위아래로 배치
+                    question: detail.question,
+                    score: detail.score,
+                    maxScore: detail.maxScore
+                  }));
+                  
+                  const event = new CustomEvent('addGradingMarks', {
+                    detail: { marks }
+                  });
+                  window.dispatchEvent(event);
+                  setGradingResult(null);
+                }}
+                style={{
+                  background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '0.75rem 1.5rem',
+                  fontSize: '1rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.transform = 'translateY(-1px)';
+                  e.target.style.boxShadow = '0 4px 12px rgba(239, 68, 68, 0.4)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.transform = 'translateY(0)';
+                  e.target.style.boxShadow = 'none';
+                }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                </svg>
+                PDF에 표시하기
+              </button>
+              
+              <button
+                onClick={() => setGradingResult(null)}
+                style={{
+                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '0.75rem 2rem',
+                  fontSize: '1rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.transform = 'translateY(-1px)';
+                  e.target.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.4)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.transform = 'translateY(0)';
+                  e.target.style.boxShadow = 'none';
+                }}
+              >
+                확인
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* 플로팅 컨트롤 패널 */}
       <div style={{
@@ -1883,7 +2268,10 @@ function App() {
               marginBottom: '0.5rem',
               fontFamily: 'var(--font-ui)'
             }}>
-              🎙️ 녹음 & 재생
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style={{ marginRight: '8px' }}>
+                <path d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/>
+              </svg>
+              녹음 & 재생
             </div>
             
             {/* 녹음 버튼 */}
@@ -2133,7 +2521,10 @@ function App() {
               marginBottom: '0.5rem',
               fontFamily: 'var(--font-ui)'
             }}>
-              ⚡ 액션
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style={{ marginRight: '8px' }}>
+                <path d="M7 14c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3zm0 4c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm12-8c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3zm0-4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm-8 4c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3zm0 4c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z"/>
+              </svg>
+              액션
             </div>
 
             {/* 다시 녹음 버튼 */}
@@ -2295,7 +2686,10 @@ function App() {
                 marginBottom: '0.5rem',
                 fontFamily: 'var(--font-ui)'
               }}>
-                📝 선생님 첨삭
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style={{ marginRight: '8px' }}>
+                  <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                </svg>
+                선생님 첨삭
               </div>
 
               <button
@@ -2575,6 +2969,23 @@ function App() {
             font-size: 0.875rem !important;
             min-height: 40px !important;
           }
+        }
+      `}</style>
+      
+      {/* CSS 애니메이션 */}
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .grading-modal {
+          animation: fadeIn 0.3s ease-out;
         }
       `}</style>
     </div>
