@@ -102,7 +102,7 @@ function App() {
             },
           ],
           studentSubmissionId: 'demo1',
-          bookTitle: '소마 프리미어 교재 1',
+          bookTitle: '2023 프리미어 초급2',
           bookUrl: '/somapremier.pdf'
         },
         {
@@ -144,7 +144,7 @@ function App() {
             }
           ],
           studentSubmissionId: 'demo2',
-          bookTitle: '소마 프리미어 교재 2(첨삭)',
+          bookTitle: '2023 프리미어 초급2',
           bookUrl: '/somapremier.pdf'
         },
         {
@@ -197,7 +197,7 @@ function App() {
             }
           ],
           studentSubmissionId: 'demo3',
-          bookTitle: '소마 프리미어 교재 1',
+          bookTitle: '2023 프리미어 초급2',
           bookUrl: '/somapremier.pdf'
         }
       ];
@@ -215,19 +215,19 @@ function App() {
   const files = [
     { 
       id: 1, 
-      title: '2023 프리미어 초급2-내지 DEMO', 
+      title: '2023 프리미어 초급2', 
       url: '/assets/pdf/2023-프리미어 초급2-내지_DEMO_compressed.pdf',
       type: 'pdf'
     },
     { 
       id: 2, 
-      title: '2023 프리미어 초급2-내지 DEMO (첨삭)', 
+      title: '2023 프리미어 초급2', 
       url: '/assets/pdf/2023-프리미어 초급2-내지_DEMO_compressed.pdf',
       type: 'pdf'
     },
     { 
       id: 3, 
-      title: '2023 프리미어 초급2-내지 DEMO (학습)', 
+      title: '2023 프리미어 초급2', 
       url: '/assets/pdf/2023-프리미어 초급2-내지_DEMO_compressed.pdf',
       type: 'pdf'
     }
@@ -1602,7 +1602,9 @@ function App() {
                 fontSize: '0.875rem',
                 fontFamily: "'SEBANG Gothic', sans-serif",
                 fontWeight: '500',
-                transition: 'all 0.2s ease'
+                transition: 'all 0.2s ease',
+                whiteSpace: 'nowrap',
+                flexShrink: 0
               }}
               onMouseEnter={(e) => e.target.style.transform = 'translateY(-1px)'}
               onMouseLeave={(e) => e.target.style.transform = 'translateY(0)'}
@@ -1623,7 +1625,9 @@ function App() {
                 fontSize: '0.875rem',
                 fontFamily: "'SEBANG Gothic', sans-serif",
                 fontWeight: '500',
-                transition: 'all 0.2s ease'
+                transition: 'all 0.2s ease',
+                whiteSpace: 'nowrap',
+                flexShrink: 0
               }}
               onMouseEnter={(e) => e.target.style.transform = 'translateY(-1px)'}
               onMouseLeave={(e) => e.target.style.transform = 'translateY(0)'}
@@ -1653,7 +1657,10 @@ function App() {
             background: 'rgba(255, 255, 255, 0.8)',
             padding: '0.5rem 1rem',
             borderRadius: '12px',
-            border: '1px solid rgba(249, 115, 22, 0.2)'
+            border: '1px solid rgba(249, 115, 22, 0.2)',
+            flexWrap: 'nowrap',
+            overflowX: 'auto',
+            whiteSpace: 'nowrap'
           }}>
             {/* PDF 페이지 네비게이션 (PDF 파일일 때만 표시) */}
             {isCurrentFilePDF && (
@@ -1756,7 +1763,7 @@ function App() {
             </div>
             
             {/* 색상 선택 */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap', flexShrink: 0 }}>
               <span style={{ fontSize: '0.8rem', color: '#64748b', fontFamily: 'var(--font-ui)' }}>색상:</span>
               <input
                 type="color"
@@ -1773,7 +1780,7 @@ function App() {
             </div>
             
             {/* 브러시 크기 */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap', flexShrink: 0 }}>
               <span style={{ fontSize: '0.8rem', color: '#64748b', fontFamily: 'var(--font-ui)' }}>크기:</span>
               <select
                 value={brushSize}
@@ -1814,7 +1821,9 @@ function App() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.5rem',
-                opacity: isAIGrading ? 0.7 : 1
+                opacity: isAIGrading ? 0.7 : 1,
+                whiteSpace: 'nowrap',
+                flexShrink: 0
               }}
               onMouseEnter={(e) => {
                 e.target.style.transform = 'translateY(-1px)';
@@ -1844,23 +1853,6 @@ function App() {
             </button>
           </div>
           
-          {/* 오른쪽: 학습 모드 표시 */}
-          <div style={{
-            display: 'flex',
-            gap: '0.5rem',
-            alignItems: 'center'
-          }}>
-            <span style={{
-              fontFamily: "'SEBANG Gothic', sans-serif",
-              fontSize: '0.875rem',
-              color: '#64748b',
-              background: 'rgba(255, 255, 255, 0.7)',
-              padding: '0.25rem 0.75rem',
-              borderRadius: '12px'
-            }}>
-              학습 모드
-            </span>
-          </div>
         </div>
       </div>
 
