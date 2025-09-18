@@ -81,6 +81,8 @@ export default function AdminPage() {
   const [aiResults, setAiResults] = useState({});
   const [progress, setProgress] = useState(0);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [showAIAnalysisModal, setShowAIAnalysisModal] = useState(false);
+  const [analysisStage, setAnalysisStage] = useState('');
   
   // 페이지 선택 UI 개선을 위한 새로운 상태들
   // const [currentPageRange, setCurrentPageRange] = useState({ start: 1, end: 20 });
@@ -238,17 +240,40 @@ export default function AdminPage() {
   const runAutoClassify = async () => {
     setBusy(true);
     setProgress(0);
+    setShowAIAnalysisModal(true);
+    setAnalysisStage('문제 분석 중...');
     
-    // 프로그레스바 시뮬레이션
-    const progressInterval = setInterval(() => {
-      setProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(progressInterval);
-          return 100;
-        }
-        return prev + 10;
+    // 비동기 분석 시뮬레이션
+    const analysisStages = [
+      { stage: '이미지 처리 중...', duration: 800 },
+      { stage: '텍스트 추출 중...', duration: 700 },
+      { stage: '문제 유형 분석 중...', duration: 900 },
+      { stage: '정답 생성 중...', duration: 600 },
+      { stage: '풀이 과정 작성 중...', duration: 800 },
+      { stage: '결과 검증 중...', duration: 500 }
+    ];
+    
+    let currentProgress = 0;
+    
+    for (let i = 0; i < analysisStages.length; i++) {
+      const { stage, duration } = analysisStages[i];
+      setAnalysisStage(stage);
+      
+      // 각 단계별 진행률 업데이트
+      const stageProgress = Math.floor((i + 1) * (100 / analysisStages.length));
+      
+      await new Promise(resolve => {
+        const interval = setInterval(() => {
+          currentProgress += 2;
+          if (currentProgress >= stageProgress) {
+            currentProgress = stageProgress;
+            clearInterval(interval);
+            resolve();
+          }
+          setProgress(currentProgress);
+        }, duration / 10);
       });
-    }, 300);
+    }
     
     // 문제 유형에 따른 AI 분류 결과 생성
     const getMockResults = (problemType) => {
@@ -300,7 +325,11 @@ export default function AdminPage() {
       newResults[problem.id] = mockResults;
     });
     
-    await new Promise((r) => setTimeout(r, 3000));
+    // 최종 분석 완료
+    setAnalysisStage('분석 완료!');
+    setProgress(100);
+    
+    await new Promise((r) => setTimeout(r, 1000));
     
     setAiResults(prev => ({
       ...prev,
@@ -309,6 +338,8 @@ export default function AdminPage() {
     
     setBusy(false);
     setProgress(0);
+    setShowAIAnalysisModal(false);
+    setAnalysisStage('');
   };
 
   const addProblem = () => {
@@ -1727,43 +1758,6 @@ export default function AdminPage() {
                     <span>분류 결과</span>
                   </div>
                   <div style={{ flex: 1, overflow: 'auto' }}>
-                    {busy && (
-                      <div style={{ marginBottom: '16px' }}>
-                        <div style={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          gap: '8px', 
-                          marginBottom: '8px',
-                          fontSize: '14px',
-                          color: '#667eea',
-                          fontWeight: '500'
-                        }}>
-                          <div style={{
-                            width: '16px',
-                            height: '16px',
-                            border: '2px solid #667eea',
-                            borderTop: '2px solid transparent',
-                            borderRadius: '50%',
-                            animation: 'spin 1s linear infinite'
-                          }}></div>
-                          AI 분석 중... {progress}%
-                        </div>
-                        <div style={{
-                          width: '100%',
-                          height: '6px',
-                          backgroundColor: '#e5e7eb',
-                          borderRadius: '3px',
-                          overflow: 'hidden'
-                        }}>
-                          <div style={{
-                            width: `${progress}%`,
-                            height: '100%',
-                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                            transition: 'width 0.3s ease'
-                          }}></div>
-                        </div>
-                      </div>
-                    )}
                     
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                       <div>
@@ -2024,6 +2018,114 @@ export default function AdminPage() {
                 문제편집으로 돌아가기
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* AI 분석 모달 */}
+      {showAIAnalysisModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          backdropFilter: 'blur(4px)'
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '20px',
+            padding: '3rem',
+            maxWidth: '500px',
+            width: '90%',
+            boxShadow: '0 25px 50px rgba(0, 0, 0, 0.25)',
+            border: '1px solid rgba(102, 126, 234, 0.2)',
+            textAlign: 'center',
+            position: 'relative'
+          }}>
+            {/* AI 아이콘 */}
+            <div style={{
+              width: '80px',
+              height: '80px',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 2rem',
+              animation: 'pulse 2s ease-in-out infinite'
+            }}>
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="white">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+              </svg>
+            </div>
+
+            {/* 제목 */}
+            <h2 style={{
+              fontSize: '1.5rem',
+              fontWeight: 'bold',
+              color: '#1f2937',
+              margin: '0 0 1rem 0',
+              fontFamily: 'NanumSquare, sans-serif'
+            }}>
+              AI 자동 분석 진행 중
+            </h2>
+
+            {/* 현재 단계 표시 */}
+            <div style={{
+              fontSize: '1rem',
+              color: '#667eea',
+              fontWeight: '600',
+              marginBottom: '2rem',
+              fontFamily: 'NanumSquare, sans-serif'
+            }}>
+              {analysisStage}
+            </div>
+
+            {/* 진행률 바 */}
+            <div style={{
+              width: '100%',
+              height: '8px',
+              background: '#f3f4f6',
+              borderRadius: '4px',
+              overflow: 'hidden',
+              marginBottom: '1rem'
+            }}>
+              <div style={{
+                width: `${progress}%`,
+                height: '100%',
+                background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)',
+                borderRadius: '4px',
+                transition: 'width 0.3s ease'
+              }}></div>
+            </div>
+
+            {/* 진행률 퍼센트 */}
+            <div style={{
+              fontSize: '1.2rem',
+              fontWeight: 'bold',
+              color: '#667eea',
+              fontFamily: 'NanumSquare, sans-serif'
+            }}>
+              {progress}%
+            </div>
+
+            {/* 설명 텍스트 */}
+            <p style={{
+              fontSize: '0.875rem',
+              color: '#6b7280',
+              marginTop: '1.5rem',
+              lineHeight: '1.5',
+              fontFamily: 'NanumSquare, sans-serif'
+            }}>
+              AI가 문제를 분석하고 있습니다.<br/>
+              잠시만 기다려주세요.
+            </p>
           </div>
         </div>
       )}
