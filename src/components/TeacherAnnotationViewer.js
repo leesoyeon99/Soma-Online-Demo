@@ -1,5 +1,19 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 
+// CSS 애니메이션 추가
+const feedbackAnimationStyle = `
+  @keyframes fadeInScale {
+    0% {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0.3) rotate(0deg);
+    }
+    100% {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1) rotate(var(--rotation));
+    }
+  }
+`;
+
 const TeacherAnnotationViewer = ({ 
   submission, 
   onBackToSubmissions, 
@@ -28,10 +42,34 @@ const TeacherAnnotationViewer = ({
   const [showStudentWork, setShowStudentWork] = useState(true);
   const [showTeacherAnnotations, setShowTeacherAnnotations] = useState(true);
   
+  // 샘플 첨삭 텍스트 (PDF/이미지 위에 표시될 내용)
+  const sampleFeedbackTexts = [
+    { text: "계산 과정이 정확해요! 👍", x: 180, y: 320, color: '#10b981', id: 1 },
+    { text: "단위를 써주세요", x: 250, y: 280, color: '#ef4444', id: 2 },
+    { text: "이 부분을 다시 확인해보세요", x: 120, y: 420, color: '#f59e0b', id: 3 },
+    { text: "좋은 접근입니다!", x: 200, y: 500, color: '#3b82f6', id: 4 }
+  ];
+  
   // 오디오 재생 상태
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+
+  // CSS 애니메이션 스타일 추가
+  useEffect(() => {
+    if (!document.getElementById('feedback-animation-style')) {
+      const style = document.createElement('style');
+      style.id = 'feedback-animation-style';
+      style.textContent = feedbackAnimationStyle;
+      document.head.appendChild(style);
+    }
+    return () => {
+      const style = document.getElementById('feedback-animation-style');
+      if (style) {
+        document.head.removeChild(style);
+      }
+    };
+  }, []);
 
   // 가상의 학생 필기 이미지 생성
   const createStudentWorkImage = useCallback(() => {
@@ -912,6 +950,50 @@ const TeacherAnnotationViewer = ({
                   onTouchMove={draw}
                   onTouchEnd={stopDrawing}
                 />
+                
+                {/* 선생님 첨삭 텍스트 오버레이 */}
+                {showTeacherAnnotations && sampleFeedbackTexts.map((feedback) => (
+                  <div
+                    key={feedback.id}
+                    style={{
+                      position: 'absolute',
+                      left: `${(feedback.x / 800) * 100}%`, // 800은 캔버스 기본 너비
+                      top: `${(feedback.y / 1000) * 100}%`, // 1000은 캔버스 기본 높이
+                      transform: `translate(-50%, -50%) rotate(${Math.sin(feedback.id * 0.5) * 2}deg)`, // 손글씨 느낌의 회전
+                      zIndex: 3,
+                      pointerEvents: 'none',
+                      fontFamily: '"Comic Sans MS", cursive, "Malgun Gothic", sans-serif',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: feedback.color,
+                      background: 'rgba(255, 255, 255, 0.95)',
+                      padding: '6px 10px',
+                      borderRadius: '8px',
+                      border: `2px solid ${feedback.color}`,
+                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+                      whiteSpace: 'nowrap',
+                      animation: 'fadeInScale 0.5s ease-out',
+                      animationDelay: `${feedback.id * 0.2}s`,
+                      animationFillMode: 'both'
+                    }}
+                  >
+                    {feedback.text}
+                    {/* 말풍선 꼬리 */}
+                    <div
+                      style={{
+                        position: 'absolute',
+                        bottom: '-8px',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        width: 0,
+                        height: 0,
+                        borderLeft: '8px solid transparent',
+                        borderRight: '8px solid transparent',
+                        borderTop: `8px solid ${feedback.color}`
+                      }}
+                    />
+                  </div>
+                ))}
               </div>
             )}
           </div>

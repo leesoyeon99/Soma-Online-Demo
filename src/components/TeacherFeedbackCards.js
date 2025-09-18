@@ -52,6 +52,26 @@ const TeacherFeedbackCards = ({
     return feedback.feedbackStrokeData ? feedback.feedbackStrokeData.length : 0;
   };
 
+  // 다양한 한글 첨삭 내용 샘플
+  const sampleFeedbackTexts = [
+    "계산 과정이 정확하고 체계적이에요! 다음번엔 단위도 꼭 써주세요.",
+    "문제 해결 방법이 훌륭해요. 답 검산을 한 번 더 해보면 완벽할 거예요.",
+    "그림을 이용해 문제를 푸는 방법이 참 좋았어요. 계산 실수만 조심하세요.",
+    "순서대로 차근차근 풀어가는 모습이 보기 좋아요. 정말 잘했어요!",
+    "개념 이해가 정확해요! 다만 공식 적용에서 부호 실수가 있었네요.",
+    "창의적인 접근 방법이네요! 답도 정확하고 과정도 깔끔해요.",
+    "기본기가 탄탄해요. 조금 더 꼼꼼히 계산하면 완벽할 거예요.",
+    "열심히 푼 흔적이 보여요. 다음엔 더 간단한 방법도 생각해보세요."
+  ];
+
+  // 첨삭 내용 가져오기 (인덱스 기반으로 다른 내용 반환)
+  const getFeedbackText = (feedback, index) => {
+    if (feedback.feedbackText) {
+      return feedback.feedbackText;
+    }
+    return sampleFeedbackTexts[index % sampleFeedbackTexts.length];
+  };
+
   // 첨삭 상태에 따른 색상 (기존 포인트 컬러 사용)
   const getStatusColor = (feedback) => {
     if (isNewFeedback(feedback.timestamp)) {
@@ -229,7 +249,7 @@ const TeacherFeedbackCards = ({
                 </div>
               </div>
 
-              {/* 첨삭 미리보기 */}
+              {/* 첨삭 내용 */}
               <div>
                 <h3 style={{
                   color: '#1e3a8a',
@@ -238,29 +258,61 @@ const TeacherFeedbackCards = ({
                   marginBottom: '1rem',
                   fontFamily: 'var(--font-title)'
                 }}>
-                  첨삭 미리보기
+                  선생님 첨삭 내용
                 </h3>
                 <div style={{
                   background: 'rgba(139, 92, 246, 0.1)',
                   padding: '1.5rem',
                   borderRadius: '12px',
                   border: '1px solid rgba(139, 92, 246, 0.2)',
-                  minHeight: '200px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
+                  minHeight: '200px'
                 }}>
+                  <div style={{
+                    background: 'white',
+                    borderRadius: '8px',
+                    padding: '1.5rem',
+                    marginBottom: '1rem',
+                    border: '1px solid rgba(139, 92, 246, 0.1)'
+                  }}>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      marginBottom: '1rem'
+                    }}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="#8b5cf6">
+                        <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                      </svg>
+                      <span style={{
+                        color: '#8b5cf6',
+                        fontSize: '0.875rem',
+                        fontWeight: '600',
+                        fontFamily: 'var(--font-ui)'
+                      }}>
+                        {selectedFeedback.teacherName} 선생님의 첨삭
+                      </span>
+                    </div>
+                    
+                    <p style={{
+                      color: '#374151',
+                      fontSize: '1rem',
+                      lineHeight: '1.6',
+                      margin: '0',
+                      fontFamily: 'var(--font-body)',
+                      fontWeight: '500'
+                    }}>
+                      "{getFeedbackText(selectedFeedback, sortedFeedbacks.findIndex(f => f.id === selectedFeedback.id))}"
+                    </p>
+                  </div>
+                  
                   <div style={{ textAlign: 'center' }}>
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="#8b5cf6" style={{ marginBottom: '1rem' }}>
-                      <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
-                    </svg>
                     <p style={{
                       color: '#64748b',
-                      fontSize: '0.9rem',
-                      margin: '0',
+                      fontSize: '0.875rem',
+                      margin: '0 0 1rem 0',
                       fontFamily: 'var(--font-body)'
                     }}>
-                      {getFeedbackCount(selectedFeedback)}개의 첨삭이 있습니다
+                      총 {getFeedbackCount(selectedFeedback)}개의 첨삭이 있습니다
                     </p>
                     <button
                       onClick={() => onSelectFeedback(selectedFeedback)}
@@ -273,7 +325,6 @@ const TeacherFeedbackCards = ({
                         cursor: 'pointer',
                         fontSize: '0.9rem',
                         fontWeight: '600',
-                        marginTop: '1rem',
                         transition: 'all 0.2s ease'
                       }}
                       onMouseEnter={(e) => {
@@ -541,19 +592,38 @@ const TeacherFeedbackCards = ({
                     )}
                   </div>
 
-                  {/* 미리보기 텍스트 */}
+                  {/* 첨삭 내용 미리보기 */}
+                  <div style={{
+                    background: 'rgba(59, 130, 246, 0.05)',
+                    border: '1px solid rgba(59, 130, 246, 0.1)',
+                    borderRadius: '8px',
+                    padding: '0.75rem',
+                    marginBottom: '0.5rem'
+                  }}>
+                    <p style={{
+                      fontFamily: 'var(--font-body)',
+                      fontSize: '0.875rem',
+                      color: '#374151',
+                      margin: '0',
+                      lineHeight: '1.5',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                      fontWeight: '500'
+                    }}>
+                      "{getFeedbackText(feedback, index)}"
+                    </p>
+                  </div>
+                  
                   <p style={{
                     fontFamily: 'var(--font-body)',
-                    fontSize: '0.875rem',
+                    fontSize: '0.8rem',
                     color: '#64748b',
                     margin: '0',
-                    lineHeight: '1.5',
-                    display: '-webkit-box',
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden'
+                    lineHeight: '1.4'
                   }}>
-                    선생님이 {getFeedbackCount(feedback)}개의 첨삭을 남겨주셨습니다. 자세한 내용을 확인해보세요.
+                    {getFeedbackCount(feedback)}개의 첨삭 • 자세한 내용을 확인해보세요
                   </p>
                 </div>
 

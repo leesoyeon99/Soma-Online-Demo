@@ -19,7 +19,8 @@ const StaticPDFViewer = ({
   isTeacherMode = false,
   isStudentMode = false,
   onPageCountChange,
-  onPageChange
+  onPageChange,
+  feedbackTexts = []
 }) => {
   const canvasRef = useRef(null);
   const markupCanvasRef = useRef(null);
@@ -164,7 +165,45 @@ const StaticPDFViewer = ({
     pageDrawings.forEach(drawing => {
       drawStroke(context, drawing);
     });
-  }, [savedDrawings, pageNum, isTeacherMode, studentStrokeData, isStudentMode, teacherFeedbackData, showTeacherFeedback]);
+    
+    // 첨삭 텍스트 그리기 (손글씨 스타일)
+    if (feedbackTexts && feedbackTexts.length > 0 && isTeacherMode) {
+      feedbackTexts.forEach((feedback, index) => {
+        context.save();
+        
+        // 손글씨 스타일 폰트 설정
+        context.font = '18px "Comic Sans MS", cursive, "Malgun Gothic", sans-serif';
+        context.fillStyle = feedback.color || '#ef4444';
+        context.strokeStyle = feedback.color || '#ef4444';
+        context.lineWidth = 1;
+        context.textAlign = 'start';
+        context.textBaseline = 'middle';
+        
+        // 텍스트에 약간의 회전 효과 (손글씨처럼)
+        const rotation = (Math.sin(index * 0.5) * 0.05); // -0.05 ~ 0.05 라디안
+        context.translate(feedback.x * zoomScale, feedback.y * zoomScale);
+        context.rotate(rotation);
+        
+        // 텍스트 배경 (말풍선 효과)
+        const textWidth = context.measureText(feedback.text).width;
+        const padding = 8;
+        const bgHeight = 25;
+        
+        // 말풍선 배경 그리기 (호환성을 위해 직사각형 사용)
+        context.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        context.strokeStyle = feedback.color || '#ef4444';
+        context.lineWidth = 2;
+        context.fillRect(-padding, -bgHeight/2, textWidth + padding*2, bgHeight);
+        context.strokeRect(-padding, -bgHeight/2, textWidth + padding*2, bgHeight);
+        
+        // 텍스트 그리기
+        context.fillStyle = feedback.color || '#ef4444';
+        context.fillText(feedback.text, 0, 0);
+        
+        context.restore();
+      });
+    }
+  }, [savedDrawings, pageNum, isTeacherMode, studentStrokeData, isStudentMode, teacherFeedbackData, showTeacherFeedback, feedbackTexts, zoomScale]);
 
   // 전체 삭제 이벤트 리스너
   useEffect(() => {

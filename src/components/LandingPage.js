@@ -38,7 +38,7 @@ const LandingPage = ({ onSelectUserType }) => {
       id: 'admin',
       title: '교재등록 & AI 분석',
       subtitle: 'Admin 데모',
-      description: '교재 업로드, AI 분석, 콘텐츠 관리',
+      description: '교재 업로드, AI 자동분석, 교재 데이터화',
       icon: (
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
