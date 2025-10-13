@@ -49,6 +49,9 @@ const StaticPDFViewer = ({
   const [lastPos, setLastPos] = useState({ x: 0, y: 0 });
   const [currentPath, setCurrentPath] = useState([]);
   
+  // 지우개 커서 상태
+  const [eraserCursor, setEraserCursor] = useState({ x: 0, y: 0, show: false });
+  
   // 동영상 모달 상태
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
 
@@ -121,17 +124,37 @@ const StaticPDFViewer = ({
   const drawStroke = (context, drawing) => {
     if (drawing.points.length < 2) return;
     
-    context.beginPath();
-    context.lineWidth = drawing.brushSize || 3;
-    context.strokeStyle = drawing.color || '#ef4444';
-    context.lineCap = 'round';
-    context.lineJoin = 'round';
+    context.save();
     
-    context.moveTo(drawing.points[0].x, drawing.points[0].y);
-    for (let i = 1; i < drawing.points.length; i++) {
-      context.lineTo(drawing.points[i].x, drawing.points[i].y);
+    if (drawing.tool === 'eraser') {
+      // 지우개 스트로크는 destination-out 모드로 그리기
+      context.globalCompositeOperation = 'destination-out';
+      context.lineWidth = drawing.brushSize * 10 || 30;
+      context.lineCap = 'round';
+      context.lineJoin = 'round';
+      
+      context.beginPath();
+      context.moveTo(drawing.points[0].x, drawing.points[0].y);
+      for (let i = 1; i < drawing.points.length; i++) {
+        context.lineTo(drawing.points[i].x, drawing.points[i].y);
+      }
+      context.stroke();
+    } else {
+      // 펜 스트로크
+      context.lineWidth = drawing.brushSize || 3;
+      context.strokeStyle = drawing.color || '#ef4444';
+      context.lineCap = 'round';
+      context.lineJoin = 'round';
+      
+      context.beginPath();
+      context.moveTo(drawing.points[0].x, drawing.points[0].y);
+      for (let i = 1; i < drawing.points.length; i++) {
+        context.lineTo(drawing.points[i].x, drawing.points[i].y);
+      }
+      context.stroke();
     }
-    context.stroke();
+    
+    context.restore();
   };
 
   // 마크업 다시 그리기 (성능 최적화)
@@ -633,14 +656,31 @@ const StaticPDFViewer = ({
     setCurrentPath([pos]);
   }, [selectedTool, getEventPos]);
 
-  // 그리기 중 (안정적인 실시간 그리기)
-  const draw = useCallback((e) => {
+  // 마우스 이동 감지 (지우개 커서용)
+  const handleMouseMove = useCallback((e) => {
+    const pos = getEventPos(e);
+    
+    // 지우개 모드일 때 커서 위치 업데이트
+    if (selectedTool === 'eraser') {
+      setEraserCursor({ x: pos.x, y: pos.y, show: true });
+    } else {
+      setEraserCursor(prev => ({ ...prev, show: false }));
+    }
+    
+    // 그리기 중이면 draw 로직 실행
+    if (isDrawing) {
+      drawOnCanvas(e);
+    }
+  }, [selectedTool, isDrawing, getEventPos]);
+
+  // 실제 그리기 함수 (draw에서 drawOnCanvas로 분리)
+  const drawOnCanvas = useCallback((e) => {
     if (!isDrawing || selectedTool === 'hand') return;
     
     e.preventDefault();
     e.stopPropagation();
     
-    // 스크롤 위치 저장 (리렌더링 방지)
+    // 스크롤 위치 저장 (리렌더링 방지) 
     const container = containerRef.current;
     if (container) {
       scrollPositionRef.current = {
@@ -650,83 +690,58 @@ const StaticPDFViewer = ({
     }
     
     const pos = getEventPos(e);
-    setLastPos(pos);
-    setCurrentPath(prev => [...prev, pos]);
-    
+
     // 실시간 그리기 (안정적인 렌더링)
     const canvas = markupCanvasRef.current;
     if (canvas) {
       const context = canvas.getContext('2d');
       
       if (selectedTool === 'eraser') {
-        // 지우개 기능 - 스트로크 단위로 지우기
-        const currentPageDrawings = savedDrawings[pageNum] || [];
-        const threshold = brushSize * 3; // 지우개 크기의 3배 범위 내에서 스트로크 찾기
-        
-        for (let i = currentPageDrawings.length - 1; i >= 0; i--) {
-          const stroke = currentPageDrawings[i];
-          if (stroke.points && stroke.points.length > 0) {
-            // 스트로크의 각 점들과 마우스 위치 비교
-            for (let j = 0; j < stroke.points.length; j++) {
-              const point = stroke.points[j];
-              const distance = Math.sqrt(
-                Math.pow(point.x - pos.x, 2) + Math.pow(point.y - pos.y, 2)
-              );
-              
-              if (distance <= threshold) {
-                // 해당 스트로크를 삭제
-                const updatedPageDrawings = currentPageDrawings.filter((_, index) => index !== i);
-                setSavedDrawings(prev => ({
-                  ...prev,
-                  [pageNum]: updatedPageDrawings
-                }));
-                
-                // 현재 페이지 필기 상태도 업데이트
-                setCurrentPageDrawings(updatedPageDrawings);
-                
-                // 부모 컴포넌트에 전체 스트로크 데이터 전달
-                if (onStrokeDataChange) {
-                  const allDrawings = Object.values({
-                    ...savedDrawings,
-                    [pageNum]: updatedPageDrawings
-                  }).flat();
-                  onStrokeDataChange(allDrawings);
-                }
-                
-                // 강사 모드에서 로컬 스토리지에 자동 저장
-                if (isTeacherMode) {
-                  const updatedDrawings = {
-                    ...savedDrawings,
-                    [pageNum]: updatedPageDrawings
-                  };
-                  localStorage.setItem(`teacherFeedback_${pdfFileName}`, JSON.stringify(updatedDrawings));
-                }
-                
-                // 캔버스 다시 그리기
-                redrawMarkups();
-                return;
-              }
-            }
-          }
-        }
-      } else if (selectedTool === 'pen') {
-        // 펜 기능
+        // 픽셀 기반 지우개 - 실제 지우개처럼 동작
         context.save();
+        context.globalCompositeOperation = 'destination-out'; // 지우기 모드
         context.beginPath();
-        context.lineWidth = brushSize;
-        context.strokeStyle = selectedColor;
-        context.lineCap = 'round';
-        context.lineJoin = 'round';
-        context.globalAlpha = 1;
-        context.globalCompositeOperation = 'source-over';
-        
-        context.moveTo(lastPos.x, lastPos.y);
-        context.lineTo(pos.x, pos.y);
-        context.stroke();
+        context.arc(pos.x, pos.y, brushSize * 10, 0, 2 * Math.PI); // 원형 지우개
+        context.fill();
         context.restore();
+        
+        // 지우개 경로도 저장 (나중에 다시 그릴 때 사용)
+        setCurrentPath(prev => [...prev, pos]);
+        
+        // 지우개 사용 중이면 여기서 종료 (펜 그리기 방지)
+        return;
+      } else if (selectedTool === 'pen') {
+        // currentPath의 마지막 점을 함수형 업데이트로 가져오기
+        setCurrentPath(prev => {
+          const context = canvas.getContext('2d');
+          context.save();
+          context.beginPath();
+          context.lineWidth = brushSize;
+          context.strokeStyle = selectedColor;
+          context.lineCap = 'round';
+          context.lineJoin = 'round';
+          context.globalAlpha = 1;
+          context.globalCompositeOperation = 'source-over';
+          
+          if (prev.length > 0) {
+            const lastPoint = prev[prev.length - 1];
+            context.moveTo(lastPoint.x, lastPoint.y);
+            context.lineTo(pos.x, pos.y);
+            context.stroke();
+          }
+          
+          context.restore();
+          return [...prev, pos];
+        });
+        
+        return; // 여기서 리턴
+
       }
     }
-  }, [isDrawing, selectedTool, getEventPos, lastPos, brushSize, selectedColor]);
+    // 경로에 현재 위치 추가 (setLastPos는 제거)
+    setCurrentPath(prev => [...prev, pos]);
+  }, [isDrawing, selectedTool, getEventPos, brushSize, selectedColor]); // currentPath 제거!
+
 
   // 그리기 종료 (성능 최적화)
   const stopDrawing = useCallback((e) => {
@@ -735,11 +750,12 @@ const StaticPDFViewer = ({
     e.preventDefault();
     e.stopPropagation();
     
+    // 펜과 지우개 모두 저장 (지우개도 스트로크로 저장)
     if (isDrawing && currentPath.length > 1) {
       const newDrawing = {
         id: Date.now(),
         type: 'stroke',
-        tool: selectedTool,
+        tool: selectedTool, // 'pen' 또는 'eraser'
         color: selectedColor,
         brushSize: brushSize,
         points: currentPath,
@@ -980,13 +996,34 @@ const StaticPDFViewer = ({
                 transform: 'translateZ(0)'
               }}
               onMouseDown={startDrawing}
-              onMouseMove={draw}
+              onMouseMove={handleMouseMove}
               onMouseUp={stopDrawing}
-              onMouseLeave={stopDrawing}
+              onMouseLeave={(e) => {
+                stopDrawing(e);
+                setEraserCursor(prev => ({ ...prev, show: false }));
+              }}
               onTouchStart={startDrawing}
-              onTouchMove={draw}
+              onTouchMove={handleMouseMove}
               onTouchEnd={stopDrawing}
             />
+            
+            {/* 지우개 영역 표시 */}
+            {eraserCursor.show && selectedTool === 'eraser' && (
+              <div
+                style={{
+                  position: 'absolute',
+                  left: eraserCursor.x - brushSize * 2,
+                  top: eraserCursor.y - brushSize * 2,
+                  width: brushSize * 4,
+                  height: brushSize * 4,
+                  border: '2px dashed #ff6b6b',
+                  borderRadius: '50%',
+                  backgroundColor: 'rgba(255, 107, 107, 0.1)',
+                  pointerEvents: 'none',
+                  zIndex: 10
+                }}
+              />
+            )}
             
             {/* 동영상 버튼 - 2페이지에만 표시 */}
             {pageNum === 2 && (

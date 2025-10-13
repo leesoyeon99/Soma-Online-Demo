@@ -215,14 +215,14 @@ function App() {
   const files = [
     { 
       id: 1, 
-      title: '2023 프리미어 초급2', 
-      url: '/assets/pdf/2023-프리미어 초급2-내지_DEMO_compressed.pdf',
+      title: '2023 소마 프리미어 (NEW)', 
+      url: '/assets/pdf/mvp_2023_소마_프리미어.pdf',
       type: 'pdf'
     },
     { 
       id: 2, 
-      title: '2023 프리미어 초급2', 
-      url: '/assets/pdf/2023-프리미어 초급2-내지_DEMO_compressed.pdf',
+      title: '2023 미래탐구 수학중3-1응용심화 셀프북 교사용 (NEW)', 
+      url: '/assets/pdf/mvp_2022_미래탐구_수학중3-1응용심화_셀프북_교사용.pdf',
       type: 'pdf'
     },
     { 
