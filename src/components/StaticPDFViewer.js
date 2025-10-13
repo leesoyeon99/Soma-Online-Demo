@@ -129,16 +129,23 @@ const StaticPDFViewer = ({
     if (drawing.tool === 'eraser') {
       // 지우개 스트로크는 destination-out 모드로 그리기
       context.globalCompositeOperation = 'destination-out';
-      context.lineWidth = drawing.brushSize * 10 || 30;
+      // context.lineWidth = drawing.brushSize * 10 || 30;
       context.lineCap = 'round';
       context.lineJoin = 'round';
       
-      context.beginPath();
-      context.moveTo(drawing.points[0].x, drawing.points[0].y);
-      for (let i = 1; i < drawing.points.length; i++) {
-        context.lineTo(drawing.points[i].x, drawing.points[i].y);
+      // context.beginPath();
+      // context.moveTo(drawing.points[0].x, drawing.points[0].y);
+      // for (let i = 1; i < drawing.points.length; i++) {
+      //   context.lineTo(drawing.points[i].x, drawing.points[i].y);
+      // }
+      // context.stroke();
+      // 각 점마다 원형으로 지우기 (실시간 지우개와 동일하게)
+      const eraserSize = drawing.brushSize * 10 || 30;
+      for (let i = 0; i < drawing.points.length; i++) {
+        context.beginPath();
+        context.arc(drawing.points[i].x, drawing.points[i].y, eraserSize, 0, 2 * Math.PI);
+        context.fill();
       }
-      context.stroke();
     } else {
       // 펜 스트로크
       context.lineWidth = drawing.brushSize || 3;
