@@ -245,12 +245,12 @@ const LandingPage = ({ onSelectUserType }) => {
                 }
               }}
               onMouseEnter={(e) => {
-                e.target.style.transform = 'translateY(-8px)';
-                e.target.style.boxShadow = `0 25px 50px ${userType.color}30`;
+                e.currentTarget.style.transform = 'translateY(-8px)';
+                e.currentTarget.style.boxShadow = `0 25px 50px ${userType.color}30`;
               }}
               onMouseLeave={(e) => {
-                e.target.style.transform = 'translateY(0)';
-                e.target.style.boxShadow = userType.isPrimary 
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = userType.isPrimary 
                   ? `0 20px 40px ${userType.color}20`
                   : '0 10px 30px rgba(0, 0, 0, 0.1)';
               }}

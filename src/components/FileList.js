@@ -62,20 +62,20 @@ const FileList = ({ files, activeFileIndex, onFileSelect }) => {
             onClick={() => onFileSelect(file.url, index)}
             onMouseEnter={(e) => {
               if (index !== activeFileIndex) {
-                e.target.style.background = 'linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)';
-                e.target.style.borderColor = '#f97316';
-                e.target.style.transform = 'translateY(-1px) scale(1.01)';
-                e.target.style.boxShadow = '0 6px 12px -3px rgba(0, 0, 0, 0.1)';
-                e.target.style.zIndex = '10';
+                e.currentTarget.style.background = 'linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)';
+                e.currentTarget.style.borderColor = '#f97316';
+                e.currentTarget.style.transform = 'translateY(-1px) scale(1.01)';
+                e.currentTarget.style.boxShadow = '0 6px 12px -3px rgba(0, 0, 0, 0.1)';
+                e.currentTarget.style.zIndex = '10';
               }
             }}
             onMouseLeave={(e) => {
               if (index !== activeFileIndex) {
-                e.target.style.background = 'linear-gradient(135deg, #ffffff 0%, #fefefe 100%)';
-                e.target.style.borderColor = '#f1f5f9';
-                e.target.style.transform = 'scale(1)';
-                e.target.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.05)';
-                e.target.style.zIndex = '1';
+                e.currentTarget.style.background = 'linear-gradient(135deg, #ffffff 0%, #fefefe 100%)';
+                e.currentTarget.style.borderColor = '#f1f5f9';
+                e.currentTarget.style.transform = 'scale(1)';
+                e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.05)';
+                e.currentTarget.style.zIndex = '1';
               }
             }}
           >

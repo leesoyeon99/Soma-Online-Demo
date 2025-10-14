@@ -283,17 +283,18 @@ const TeacherBookListPage = ({ files, onBookSelect, onBackToLogin, onGoToSubmiss
                       border: '2px solid rgba(59, 130, 246, 0.2)',
                       boxShadow: '0 8px 32px rgba(30, 58, 138, 0.2)',
                       position: 'relative',
-                      overflow: 'hidden'
+                      overflow: 'hidden',
+                      willChange: 'transform, box-shadow'
                     }}
                     onMouseEnter={(e) => {
-                      e.target.style.transform = 'translateY(-4px)';
-                      e.target.style.boxShadow = '0 12px 40px rgba(30, 58, 138, 0.3)';
-                      e.target.style.borderColor = 'rgba(59, 130, 246, 0.4)';
+                      e.currentTarget.style.transform = 'translateY(-4px)';
+                      e.currentTarget.style.boxShadow = '0 12px 40px rgba(30, 58, 138, 0.3)';
+                      e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.4)';
                     }}
                     onMouseLeave={(e) => {
-                      e.target.style.transform = 'translateY(0)';
-                      e.target.style.boxShadow = '0 8px 32px rgba(30, 58, 138, 0.2)';
-                      e.target.style.borderColor = 'rgba(59, 130, 246, 0.2)';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 8px 32px rgba(30, 58, 138, 0.2)';
+                      e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.2)';
                     }}
                   >
                     {/* 즐겨찾기 버튼 */}
