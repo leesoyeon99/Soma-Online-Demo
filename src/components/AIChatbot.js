@@ -1,6 +1,19 @@
 import React, { useState, useRef, useEffect } from 'react';
 
-const AIChatbot = ({ isOpen, onClose, bookTitle }) => {
+// API 설정 - 환경변수로 분리 가능
+// const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://aiapi-fastapi-dev.t-ime.com';
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000';
+
+const AIChatbot = ({ 
+  isOpen, 
+  onClose, 
+  bookTitle,
+  // 캔버스 캡처를 위한 추가 props
+  pdfCanvasRef,
+  markupCanvasRef,
+  currentPageNum,
+  pdfFileName
+}) => {
   const [messages, setMessages] = useState([
     {
       id: 1,
@@ -13,6 +26,118 @@ const AIChatbot = ({ isOpen, onClose, bookTitle }) => {
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
 
+  // 페이지별 챗 히스토리 키 생성
+  const getChatHistoryKey = () => `chatHistory_${pdfFileName}_page${currentPageNum}`;
+
+  // 현재 페이지의 대화를 localStorage에 저장하는 함수
+  const saveCurrentConversation = () => {
+    if (!pdfFileName || !currentPageNum) return;
+    
+    const historyKey = getChatHistoryKey();
+    const messagesForSave = messages
+      .filter(msg => msg.type !== 'ai' || !msg.content.includes('안녕하세요!')) // 초기 인사 메시지 제외
+      .map(msg => ({
+        role: msg.type === 'user' ? 'user' : 'assistant',
+        content: msg.content,
+        timestamp: msg.timestamp.toISOString()
+      }));
+    
+    if (messagesForSave.length > 0) {
+      const limitedHistory = messagesForSave.slice(-20); // 최대 20개만 저장
+      localStorage.setItem(historyKey, JSON.stringify(limitedHistory));
+    }
+  };
+
+  // 페이지별 챗 히스토리 로드
+  useEffect(() => {
+    if (isOpen && pdfFileName && currentPageNum) {
+      console.log('📂 히스토리 로드:', `페이지 ${currentPageNum}`, getChatHistoryKey());
+      
+      const historyKey = getChatHistoryKey();
+      const savedHistory = localStorage.getItem(historyKey);
+      
+      if (savedHistory) {
+        try {
+          const parsedHistory = JSON.parse(savedHistory);
+          console.log('✅ 저장된 히스토리 발견:', parsedHistory.length, '개 메시지');
+          
+          // localStorage의 히스토리를 메시지 형식으로 변환
+          const loadedMessages = [
+            {
+              id: 1,
+              type: 'ai',
+              content: `안녕하세요! 페이지 ${currentPageNum}에 대해 궁금한 것이 있으시면 언제든 물어보세요! 🤖`,
+              timestamp: new Date()
+            },
+            ...parsedHistory.map((msg, index) => ({
+              id: index + 2,
+              type: msg.role === 'user' ? 'user' : 'ai',
+              content: msg.content,
+              timestamp: new Date(msg.timestamp)
+            }))
+          ];
+          setMessages(loadedMessages);
+        } catch (error) {
+          console.error('❌ 히스토리 로드 실패:', error);
+          // 에러 시 초기 메시지만 표시
+          setMessages([{
+            id: 1,
+            type: 'ai',
+            content: `안녕하세요! 페이지 ${currentPageNum}에 대해 궁금한 것이 있으시면 언제든 물어보세요! 🤖`,
+            timestamp: new Date()
+          }]);
+        }
+      } else {
+        console.log('ℹ️ 저장된 히스토리 없음 - 초기 메시지 표시');
+        // 히스토리 없으면 초기 메시지
+        setMessages([{
+          id: 1,
+          type: 'ai',
+          content: `안녕하세요! 페이지 ${currentPageNum}에 대해 궁금한 것이 있으시면 언제든 물어보세요! 🤖`,
+          timestamp: new Date()
+        }]);
+      }
+    }
+  }, [currentPageNum, pdfFileName, isOpen]); // isOpen 다시 추가!
+
+  // 이전 페이지 번호 추적
+  const prevPageNumRef = useRef(currentPageNum);
+  
+  // 페이지가 바뀔 때 이전 페이지의 대화 저장
+  useEffect(() => {
+    if (prevPageNumRef.current !== currentPageNum) {
+      console.log(`📝 페이지 변경 감지: ${prevPageNumRef.current} → ${currentPageNum}`);
+      
+      // 이전 페이지의 대화 저장
+      if (messages.length > 1) { // 초기 메시지 외에 대화가 있으면
+        const prevHistoryKey = `chatHistory_${pdfFileName}_page${prevPageNumRef.current}`;
+        const messagesForSave = messages
+          .filter(msg => msg.type !== 'ai' || !msg.content.includes('안녕하세요!'))
+          .map(msg => ({
+            role: msg.type === 'user' ? 'user' : 'assistant',
+            content: msg.content,
+            timestamp: msg.timestamp.toISOString()
+          }));
+        
+        if (messagesForSave.length > 0) {
+          localStorage.setItem(prevHistoryKey, JSON.stringify(messagesForSave.slice(-20)));
+          console.log(`✅ 페이지 ${prevPageNumRef.current} 대화 저장 완료`);
+        }
+      }
+      
+      // 현재 페이지 번호 업데이트
+      prevPageNumRef.current = currentPageNum;
+    }
+  }, [currentPageNum, pdfFileName, messages]);
+
+  // 챗봇이 닫힐 때 현재 대화 저장
+  useEffect(() => {
+    if (!isOpen && messages.length > 1) {
+      console.log('💾 챗봇 닫힘 - 현재 대화 저장');
+      saveCurrentConversation();
+    }
+  }, [isOpen, messages]);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -20,6 +145,47 @@ const AIChatbot = ({ isOpen, onClose, bookTitle }) => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // 캔버스를 이미지로 캡처하는 함수
+  const captureCanvas = () => {
+    if (!pdfCanvasRef?.current || !markupCanvasRef?.current) {
+      console.warn('캔버스를 찾을 수 없습니다. 텍스트만 전송합니다.');
+      return null;
+    }
+
+    try {
+      const pdfCanvas = pdfCanvasRef.current;
+      const markupCanvas = markupCanvasRef.current;
+      
+      // 임시 캔버스 생성 (두 캔버스 합치기)
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = pdfCanvas.width;
+      tempCanvas.height = pdfCanvas.height;
+      const ctx = tempCanvas.getContext('2d');
+      
+      // 백그라운드 흰색으로 설정 (AI 분석에 유리)
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+      
+      // PDF 원본 그리기
+      ctx.drawImage(pdfCanvas, 0, 0);
+      
+      // 필기 레이어 그리기
+      ctx.drawImage(markupCanvas, 0, 0);
+      
+      // Base64로 변환 (JPEG, 품질 0.8) - 파일 크기 최적화
+      const imageData = tempCanvas.toDataURL('image/jpeg', 0.8);
+      
+      // 메모리 정리
+      tempCanvas.width = 0;
+      tempCanvas.height = 0;
+      
+      return imageData;
+    } catch (error) {
+      console.error('캔버스 캡처 오류:', error);
+      return null;
+    }
+  };
 
   const handleSendMessage = async () => {
     if (!inputMessage.trim()) return;
@@ -32,36 +198,222 @@ const AIChatbot = ({ isOpen, onClose, bookTitle }) => {
     };
 
     setMessages(prev => [...prev, userMessage]);
+    const currentInput = inputMessage;
     setInputMessage('');
     setIsTyping(true);
 
-    // AI 응답 시뮬레이션 (실제로는 API 호출)
-    setTimeout(() => {
-      const aiResponse = generateAIResponse(inputMessage);
-      const aiMessage = {
-        id: Date.now() + 1,
-        type: 'ai',
-        content: aiResponse,
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, aiMessage]);
+    // AI 메시지 생성 (빈 내용으로 시작)
+    const aiMessageId = Date.now() + 1;
+    const aiMessage = {
+      id: aiMessageId,
+      type: 'ai',
+      content: '',
+      timestamp: new Date()
+    };
+    setMessages(prev => [...prev, aiMessage]);
+
+    try {
+      // 스트리밍 모드로 API 호출 (기본값)
+      await generateAIResponseStreaming(currentInput, (chunk) => {
+        // 실시간으로 메시지 업데이트
+        setMessages(prev => 
+          prev.map(msg => 
+            msg.id === aiMessageId 
+              ? { ...msg, content: chunk }
+              : msg
+          )
+        );
+      });
+      
+    } catch (error) {
+      console.error('메시지 전송 오류:', error);
+      
+      // 에러 메시지로 교체
+      setMessages(prev => 
+        prev.map(msg => 
+          msg.id === aiMessageId 
+            ? { ...msg, content: '죄송합니다. 일시적인 오류가 발생했습니다. 다시 시도해주세요.' }
+            : msg
+        )
+      );
+    } finally {
       setIsTyping(false);
-    }, 1500);
+    }
   };
 
-  const generateAIResponse = (userInput) => {
-    const responses = [
-      "좋은 질문이네요! 이 문제를 단계별로 풀어보겠습니다. 먼저 문제에서 주어진 조건을 정리해보세요.",
-      "이 개념은 수학에서 매우 중요한 부분입니다. 예시를 들어 설명해드릴게요.",
-      "문제를 해결하기 위해서는 먼저 공식을 적용해야 합니다. 어떤 공식을 사용해야 할지 생각해보세요.",
-      "정답은 맞습니다! 하지만 더 간단한 방법도 있어요. 다른 풀이 방법도 알려드릴게요.",
-      "이 부분이 어려우시군요. 그림을 그려서 설명해드릴게요. 먼저 도형을 그려보세요.",
-      "훌륭한 접근 방법입니다! 이제 다음 단계로 넘어가보겠습니다.",
-      "이 문제는 여러 가지 방법으로 풀 수 있어요. 가장 쉬운 방법부터 알려드릴게요.",
-      "개념을 이해하는 것이 중요해요. 이 원리를 다른 문제에도 적용할 수 있습니다."
-    ];
-    
-    return responses[Math.floor(Math.random() * responses.length)];
+  // AI 응답 생성 함수 (스트리밍 모드 - 기본값)
+  const generateAIResponseStreaming = async (userInput, onChunk) => {
+    try {
+      // 현재 페이지 캡처
+      const pageImage = captureCanvas();
+      
+      // 현재 페이지의 챗 히스토리 로드 (최근 5개만)
+      const currentHistoryKey = getChatHistoryKey();
+      const currentSavedHistory = localStorage.getItem(currentHistoryKey) || '[]';
+      const currentParsedHistory = JSON.parse(currentSavedHistory);
+      const recentHistory = currentParsedHistory.slice(-5); // 최근 5개 대화만
+      
+      // API 호출
+      const requestBody = {
+        question: userInput,
+        pageNumber: currentPageNum || 1,
+        bookTitle: bookTitle,
+        pdfFileName: pdfFileName || 'unknown.pdf',
+        streaming: true, // 스트리밍 모드 활성화
+        chatHistory: recentHistory, // 최근 5개 대화 히스토리 추가
+        ...(pageImage && { imageData: pageImage })
+      };
+
+      console.log('AI API 호출 (스트리밍):', {
+        question: userInput,
+        pageNumber: currentPageNum,
+        hasImage: !!pageImage,
+        historyCount: recentHistory.length
+      });
+
+      const response = await fetch(`${API_BASE_URL}/api/v1/soma-online/ai-chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        throw new Error(`API 에러: ${response.status} ${response.statusText}`);
+      }
+
+      // SSE 스트림 읽기
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let fullResponse = '';
+      let buffer = ''; // 불완전한 청크를 위한 버퍼
+
+      console.log('🔄 스트리밍 시작...');
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) {
+          console.log('✅ 스트림 읽기 완료');
+          break;
+        }
+
+        // 청크 디코딩
+        const chunk = decoder.decode(value, { stream: true });
+        buffer += chunk;
+        console.log('📦 받은 청크:', chunk);
+
+        // 완전한 라인들만 처리
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || ''; // 마지막 불완전한 라인은 버퍼에 보관
+
+        for (const line of lines) {
+          console.log('📝 처리 중인 라인:', line);
+          
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6).trim(); // 'data: ' 제거 및 공백 제거
+            
+            if (data === '[DONE]') {
+              console.log('🏁 스트리밍 완료 신호 받음');
+              return fullResponse;
+            }
+
+            if (!data) continue; // 빈 데이터 스킵
+
+            // JSON인지 순수 텍스트인지 판별
+            if (data.startsWith('{')) {
+              // JSON 형식
+              try {
+                const parsed = JSON.parse(data);
+                console.log('✨ JSON 파싱 성공:', parsed);
+                
+                if (parsed.content) {
+                  fullResponse += parsed.content;
+                  console.log('💬 누적 응답 길이:', fullResponse.length);
+                  
+                  // 실시간으로 UI 업데이트
+                  if (onChunk) {
+                    onChunk(fullResponse);
+                  }
+                }
+                if (parsed.error) {
+                  console.error('❌ 에러 수신:', parsed.error);
+                  throw new Error(parsed.error);
+                }
+              } catch (e) {
+                console.warn('⚠️ JSON 파싱 실패:', data, e.message);
+              }
+            } else {
+              // 순수 텍스트 형식 (현재 백엔드 방식)
+              console.log('💬 텍스트 수신:', data.substring(0, 50) + '...');
+              fullResponse += data;
+              
+              // 실시간으로 UI 업데이트
+              if (onChunk) {
+                onChunk(fullResponse);
+              }
+            }
+          }
+        }
+      }
+
+      console.log('📊 최종 응답 길이:', fullResponse.length);
+      
+      // 히스토리 저장은 saveCurrentConversation()에서 일괄 처리
+      return fullResponse;
+      
+    } catch (error) {
+      console.error('AI 응답 생성 오류 (스트리밍):', error);
+      throw error;
+    }
+  };
+
+  // 논스트리밍 모드 (테스트용)
+  const generateAIResponseNonStreaming = async (userInput) => {
+    try {
+      const pageImage = captureCanvas();
+      
+      // 현재 페이지의 챗 히스토리 로드 (최근 5개만)
+      const currentHistoryKey2 = getChatHistoryKey();
+      const currentSavedHistory2 = localStorage.getItem(currentHistoryKey2) || '[]';
+      const currentParsedHistory2 = JSON.parse(currentSavedHistory2);
+      const recentHistory = currentParsedHistory2.slice(-5);
+      
+      const requestBody = {
+        question: userInput,
+        pageNumber: currentPageNum || 1,
+        bookTitle: bookTitle,
+        pdfFileName: pdfFileName || 'unknown.pdf',
+        streaming: false,
+        chatHistory: recentHistory, // 최근 5개 대화 히스토리 추가
+        ...(pageImage && { imageData: pageImage })
+      };
+
+      const response = await fetch(`${API_BASE_URL}/api/v1/soma-online/ai-chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+        signal: AbortSignal.timeout(300000)
+      });
+
+      if (!response.ok) {
+        throw new Error(`API 에러: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      const aiResponse = data.data?.result?.content || data.answer || data.response || data.message || '응답을 받지 못했습니다.';
+      
+      console.log('백엔드 응답 (논스트리밍):', data);
+
+      // 히스토리 저장은 saveCurrentConversation()에서 일괄 처리
+      return aiResponse;
+      
+    } catch (error) {
+      console.error('AI 응답 생성 오류 (논스트리밍):', error);
+      throw error;
+    }
   };
 
   const handleKeyPress = (e) => {

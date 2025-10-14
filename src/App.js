@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import './App.css';
 import LandingPage from './components/LandingPage';
 import LoginPage from './components/LoginPage';
@@ -20,6 +20,9 @@ function App() {
   const [currentPage, setCurrentPage] = useState('landing'); // 'landing', 'login', 'bookList', 'detail', 'teacherAnnotation', 'teacherFeedbackCards', 'teacherSubmission'
   // const [userType, setUserType] = useState(null); // 'admin', 'teacher', 'student' - 현재 사용하지 않음
   const [isAIChatbotOpen, setIsAIChatbotOpen] = useState(false);
+  
+  // PDF Viewer ref (AIChatbot에서 캔버스 접근용)
+  const pdfViewerRef = useRef(null);
   // const [isLoggedIn, setIsLoggedIn] = useState(false); // 현재 사용하지 않음
   const [selectedSubmission, setSelectedSubmission] = useState(null);
   
@@ -1215,6 +1218,7 @@ function App() {
           }}>
             {isCurrentFilePDF ? (
               <StaticPDFViewer
+                ref={pdfViewerRef}
                 pdfFileName={currentFile.url.replace('/', '')}
                 pageNum={currentPageNum}
                 zoomScale={zoomScale}
@@ -1507,6 +1511,10 @@ function App() {
           isOpen={isAIChatbotOpen}
           onClose={() => setIsAIChatbotOpen(false)}
           bookTitle={files[activeFileIndex]?.title || '교재'}
+          pdfCanvasRef={pdfViewerRef?.current?.canvasRef}
+          markupCanvasRef={pdfViewerRef?.current?.markupCanvasRef}
+          currentPageNum={currentPageNum}
+          pdfFileName={currentFile?.url?.replace('/', '') || 'unknown.pdf'}
         />
       </div>
     );
@@ -1871,6 +1879,7 @@ function App() {
         }}>
           {isCurrentFilePDF ? (
             <StaticPDFViewer
+              ref={pdfViewerRef}
               pdfFileName={currentFile.url.replace('/', '')}
               pageNum={currentPageNum}
               zoomScale={zoomScale}
@@ -2847,6 +2856,10 @@ function App() {
         isOpen={isAIChatbotOpen}
         onClose={() => setIsAIChatbotOpen(false)}
         bookTitle={files[activeFileIndex]?.title || '교재'}
+        pdfCanvasRef={pdfViewerRef?.current?.canvasRef}
+        markupCanvasRef={pdfViewerRef?.current?.markupCanvasRef}
+        currentPageNum={currentPageNum}
+        pdfFileName={currentFile?.url?.replace('/', '') || 'unknown.pdf'}
       />
 
 
