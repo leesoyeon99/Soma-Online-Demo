@@ -471,15 +471,16 @@ const TeacherFeedbackCards = ({
                   boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
                   border: statusColor.border,
                   position: 'relative',
-                  overflow: 'hidden'
+                  overflow: 'hidden',
+                  willChange: 'transform, box-shadow'
                 }}
                 onMouseEnter={(e) => {
-                  e.target.style.transform = 'translateY(-4px) scale(1.02)';
-                  e.target.style.boxShadow = '0 20px 25px -5px rgba(0, 0, 0, 0.15)';
+                  e.currentTarget.style.transform = 'translateY(-4px) scale(1.02)';
+                  e.currentTarget.style.boxShadow = '0 20px 25px -5px rgba(0, 0, 0, 0.15)';
                 }}
                 onMouseLeave={(e) => {
-                  e.target.style.transform = 'translateY(0) scale(1)';
-                  e.target.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1)';
+                  e.currentTarget.style.transform = 'translateY(0) scale(1)';
+                  e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1)';
                 }}
               >
                 {/* 신규 배지 */}

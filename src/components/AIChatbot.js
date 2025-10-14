@@ -66,7 +66,7 @@ const AIChatbot = ({
             {
               id: 1,
               type: 'ai',
-              content: `안녕하세요! 페이지 ${currentPageNum}에 대해 궁금한 것이 있으시면 언제든 물어보세요! 🤖`,
+              content: `안녕하세요! ${bookTitle}의 페이지 ${currentPageNum}에 대해 궁금한 것이 있으시면 언제든 물어보세요! 🤖`,
               timestamp: new Date()
             },
             ...parsedHistory.map((msg, index) => ({
@@ -83,7 +83,7 @@ const AIChatbot = ({
           setMessages([{
             id: 1,
             type: 'ai',
-            content: `안녕하세요! 페이지 ${currentPageNum}에 대해 궁금한 것이 있으시면 언제든 물어보세요! 🤖`,
+            content: `안녕하세요! ${bookTitle}의 페이지 ${currentPageNum}에 대해 궁금한 것이 있으시면 언제든 물어보세요! 🤖`,
             timestamp: new Date()
           }]);
         }
@@ -93,7 +93,7 @@ const AIChatbot = ({
         setMessages([{
           id: 1,
           type: 'ai',
-          content: `안녕하세요! 페이지 ${currentPageNum}에 대해 궁금한 것이 있으시면 언제든 물어보세요! 🤖`,
+          content: `안녕하세요! ${bookTitle}의 페이지 ${currentPageNum}에 대해 궁금한 것이 있으시면 언제든 물어보세요! 🤖`,
           timestamp: new Date()
         }]);
       }
