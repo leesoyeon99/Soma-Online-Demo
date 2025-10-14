@@ -4,7 +4,7 @@ React 기반의 디지털 학습 플랫폼 데모입니다. 학생과 선생님 
 
 ## 🚀 라이브 데모
 
-[여기서 라이브 데모를 확인하세요](https://yourusername.github.io/soma-online-demo)
+[여기서 라이브 데모를 확인하세요](https://yourusername.github.io/Soma-Online-Demo)
 
 ## 📋 주요 기능
 
