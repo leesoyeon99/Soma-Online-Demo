@@ -1,10 +1,10 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
 
 // PDF.js worker 설정 - CDN 사용 (API 버전과 일치)
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@5.4.149/build/pdf.worker.min.mjs';
 
-const StaticPDFViewer = ({ 
+const StaticPDFViewer = forwardRef(({ 
   pdfFileName = 'somapremier.pdf',
   pageNum = 1, 
   zoomScale = 1.0, 
@@ -21,7 +21,7 @@ const StaticPDFViewer = ({
   onPageCountChange,
   onPageChange,
   feedbackTexts = []
-}) => {
+}, ref) => {
   const canvasRef = useRef(null);
   const markupCanvasRef = useRef(null);
   const containerRef = useRef(null);
@@ -54,6 +54,14 @@ const StaticPDFViewer = ({
   
   // 동영상 모달 상태
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
+
+  // ref를 통해 캔버스에 접근할 수 있도록 함 (AIChatbot용)
+  useImperativeHandle(ref, () => ({
+    canvasRef,
+    markupCanvasRef,
+    currentPageNum: pageNum,
+    pdfFileName
+  }), [pageNum, pdfFileName]);
 
   // PDF 문서 로드 (정적 경로 사용)
   useEffect(() => {
@@ -1263,6 +1271,6 @@ const StaticPDFViewer = ({
       )}
     </div>
   );
-};
+});
 
 export default StaticPDFViewer;
