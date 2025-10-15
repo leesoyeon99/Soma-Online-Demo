@@ -487,6 +487,59 @@ const TeacherAnnotationViewer = ({
   }, [redrawAnnotations]);
 
   // 오디오 재생 핸들러
+  // 학생 제출물 통합 재생 (오디오 + 스트로크 동기화)
+  const handleStudentWorkReplay = async () => {
+    const audio = audioRef.current;
+    const pdfViewerCanvas = document.querySelector('canvas'); // PDF 캔버스
+    
+    if (!audio) return;
+    
+    if (isPlaying) {
+      audio.pause();
+      setIsPlaying(false);
+      return;
+    }
+    
+    // 재생 시작
+    audio.currentTime = 0;
+    audio.play();
+    setIsPlaying(true);
+    
+    console.log('🎬 학생 제출물 재생 시작:', {
+      strokeCount: submission.strokeData?.length,
+      hasAudio: !!(submission.audioBase64 || submission.audioUrl),
+      recordingStartTime: submission.recordingStartTime
+    });
+    
+    // 스트로크 애니메이션 (타임스탬프에 맞춰 그리기)
+    if (submission.strokeData && submission.strokeData.length > 0) {
+      const recordingStrokes = submission.strokeData.filter(
+        stroke => stroke.isRecording && typeof stroke.timestamp === 'number'
+      );
+      
+      console.log('재생할 녹음 스트로크:', recordingStrokes.length, '개');
+      
+      // 스트로크 동기화 인터벌
+      const syncInterval = setInterval(() => {
+        if (!audio || audio.paused || audio.ended) {
+          clearInterval(syncInterval);
+          return;
+        }
+        
+        const currentAudioTime = audio.currentTime;
+        
+        // 현재 오디오 시간에 맞는 스트로크 그리기
+        recordingStrokes.forEach(stroke => {
+          if (stroke.timestamp <= currentAudioTime && !stroke.drawn) {
+            console.log(`스트로크 그리기: ${stroke.timestamp.toFixed(2)}s`);
+            // TODO: 캔버스에 실제로 그리기
+            stroke.drawn = true;
+          }
+        });
+      }, 50);
+    }
+  };
+
   const handleAudioPlay = () => {
     const audio = audioRef.current;
     if (audio) {
@@ -1042,8 +1095,39 @@ const TeacherAnnotationViewer = ({
             </div>
           </div>
 
+          {/* 제출 정보 */}
+          <div>
+            <h3 style={{
+              color: '#1e3a8a',
+              fontSize: '1.1rem',
+              fontWeight: 'bold',
+              margin: '0 0 0.5rem 0',
+              fontFamily: 'var(--font-title)'
+            }}>
+              제출 정보
+            </h3>
+            <div style={{
+              background: 'rgba(59, 130, 246, 0.1)',
+              padding: '1rem',
+              borderRadius: '8px',
+              border: '1px solid rgba(59, 130, 246, 0.2)',
+              fontSize: '0.9rem',
+              color: '#64748b'
+            }}>
+              <p style={{ margin: '0 0 0.5rem 0' }}>
+                <strong>페이지:</strong> {submission.currentPage || '정보 없음'}
+              </p>
+              <p style={{ margin: '0 0 0.5rem 0' }}>
+                <strong>스트로크:</strong> {submission.strokeData?.length || 0}개
+              </p>
+              <p style={{ margin: '0' }}>
+                <strong>오디오:</strong> {(submission.audioBase64 || submission.audioUrl) ? '있음 ✅' : '없음 ❌'}
+              </p>
+            </div>
+          </div>
+
           {/* 오디오 플레이어 */}
-          {submission.audioUrl && (
+          {(submission.audioBase64 || submission.audioUrl) && (
             <div>
               <h3 style={{
                 color: '#1e3a8a',
@@ -1052,7 +1136,7 @@ const TeacherAnnotationViewer = ({
                 margin: '0 0 0.5rem 0',
                 fontFamily: 'var(--font-title)'
               }}>
-                학생 녹음
+                학생 녹음 재생
               </h3>
               <div style={{
                 background: 'rgba(16, 185, 129, 0.1)',
@@ -1062,17 +1146,20 @@ const TeacherAnnotationViewer = ({
               }}>
                 <audio
                   ref={audioRef}
-                  src={submission.audioUrl}
+                  src={submission.audioBase64 || submission.audioUrl}
                   onTimeUpdate={handleTimeUpdate}
                   onLoadedMetadata={handleLoadedMetadata}
                   onEnded={handleAudioEnded}
                   style={{ display: 'none' }}
                 />
                 
+                {/* 통합 재생 버튼 (오디오 + 스트로크) */}
                 <button
-                  onClick={handleAudioPlay}
+                  onClick={handleStudentWorkReplay}
                   style={{
-                    background: isPlaying ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    background: isPlaying 
+                      ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' 
+                      : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
                     color: 'white',
                     border: 'none',
                     borderRadius: '8px',
@@ -1086,7 +1173,7 @@ const TeacherAnnotationViewer = ({
                     gap: '0.5rem',
                     width: '100%',
                     justifyContent: 'center',
-                    marginBottom: '1rem'
+                    marginBottom: '0.5rem'
                   }}
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -1096,7 +1183,35 @@ const TeacherAnnotationViewer = ({
                       <path d="M8 5v14l11-7z"/>
                     )}
                   </svg>
-                  {isPlaying ? '일시정지' : '재생'}
+                  {isPlaying ? '재생 중...' : '🎬 학습 재생 (오디오+필기)'}
+                </button>
+                
+                {/* 오디오만 재생 버튼 */}
+                <button
+                  onClick={handleAudioPlay}
+                  style={{
+                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '0.5rem 1rem',
+                    cursor: 'pointer',
+                    fontSize: '0.8rem',
+                    fontWeight: '600',
+                    transition: 'all 0.2s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    width: '100%',
+                    justifyContent: 'center',
+                    marginBottom: '1rem',
+                    opacity: 0.8
+                  }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M8 5v14l11-7z"/>
+                  </svg>
+                  오디오만 재생
                 </button>
                 
                 <div style={{

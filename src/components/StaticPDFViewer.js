@@ -13,6 +13,7 @@ const StaticPDFViewer = forwardRef(({
   brushSize = 3,
   onStrokeDataChange,
   isRecording = false,
+  isReplaying = false,
   studentStrokeData = null,
   teacherFeedbackData = null,
   showTeacherFeedback = false,
@@ -129,30 +130,42 @@ const StaticPDFViewer = forwardRef(({
     }
   }, [pdfFileName, onPageCountChange, isTeacherMode]);
 
-  // 스트로크 그리기
+  // 스트로크 그리기 (상대 좌표 → 절대 좌표 변환)
   const drawStroke = (context, drawing) => {
     if (drawing.points.length < 2) return;
+    
+    const canvas = context.canvas;
+    const currentCanvasWidth = canvas.width;
+    const currentCanvasHeight = canvas.height;
+    
+    // 상대 좌표(0~1)를 현재 캔버스 크기에 맞게 절대 좌표로 변환
+    // points[i].x가 1보다 크면 이미 절대 좌표 (하위 호환성)
+    const denormalizedPoints = drawing.points.map(point => {
+      if (point.x <= 1 && point.y <= 1) {
+        // 상대 좌표 → 절대 좌표
+        return {
+          x: point.x * currentCanvasWidth,
+          y: point.y * currentCanvasHeight
+        };
+      } else {
+        // 이미 절대 좌표 (기존 데이터 호환)
+        return point;
+      }
+    });
     
     context.save();
     
     if (drawing.tool === 'eraser') {
       // 지우개 스트로크는 destination-out 모드로 그리기
       context.globalCompositeOperation = 'destination-out';
-      // context.lineWidth = drawing.brushSize * 10 || 30;
       context.lineCap = 'round';
       context.lineJoin = 'round';
       
-      // context.beginPath();
-      // context.moveTo(drawing.points[0].x, drawing.points[0].y);
-      // for (let i = 1; i < drawing.points.length; i++) {
-      //   context.lineTo(drawing.points[i].x, drawing.points[i].y);
-      // }
-      // context.stroke();
-      // 각 점마다 원형으로 지우기 (실시간 지우개와 동일하게)
+      // 각 점마다 원형으로 지우기
       const eraserSize = drawing.brushSize * 10 || 30;
-      for (let i = 0; i < drawing.points.length; i++) {
+      for (let i = 0; i < denormalizedPoints.length; i++) {
         context.beginPath();
-        context.arc(drawing.points[i].x, drawing.points[i].y, eraserSize, 0, 2 * Math.PI);
+        context.arc(denormalizedPoints[i].x, denormalizedPoints[i].y, eraserSize, 0, 2 * Math.PI);
         context.fill();
       }
     } else {
@@ -163,9 +176,9 @@ const StaticPDFViewer = forwardRef(({
       context.lineJoin = 'round';
       
       context.beginPath();
-      context.moveTo(drawing.points[0].x, drawing.points[0].y);
-      for (let i = 1; i < drawing.points.length; i++) {
-        context.lineTo(drawing.points[i].x, drawing.points[i].y);
+      context.moveTo(denormalizedPoints[0].x, denormalizedPoints[0].y);
+      for (let i = 1; i < denormalizedPoints.length; i++) {
+        context.lineTo(denormalizedPoints[i].x, denormalizedPoints[i].y);
       }
       context.stroke();
     }
@@ -451,21 +464,35 @@ const StaticPDFViewer = forwardRef(({
 
   // 페이지 변경 시 렌더링 (단순화된 안전한 렌더링)
   useEffect(() => {
-    console.log('페이지 변경 감지:', { pdfDoc: !!pdfDoc, pageNum, totalPages });
+    const validPageNum = typeof pageNum === 'number' ? pageNum : parseInt(pageNum, 10);
+    console.log('페이지 변경 감지:', { 
+      pdfDoc: !!pdfDoc, 
+      pageNum, 
+      validPageNum,
+      isValidNumber: !isNaN(validPageNum),
+      totalPages 
+    });
     
-    if (pdfDoc && pageNum && pageNum <= totalPages) {
-      console.log('🚀 페이지 렌더링 시작');
+    if (pdfDoc && !isNaN(validPageNum) && validPageNum > 0 && validPageNum <= totalPages) {
+      // 재생 중이면 페이지 렌더링 건너뜀 (재생 로직이 마크업만 제어)
+      if (isReplaying) {
+        console.log('⏸️ 재생 중이므로 페이지 렌더링 건너뜀');
+        setPageRendering(false);
+        return;
+      }
+      
+      console.log('🚀 페이지 렌더링 시작, 페이지:', validPageNum);
       setPageRendering(true);
       
       // 현재 페이지의 필기 데이터 로드
-      const pageDrawings = savedDrawings[pageNum] || [];
+      const pageDrawings = savedDrawings[validPageNum] || [];
       setCurrentPageDrawings(pageDrawings);
       
       // 렌더링 작업을 순차적으로 처리
       const renderCurrentPage = async () => {
         try {
-          console.log('📖 PDF 페이지 가져오기:', pageNum);
-          const page = await pdfDoc.getPage(pageNum);
+          console.log('📖 PDF 페이지 가져오기:', validPageNum);
+          const page = await pdfDoc.getPage(validPageNum);
           const canvas = canvasRef.current;
           const markupCanvas = markupCanvasRef.current;
           
@@ -488,26 +515,31 @@ const StaticPDFViewer = forwardRef(({
             console.log('📐 마크업 캔버스 크기 조정 완료');
             
             // 마크업 다시 그리기 (지연 실행으로 성능 최적화)
-            setTimeout(() => {
-              console.log('마크업 다시 그리기');
-              
-              // 현재 페이지의 필기 데이터 그리기
-              const markupCanvas = markupCanvasRef.current;
-              if (markupCanvas) {
-                const context = markupCanvas.getContext('2d');
-                const pageDrawings = savedDrawings[pageNum] || [];
-                pageDrawings.forEach(drawing => {
-                  drawStroke(context, drawing);
-                });
-              }
-              
-              // 스크롤 위치 복원 (리렌더링 후 위치 유지)
-              const container = containerRef.current;
-              if (container && scrollPositionRef.current) {
-                container.scrollLeft = scrollPositionRef.current.x;
-                container.scrollTop = scrollPositionRef.current.y;
-              }
-            }, 100);
+            // 재생 중일 때는 마크업 렌더링을 건너뜀 (재생 로직이 직접 그림)
+            if (!isReplaying) {
+              setTimeout(() => {
+                console.log('마크업 다시 그리기, 페이지:', validPageNum);
+                
+                // 현재 페이지의 필기 데이터 그리기
+                const markupCanvas = markupCanvasRef.current;
+                if (markupCanvas) {
+                  const context = markupCanvas.getContext('2d');
+                  const pageDrawings = savedDrawings[validPageNum] || [];
+                  pageDrawings.forEach(drawing => {
+                    drawStroke(context, drawing);
+                  });
+                }
+                
+                // 스크롤 위치 복원 (리렌더링 후 위치 유지)
+                const container = containerRef.current;
+                if (container && scrollPositionRef.current) {
+                  container.scrollLeft = scrollPositionRef.current.x;
+                  container.scrollTop = scrollPositionRef.current.y;
+                }
+              }, 100);
+            } else {
+              console.log('⏸️ 재생 중이므로 마크업 자동 렌더링 건너뜀');
+            }
           } else {
             console.warn('캔버스가 준비되지 않음');
           }
@@ -521,14 +553,20 @@ const StaticPDFViewer = forwardRef(({
       
       // 렌더링 시작
       renderCurrentPage();
-    } else if (pageNum > totalPages) {
+    } else if (!isNaN(validPageNum) && validPageNum > totalPages) {
       // 페이지 범위를 벗어나면 첫 페이지로 이동
-      console.log(`페이지 ${pageNum}은 전체 페이지 수(${totalPages}페이지)를 벗어납니다.`);
+      console.warn(`⚠️ 페이지 ${validPageNum}은 전체 페이지 수(${totalPages}페이지)를 벗어납니다. 1페이지로 이동합니다.`);
       if (onPageChange) {
         onPageChange(1);
       }
     } else {
-      console.log('PDF 문서가 로드되지 않음 또는 페이지 번호가 유효하지 않음');
+      console.warn('⚠️ PDF 렌더링 불가:', {
+        pdfDoc: !!pdfDoc,
+        pageNum,
+        validPageNum,
+        isValidNumber: !isNaN(validPageNum),
+        totalPages
+      });
     }
   }, [pdfDoc, pageNum, zoomScale, totalPages, onPageChange, renderPage]);
 
@@ -775,13 +813,25 @@ const StaticPDFViewer = forwardRef(({
     
     // 펜과 지우개 모두 저장 (지우개도 스트로크로 저장)
     if (isDrawing && currentPath.length > 1) {
+      const canvas = markupCanvasRef.current;
+      const canvasWidth = canvas?.width || 1;
+      const canvasHeight = canvas?.height || 1;
+      
+      // 절대 좌표를 상대 좌표(0~1)로 변환하여 저장
+      const normalizedPoints = currentPath.map(point => ({
+        x: point.x / canvasWidth,
+        y: point.y / canvasHeight
+      }));
+      
       const newDrawing = {
         id: Date.now(),
         type: 'stroke',
         tool: selectedTool, // 'pen' 또는 'eraser'
         color: selectedColor,
         brushSize: brushSize,
-        points: currentPath,
+        points: normalizedPoints, // 상대 좌표로 저장
+        canvasWidth: canvasWidth, // 원본 캔버스 크기도 저장 (디버깅용)
+        canvasHeight: canvasHeight,
         timestamp: strokeStartTime, // 스트로크 시작 시간 (밀리초)
         isRecording: isRecording
       };

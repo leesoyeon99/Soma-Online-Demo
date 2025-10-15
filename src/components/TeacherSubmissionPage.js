@@ -6,9 +6,56 @@ const TeacherSubmissionPage = ({ onBackToBookList, onViewSubmission }) => {
   const [filterStatus, setFilterStatus] = useState('all'); // 'all', 'pending', 'graded'
   const [searchTerm, setSearchTerm] = useState('');
 
-  // 샘플 제출 데이터 (실제로는 서버에서 가져옴)
+  // 실제 학생 제출 데이터 로드
   useEffect(() => {
-    const sampleSubmissions = [
+    console.log('🎓 TeacherSubmissionPage 마운트됨 - 제출물 로드 시작');
+    
+    // localStorage에서 실제 제출 데이터 가져오기
+    const loadSubmissions = () => {
+      const savedSubmissions = localStorage.getItem('studentSubmissions');
+      console.log('🔍 localStorage 확인:', savedSubmissions ? '데이터 있음' : '데이터 없음');
+      
+      if (savedSubmissions) {
+        try {
+          const parsedSubmissions = JSON.parse(savedSubmissions);
+          console.log('📚 로드된 학생 제출물:', parsedSubmissions.length, '개');
+          console.log('제출 데이터 상세:', parsedSubmissions);
+          
+          if (parsedSubmissions.length === 0) {
+            console.warn('⚠️ studentSubmissions는 있지만 빈 배열입니다!');
+            loadSampleSubmissions();
+            return;
+          }
+          
+          // 제출 데이터를 TeacherSubmissionPage 형식으로 변환
+          const formattedSubmissions = parsedSubmissions.map(sub => {
+            const formatted = {
+              ...sub,
+              submittedAt: sub.timestamp || sub.submittedAt,
+              status: sub.status || 'pending',
+              hasAudio: !!(sub.audioBase64 || sub.audioUrl),
+              hasDrawing: sub.strokeData && sub.strokeData.length > 0,
+              studentName: sub.studentName || '학생',
+              bookTitle: sub.bookTitle || '교재'
+            };
+            console.log('변환된 제출물:', formatted);
+            return formatted;
+          });
+          
+          setSubmissions(formattedSubmissions);
+          return;
+        } catch (error) {
+          console.error('❌ 제출 데이터 로드 오류:', error);
+        }
+      }
+      
+      // 저장된 데이터가 없으면 샘플 데이터 표시
+      console.log('ℹ️ 저장된 제출물 없음 - 샘플 데이터 표시');
+      loadSampleSubmissions();
+    };
+    
+    const loadSampleSubmissions = () => {
+      const sampleSubmissions = [
       {
         id: 1,
         studentId: 'student1',
@@ -600,7 +647,10 @@ const TeacherSubmissionPage = ({ onBackToBookList, onViewSubmission }) => {
       }
     ];
     
-    setSubmissions(sampleSubmissions);
+      setSubmissions(sampleSubmissions);
+    };
+    
+    loadSubmissions();
   }, []);
 
   // 필터링된 제출물 목록
@@ -872,6 +922,22 @@ const TeacherSubmissionPage = ({ onBackToBookList, onViewSubmission }) => {
                   gap: '0.75rem',
                   marginBottom: '1.5rem'
                 }}>
+                  {/* 페이지 정보 */}
+                  {submission.currentPage && (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      fontSize: '0.875rem',
+                      color: '#8b5cf6',
+                      fontFamily: 'var(--font-body)'
+                    }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+                      </svg>
+                      <span><strong>페이지:</strong> {submission.currentPage}</span>
+                    </div>
+                  )}
                   <div style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -996,10 +1062,46 @@ const TeacherSubmissionPage = ({ onBackToBookList, onViewSubmission }) => {
             </h3>
             <p style={{
               fontSize: '1rem',
-              margin: '0',
+              margin: '0 0 1rem 0',
               fontFamily: 'var(--font-body)'
             }}>
               {searchTerm || filterStatus !== 'all' ? '다른 검색어를 시도해보세요' : '학생들이 과제를 제출하면 여기에 표시됩니다'}
+            </p>
+            <button
+              onClick={() => {
+                console.log('🔄 제출물 새로고침 버튼 클릭');
+                const saved = localStorage.getItem('studentSubmissions');
+                console.log('localStorage 내용:', saved);
+                if (saved) {
+                  const parsed = JSON.parse(saved);
+                  console.log('파싱된 제출물:', parsed);
+                  alert(`저장된 제출물: ${parsed.length}개\n\n콘솔을 확인하세요.`);
+                } else {
+                  alert('저장된 제출물이 없습니다.\n학생 모드에서 먼저 제출해주세요.');
+                }
+                window.location.reload();
+              }}
+              style={{
+                background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '0.75rem 1.5rem',
+                cursor: 'pointer',
+                fontSize: '0.9rem',
+                fontWeight: '600',
+                fontFamily: 'var(--font-ui)'
+              }}
+            >
+              🔄 제출물 새로고침
+            </button>
+            <p style={{
+              fontSize: '0.8rem',
+              margin: '1rem 0 0 0',
+              opacity: 0.7,
+              fontFamily: 'var(--font-body)'
+            }}>
+              전체 제출물 수: {submissions.length}개 | 필터링 후: {filteredSubmissions.length}개
             </p>
           </div>
         )}

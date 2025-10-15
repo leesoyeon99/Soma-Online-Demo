@@ -444,36 +444,83 @@ function App() {
       return;
     }
     
-    const submission = {
-      id: Date.now(),
-      studentId: 'student1',
-      studentName: '학생',
-      timestamp: new Date().toISOString(),
-      strokeData: [...strokeData],
-      audioUrl: audioUrl,
-      bookTitle: files[activeFileIndex]?.title || '교재',
-      bookUrl: currentPdfUrl
+    // 오디오를 Base64로 변환하여 저장
+    const convertAudioToBase64 = async () => {
+      if (!audioUrl) return null;
+      
+      try {
+        const response = await fetch(audioUrl);
+        const blob = await response.blob();
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      } catch (error) {
+        console.error('오디오 변환 오류:', error);
+        return null;
+      }
     };
     
-    // 로컬 스토리지에 저장 (실제로는 서버로 전송)
-    localStorage.setItem('studentSubmission', JSON.stringify(submission));
-    
-    // 알림 추가
-    const newNotification = {
-      id: Date.now(),
-      type: 'submission',
-      title: '과제 제출 완료',
-      message: `"${submission.bookTitle}" 과제가 선생님에게 전송되었습니다`,
-      timestamp: new Date().toISOString(),
-      isRead: false
-    };
-    
-    setNotifications(prev => [newNotification, ...prev]);
-    
-    // 선생님에게 알림 표시
-    setSubmissionAlert(true);
-    
-    // 데모용: 자동으로 선생님 첨삭 생성 (3초 후)
+    // 비동기 처리
+    convertAudioToBase64().then(audioBase64 => {
+      const submission = {
+        id: Date.now(),
+        studentId: 'student1',
+        studentName: '학생',
+        timestamp: new Date().toISOString(),
+        strokeData: [...strokeData], // 모든 스트로크 데이터 (타임스탬프 포함)
+        audioUrl: audioUrl, // Blob URL (임시)
+        audioBase64: audioBase64, // Base64 인코딩된 오디오 (영구 저장)
+        recordingStartTime: recordingStartTime, // 녹음 시작 시간 (타임스탬프 계산용)
+        currentPage: currentPageNum, // 제출 시 현재 PDF 페이지 번호 (수정!)
+        bookTitle: files[activeFileIndex]?.title || '교재',
+        bookUrl: currentPdfUrl,
+        pdfFileName: currentPdfUrl // PDF 파일 경로
+      };
+      
+      console.log('📤 학생 제출 데이터:', {
+        strokeCount: submission.strokeData.length,
+        hasAudio: !!submission.audioBase64,
+        recordingStartTime: submission.recordingStartTime,
+        currentPage: submission.currentPage,
+        pdfFileName: submission.pdfFileName
+      });
+      
+      // 기존 제출 목록 가져오기
+      const existingSubmissions = JSON.parse(localStorage.getItem('studentSubmissions') || '[]');
+      
+      // 새 제출 추가
+      const newSubmissions = [submission, ...existingSubmissions];
+      
+      // 로컬 스토리지에 저장 (여러 제출 관리)
+      localStorage.setItem('studentSubmissions', JSON.stringify(newSubmissions));
+      localStorage.setItem('studentSubmission', JSON.stringify(submission)); // 최신 제출 (하위 호환)
+      
+      // 저장 확인 (디버깅)
+      const savedCheck = localStorage.getItem('studentSubmissions');
+      console.log('💾 localStorage 저장 확인:', savedCheck ? `${JSON.parse(savedCheck).length}개 저장됨` : '저장 실패!');
+      console.log('저장된 전체 데이터:', JSON.parse(savedCheck || '[]'));
+      
+      // 알림 추가
+      const newNotification = {
+        id: Date.now(),
+        type: 'submission',
+        title: '과제 제출 완료',
+        message: `"${submission.bookTitle}" 페이지 ${submission.currentPage} 과제가 선생님에게 전송되었습니다`,
+        timestamp: new Date().toISOString(),
+        isRead: false
+      };
+      
+      setNotifications(prev => [newNotification, ...prev]);
+      
+      // 선생님에게 알림 표시
+      setSubmissionAlert(true);
+      
+      alert(`제출 완료!\n페이지: ${submission.currentPage}\n스트로크: ${submission.strokeData.length}개\n오디오: ${submission.audioBase64 ? '포함' : '없음'}`);
+      
+      // 데모용: 자동으로 선생님 첨삭 생성 (3초 후)
     setTimeout(() => {
       const mockTeacherFeedback = {
         id: Date.now(),
@@ -525,7 +572,7 @@ function App() {
       
       setNotifications(prev => [feedbackNotification, ...prev]);
     }, 3000);
-    
+    });
   };
 
   // 선생님이 학생에게 첨삭을 전송하는 함수

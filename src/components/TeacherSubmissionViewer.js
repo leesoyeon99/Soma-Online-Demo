@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import StaticPDFViewer from './StaticPDFViewer';
 
 const TeacherSubmissionViewer = ({ 
@@ -7,6 +7,8 @@ const TeacherSubmissionViewer = ({
   onSaveFeedback 
 }) => {
   const audioRef = useRef(null);
+  const pdfViewerRef = useRef(null);
+  const syncIntervalRef = useRef(null);
   
   const [zoomScale, setZoomScale] = useState(1.0);
   
@@ -28,18 +30,54 @@ const TeacherSubmissionViewer = ({
   
   // 오디오 재생 상태
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isReplaying, setIsReplaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
 
-  // PDF 파일명 추출
-  const getPdfFileName = () => {
-    if (!submission?.bookUrl) return 'somapremier.pdf';
-    const url = submission.bookUrl;
-    if (url.includes('/')) {
-      return url.split('/').pop();
+  // 제출물 데이터 디버깅
+  useEffect(() => {
+    console.log('🎓 TeacherSubmissionViewer 렌더링:', {
+      hasSubmission: !!submission,
+      studentName: submission?.studentName,
+      currentPage: submission?.currentPage,
+      bookUrl: submission?.bookUrl,
+      pdfFileName: submission?.pdfFileName,
+      hasAudioBase64: !!submission?.audioBase64,
+      hasAudioUrl: !!submission?.audioUrl,
+      strokeCount: submission?.strokeData?.length
+    });
+    console.log('📦 전체 submission 객체:', submission);
+  }, [submission]);
+
+  // PDF 파일 경로 추출 (useMemo로 최적화)
+  const pdfFilePath = useMemo(() => {
+    // pdfFileName 또는 bookUrl에서 전체 경로 가져오기
+    const pdfPath = submission?.pdfFileName || submission?.bookUrl;
+    
+    console.log('🔍 PDF 경로 계산 중:', {
+      'submission?.pdfFileName': submission?.pdfFileName,
+      'submission?.bookUrl': submission?.bookUrl,
+      'pdfPath': pdfPath
+    });
+    
+    if (!pdfPath) {
+      console.warn('⚠️ PDF 경로를 찾을 수 없습니다. 기본값 사용');
+      return '/assets/pdf/mvp_2023_소마_프리미어.pdf';
     }
-    return url;
-  };
+    
+    console.log('📄 원본 PDF 경로:', pdfPath);
+    
+    // 이미 전체 경로면 그대로 반환
+    if (pdfPath.startsWith('/assets/pdf/') || pdfPath.startsWith('/')) {
+      console.log('✅ 전체 경로 반환:', pdfPath);
+      return pdfPath;
+    }
+    
+    // 파일명만 있으면 경로 추가
+    const fullPath = `/assets/pdf/${pdfPath}`;
+    console.log('➕ 경로 추가 후 반환:', fullPath);
+    return fullPath;
+  }, [submission?.pdfFileName, submission?.bookUrl]);
 
   // 첨삭 그리기
   // const drawAnnotations = useCallback(() => {
@@ -125,7 +163,203 @@ const TeacherSubmissionViewer = ({
     setZoomScale(prev => Math.max(prev - 0.2, 0.5));
   };
 
-  // 오디오 재생
+  // 페이지 변경 핸들러 (메모이제이션으로 불필요한 리렌더링 방지)
+  const handlePageChange = useCallback(() => {}, []);
+  const handlePageCountChange = useCallback(() => {}, []);
+
+  // 학생 학습 재생 (오디오 + 스트로크 동기화)
+  const handleCombinedReplay = useCallback(() => {
+    const audio = audioRef.current;
+    const markupCanvas = pdfViewerRef?.current?.markupCanvasRef?.current;
+    
+    console.log('🎬 학생 학습 재생 시작:', {
+      hasAudio: !!audio,
+      hasCanvas: !!markupCanvas,
+      strokeCount: submission?.strokeData?.length,
+      recordingStartTime: submission?.recordingStartTime
+    });
+    
+    if (!markupCanvas) {
+      console.error('❌ 마크업 캔버스를 찾을 수 없습니다.');
+      alert('PDF 뷰어가 준비되지 않았습니다.');
+      return;
+    }
+    
+    // 이미 재생 중이면 중지
+    if (isReplaying) {
+      if (audio) audio.pause();
+      if (syncIntervalRef.current) {
+        clearInterval(syncIntervalRef.current);
+        syncIntervalRef.current = null;
+      }
+      setIsReplaying(false);
+      setIsPlaying(false);
+      setCurrentTime(0);
+      return;
+    }
+    
+    // 마크업 캔버스 초기화
+    const context = markupCanvas.getContext('2d');
+    context.clearRect(0, 0, markupCanvas.width, markupCanvas.height);
+    
+    // 녹음된 스트로크 필터링 (isRecording: true, timestamp 있음)
+    const recordingStrokes = (submission?.strokeData || []).filter(
+      stroke => stroke.isRecording && typeof stroke.timestamp === 'number' && 
+                stroke.timestamp !== null && stroke.timestamp !== undefined
+    );
+    
+    // 배경 스트로크 (isRecording: false, eraser 제외)
+    const backgroundStrokes = (submission?.strokeData || []).filter(
+      stroke => !stroke.isRecording && stroke.tool !== 'eraser'
+    );
+    
+    console.log('📊 스트로크 분류:', {
+      전체: submission?.strokeData?.length,
+      녹음: recordingStrokes.length,
+      배경: backgroundStrokes.length
+    });
+    
+    const currentCanvasWidth = markupCanvas.width;
+    const currentCanvasHeight = markupCanvas.height;
+    
+    // 상대 좌표를 절대 좌표로 변환하는 헬퍼 함수
+    const denormalizePoints = (points) => {
+      return points.map(point => {
+        if (point.x <= 1 && point.y <= 1) {
+          // 상대 좌표 → 절대 좌표
+          return {
+            x: point.x * currentCanvasWidth,
+            y: point.y * currentCanvasHeight
+          };
+        } else {
+          // 이미 절대 좌표 (기존 데이터 호환)
+          return point;
+        }
+      });
+    };
+    
+    // 배경 스트로크 먼저 그리기
+    backgroundStrokes.forEach(stroke => {
+      if (stroke.tool === 'pen' && stroke.points) {
+        const denormalizedPoints = denormalizePoints(stroke.points);
+        
+        context.save();
+        context.strokeStyle = stroke.color || '#000000';
+        context.lineWidth = stroke.brushSize || 3;
+        context.lineCap = 'round';
+        context.lineJoin = 'round';
+        
+        context.beginPath();
+        denormalizedPoints.forEach((point, index) => {
+          if (index === 0) {
+            context.moveTo(point.x, point.y);
+          } else {
+            context.lineTo(point.x, point.y);
+          }
+        });
+        context.stroke();
+        context.restore();
+      } else if (stroke.tool === 'eraser' && stroke.points) {
+        const denormalizedPoints = denormalizePoints(stroke.points);
+        
+        context.save();
+        context.globalCompositeOperation = 'destination-out';
+        denormalizedPoints.forEach(point => {
+          context.beginPath();
+          context.arc(point.x, point.y, (stroke.brushSize || 20) / 2, 0, Math.PI * 2);
+          context.fill();
+        });
+        context.restore();
+      }
+    });
+    
+    // drawn 플래그 초기화
+    recordingStrokes.forEach(stroke => {
+      stroke.drawn = false;
+      stroke.animationIndex = 0;
+    });
+    
+    setIsReplaying(true);
+    
+    // 오디오 재생
+    if (audio && submission?.audioBase64) {
+      audio.currentTime = 0;
+      audio.play().catch(err => console.error('오디오 재생 오류:', err));
+      setIsPlaying(true);
+    }
+    
+    // 스트로크 동기화 인터벌
+    const localSyncInterval = setInterval(() => {
+      const currentAudioTime = audio?.currentTime || 0;
+      
+      recordingStrokes.forEach(stroke => {
+        if (stroke.timestamp <= currentAudioTime && !stroke.drawn) {
+          // 스트로크 그리기 (상대 좌표 변환 적용)
+          if (stroke.tool === 'pen' && stroke.points) {
+            const denormalizedPoints = denormalizePoints(stroke.points);
+            
+            context.save();
+            context.strokeStyle = stroke.color || '#000000';
+            context.lineWidth = stroke.brushSize || 3;
+            context.lineCap = 'round';
+            context.lineJoin = 'round';
+            
+            context.beginPath();
+            denormalizedPoints.forEach((point, index) => {
+              if (index === 0) {
+                context.moveTo(point.x, point.y);
+              } else {
+                context.lineTo(point.x, point.y);
+              }
+            });
+            context.stroke();
+            context.restore();
+          } else if (stroke.tool === 'eraser' && stroke.points) {
+            const denormalizedPoints = denormalizePoints(stroke.points);
+            
+            context.save();
+            context.globalCompositeOperation = 'destination-out';
+            denormalizedPoints.forEach(point => {
+              context.beginPath();
+              context.arc(point.x, point.y, (stroke.brushSize || 20) / 2, 0, Math.PI * 2);
+              context.fill();
+            });
+            context.restore();
+          }
+          
+          stroke.drawn = true;
+        }
+      });
+      
+      // 재생 완료 체크
+      if (audio && audio.ended) {
+        clearInterval(localSyncInterval);
+        syncIntervalRef.current = null;
+        setIsReplaying(false);
+        setIsPlaying(false);
+        setCurrentTime(0);
+        console.log('✅ 재생 완료');
+      }
+    }, 50);
+    
+    syncIntervalRef.current = localSyncInterval;
+    
+    // 오디오 종료 이벤트 핸들러
+    if (audio) {
+      audio.onended = () => {
+        if (syncIntervalRef.current) {
+          clearInterval(syncIntervalRef.current);
+          syncIntervalRef.current = null;
+        }
+        setIsReplaying(false);
+        setIsPlaying(false);
+        setCurrentTime(0);
+        console.log('✅ 오디오 종료, 재생 완료');
+      };
+    }
+  }, [submission, isReplaying]);
+  
+  // 오디오만 재생
   const handlePlayAudio = () => {
     if (audioRef.current) {
       if (isPlaying) {
@@ -138,11 +372,21 @@ const TeacherSubmissionViewer = ({
     }
   };
 
+  // 오디오 메타데이터 로드
+  const handleLoadedMetadata = () => {
+    if (audioRef.current) {
+      setDuration(audioRef.current.duration);
+      console.log('🎵 오디오 로드 완료:', {
+        duration: audioRef.current.duration,
+        src: audioRef.current.src ? '데이터 있음' : '데이터 없음'
+      });
+    }
+  };
+
   // 오디오 시간 업데이트
   const handleTimeUpdate = () => {
     if (audioRef.current) {
       setCurrentTime(audioRef.current.currentTime);
-      setDuration(audioRef.current.duration);
     }
   };
 
@@ -225,7 +469,7 @@ const TeacherSubmissionViewer = ({
               fontSize: '0.875rem',
               margin: '0'
             }}>
-              학생: {submission.studentName} | 제출: {new Date(submission.submittedAt).toLocaleString()}
+              학생: {submission.studentName} | 페이지: {submission.currentPage || '정보 없음'} | 제출: {new Date(submission.submittedAt).toLocaleString()}
             </p>
           </div>
         </div>
@@ -353,18 +597,21 @@ const TeacherSubmissionViewer = ({
           overflow: 'hidden'
         }}>
           <StaticPDFViewer
-            pdfFileName={getPdfFileName()}
-            pageNum={1}
+            ref={pdfViewerRef}
+            pdfFileName={pdfFilePath}
+            pageNum={submission?.currentPage || 1}
             zoomScale={zoomScale}
             selectedTool={selectedTool}
             selectedColor={selectedColor}
             brushSize={brushSize}
+            isReplaying={isReplaying}
             onStrokeDataChange={(strokeData) => {
               setTeacherAnnotations(strokeData);
             }}
             isTeacherMode={true}
-            onPageCountChange={() => {}}
-            onPageChange={() => {}}
+            studentStrokeData={null}
+            onPageCountChange={handlePageCountChange}
+            onPageChange={handlePageChange}
             feedbackTexts={sampleFeedbackTexts}
           />
           
@@ -505,7 +752,7 @@ const TeacherSubmissionViewer = ({
             </div>
           </div>
 
-          {/* 오디오 재생 */}
+          {/* 학습 재생 버튼 (오디오 + 스트로크 동기화) */}
           {submission.audioUrl && (
             <div style={{
               marginBottom: '1rem'
@@ -516,48 +763,40 @@ const TeacherSubmissionViewer = ({
                 color: '#374151',
                 marginBottom: '0.5rem'
               }}>
-                학생 음성 설명
+                학생 학습 재생
               </h4>
+              <button
+                onClick={handleCombinedReplay}
+                style={{
+                  width: '100%',
+                  background: isReplaying 
+                    ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
+                    : 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '0.75rem 1rem',
+                  cursor: 'pointer',
+                  fontSize: '1rem',
+                  fontWeight: '600',
+                  transition: 'all 0.3s ease',
+                  marginBottom: '0.5rem'
+                }}
+              >
+                {isReplaying ? '⏸️ 재생 중지' : '▶️ 학습 재생 (오디오+필기)'}
+              </button>
               <div style={{
-                display: 'flex',
-                gap: '0.5rem',
-                alignItems: 'center'
+                fontSize: '0.875rem',
+                color: '#6b7280',
+                textAlign: 'center'
               }}>
-                <button
-                  onClick={handlePlayAudio}
-                  style={{
-                    background: isPlaying ? '#ef4444' : '#10b981',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    padding: '0.5rem',
-                    cursor: 'pointer',
-                    fontSize: '0.875rem',
-                    fontWeight: '500'
-                  }}
-                >
-{isPlaying ? (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
-                    </svg>
-                  ) : (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M8 5v14l11-7z"/>
-                    </svg>
-                  )}
-                </button>
-                <div style={{
-                  flex: 1,
-                  fontSize: '0.875rem',
-                  color: '#6b7280'
-                }}>
-                  {Math.floor(currentTime / 60)}:{(currentTime % 60).toFixed(0).padStart(2, '0')} / {Math.floor(duration / 60)}:{(duration % 60).toFixed(0).padStart(2, '0')}
-                </div>
+                {Math.floor(currentTime / 60)}:{(currentTime % 60).toFixed(0).padStart(2, '0')} / {Math.floor(duration / 60)}:{(duration % 60).toFixed(0).padStart(2, '0')}
               </div>
               <audio
                 ref={audioRef}
-                src={submission.audioUrl}
+                src={submission?.audioBase64 || submission?.audioUrl}
                 onTimeUpdate={handleTimeUpdate}
+                onLoadedMetadata={handleLoadedMetadata}
                 onEnded={handleAudioEnded}
                 style={{ display: 'none' }}
               />
