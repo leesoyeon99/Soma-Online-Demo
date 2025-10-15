@@ -20,7 +20,10 @@ const BookListPage = ({
   setCurrentPage
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [favorites, setFavorites] = useState(new Set());
+  const [favorites, setFavorites] = useState(() => {
+    const somaFile = files.find(f => f.title === '2023 소마 프리미어');
+    return new Set(somaFile ? [somaFile.id] : []);
+  });
   const [showFeedbackViewer, setShowFeedbackViewer] = useState(false);
   // const [selectedFeedback, setSelectedFeedback] = useState(null);
 
@@ -29,12 +32,18 @@ const BookListPage = ({
     file.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // 즐겨찾기 토글
   const toggleFavorite = (fileId, e) => {
     e.stopPropagation();
+    
+    // "2023 소마 프리미어"의 ID 찾기
+    const somaFile = files.find(f => f.title === '2023 소마 프리미어 초급2');
+    
     const newFavorites = new Set(favorites);
     if (newFavorites.has(fileId)) {
-      newFavorites.delete(fileId);
+      // 소마 프리미어는 제거 불가
+      if (fileId !== somaFile?.id) {
+        newFavorites.delete(fileId);
+      }
     } else {
       newFavorites.add(fileId);
     }
