@@ -253,11 +253,13 @@ function App() {
   // 녹음 및 스트로크 데이터 상태
   const [isRecording, setIsRecording] = useState(false);
   const [strokeData, setStrokeData] = useState([]);
+  const [recordingStartTime, setRecordingStartTime] = useState(null);
   
   // 재생 관련 상태
   const [isPlaying, setIsPlaying] = useState(false);
   const [isReplaying, setIsReplaying] = useState(false);
   const [replayProgress, setReplayProgress] = useState(0);
+  const [enableStrokeAnimation, setEnableStrokeAnimation] = useState(true); // 스트로크 애니메이션 활성화
   // const [audioBlob, setAudioBlob] = useState(null);
   const [audioUrl, setAudioUrl] = useState(null);
   
@@ -402,11 +404,23 @@ function App() {
         setMediaRecorder(recorder);
         // setAudioChunks(chunks);
         setIsRecording(true);
-        setStrokeData([]); // 새로운 녹음 시작 시 스트로크 데이터 초기화
+        setRecordingStartTime(Date.now()); // 녹음 시작 시간 기록
+        
+        // 기존 스트로크에서 녹음 스트로크만 제거 (녹음 전 펜 그림은 유지, 지우개는 제거)
+        setStrokeData(prev => {
+          const nonRecordingStrokes = prev.filter(stroke => {
+            // isRecording: true 스트로크는 제거 (이전 녹음)
+            // 지우개 스트로크도 제거 (지우개는 항상 일회성 작업)
+            return !stroke.isRecording && stroke.tool !== 'eraser';
+          });
+          console.log('🔄 녹음 재시작: 이전 녹음 & 지우개 제거, 유지할 스트로크 수:', nonRecordingStrokes.length);
+          return nonRecordingStrokes;
+        });
+        
         setIsPlaying(false); // 녹음 시작 시 재생 중지
         setIsReplaying(false);
         setReplayProgress(0);
-        console.log('녹음 시작');
+        console.log('🎙️ 녹음 시작');
       } catch (error) {
         console.error('녹음 권한이 거부되었거나 오류가 발생했습니다:', error);
         alert('마이크 권한이 필요합니다. 브라우저 설정에서 마이크 권한을 허용해주세요.');
@@ -681,82 +695,254 @@ function App() {
     setIsReplaying(true);
     setReplayProgress(0);
     
-    // 캔버스 초기화
-    const canvas = document.querySelector('canvas');
-    if (canvas) {
-      const context = canvas.getContext('2d');
-      context.clearRect(0, 0, canvas.width, canvas.height);
+    // 마크업 캔버스만 초기화 (PDF 배경은 유지)
+    const markupCanvas = pdfViewerRef?.current?.markupCanvasRef?.current;
+    if (markupCanvas) {
+      const context = markupCanvas.getContext('2d');
+      context.clearRect(0, 0, markupCanvas.width, markupCanvas.height);
+      
+      // 기존 그림들(녹음 전)을 먼저 그리기 - 즉시 표시 (배경)
+      const allStrokes = strokeData || [];
+      // 녹음 전 펨 스트로크만 필터링 (지우개는 제외 - 지우개는 녹음 재생 시에만 적용)
+      const backgroundStrokes = allStrokes.filter(stroke => !stroke.isRecording && stroke.tool !== 'eraser');
+      
+      console.log('배경 스트로크 수:', backgroundStrokes.length);
+      console.log('전체 스트로크:', allStrokes.map(s => ({ id: s.id, tool: s.tool, isRecording: s.isRecording, timestamp: s.timestamp })));
+      
+      // 펜 스트로크만 배경으로 그리기
+      backgroundStrokes.forEach(stroke => {
+        if (stroke.points && stroke.points.length > 1) {
+          // 펜 스트로크 처리
+          context.save();
+          context.beginPath();
+          context.lineWidth = stroke.brushSize || 3;
+          context.lineCap = 'round';
+          context.lineJoin = 'round';
+          context.strokeStyle = stroke.color || '#ef4444';
+          context.globalAlpha = 1;
+          
+          context.moveTo(stroke.points[0].x, stroke.points[0].y);
+          for (let i = 1; i < stroke.points.length; i++) {
+            context.lineTo(stroke.points[i].x, stroke.points[i].y);
+          }
+          context.stroke();
+          context.restore();
+        }
+      });
+    }
+
+    // 필기 스트로크 재생 준비 (지우개 포함, 펜과 지우개 모두)
+    const recordingStrokes = strokeData.filter(stroke => stroke.isRecording && stroke.timestamp !== null && stroke.timestamp !== undefined);
+    console.log('🎬 재생할 녹음 스트로크들:', recordingStrokes.map(s => ({
+      id: s.id,
+      tool: s.tool,
+      timestamp: typeof s.timestamp === 'number' ? s.timestamp.toFixed(2) + 's' : s.timestamp, 
+      hasPoints: !!s.points,
+      pointsLength: s.points?.length
+    })));
+    
+    if (recordingStrokes.length === 0) {
+      console.warn('⚠️ 녹음 스트로크가 없습니다! 전체 스트로크 확인:', 
+        strokeData.map(s => ({
+          id: s.id,
+          tool: s.tool,
+          isRecording: s.isRecording,
+          timestamp: s.timestamp,
+          timestampType: typeof s.timestamp
+        }))
+      );
     }
 
     // 음성 재생 시작
+    let audioInstance = null;
+    let syncIntervalId = null;
+    
     if (audioUrl) {
       try {
-        const audio = new Audio(audioUrl);
-        setCurrentAudio(audio);
+        audioInstance = new Audio(audioUrl);
+        setCurrentAudio(audioInstance);
         
-        audio.onloadedmetadata = () => {
-          setAudioDuration(audio.duration);
+        audioInstance.onloadedmetadata = () => {
+          setAudioDuration(audioInstance.duration);
+          console.log('오디오 길이:', audioInstance.duration);
         };
         
-        audio.ontimeupdate = () => {
-          setCurrentTime(audio.currentTime);
+        audioInstance.ontimeupdate = () => {
+          setCurrentTime(audioInstance.currentTime);
         };
         
-        audio.onended = () => {
+        audioInstance.onended = () => {
+          console.log('오디오 재생 종료');
           setIsPlaying(false);
+          setIsReplaying(false);
           setCurrentTime(0);
+          setReplayProgress(100);
+          
+          // 인터벌 정리
+          if (syncIntervalId) {
+            clearInterval(syncIntervalId);
+          }
+          
+          // drawn 플래그 초기화
+          recordingStrokes.forEach(stroke => delete stroke.drawn);
         };
         
-        audio.onerror = (error) => {
+        audioInstance.onerror = (error) => {
           console.error('오디오 재생 오류:', error);
           setIsPlaying(false);
+          setIsReplaying(false);
+          
+          if (syncIntervalId) {
+            clearInterval(syncIntervalId);
+          }
         };
         
         setIsPlaying(true);
-        await audio.play();
+        await audioInstance.play();
+        console.log('오디오 재생 시작');
       } catch (error) {
         console.error('오디오 재생 오류:', error);
         setIsPlaying(false);
+        setIsReplaying(false);
+        return;
       }
     }
 
-    // 필기 스트로크 재생 (음성과 동시에)
-    if (strokeData.length > 0) {
-      let currentStroke = 0;
-      const replayInterval = setInterval(() => {
-        if (currentStroke >= strokeData.length) {
-          clearInterval(replayInterval);
-          setIsReplaying(false);
-          setReplayProgress(100);
+    // 필기 스트로크 재생 (음성과 동시에 동기화, 또는 오디오 없이 스트로크만 재생)
+    if (recordingStrokes.length > 0) {
+      // 오디오가 있으면 오디오와 동기화, 없으면 스트로크만 재생
+      const hasAudio = audioInstance !== null;
+      let startTime = Date.now();
+      
+      syncIntervalId = setInterval(() => {
+        // 오디오가 있는 경우: 오디오 시간에 맞춰 재생
+        // 오디오가 없는 경우: 실제 경과 시간으로 재생
+        let currentPlaybackTime = 0;
+        
+        if (hasAudio && audioInstance && !audioInstance.paused && !audioInstance.ended) {
+          currentPlaybackTime = audioInstance.currentTime;
+        } else if (!hasAudio) {
+          // 오디오 없이 스트로크만 재생 (실시간 경과 시간)
+          currentPlaybackTime = (Date.now() - startTime) / 1000;
+        } else {
+          // 오디오가 일시정지되었거나 끝난 경우
+          clearInterval(syncIntervalId);
           return;
         }
-
-        const stroke = strokeData[currentStroke];
-        if (canvas) {
-          const context = canvas.getContext('2d');
           
-          // 스트로크 그리기
-          context.beginPath();
-          context.lineWidth = stroke.brushSize;
-          context.lineCap = 'round';
-          context.lineJoin = 'round';
-          context.strokeStyle = stroke.color;
-          
-          if (stroke.points.length > 1) {
-            context.moveTo(stroke.points[0].x, stroke.points[0].y);
-            for (let i = 1; i < stroke.points.length; i++) {
-              context.lineTo(stroke.points[i].x, stroke.points[i].y);
+        // 현재 재생 시간에 맞는 스트로크들을 찾아서 그리기
+        recordingStrokes.forEach((stroke) => {
+          if (stroke.timestamp && stroke.timestamp <= currentPlaybackTime && !stroke.drawn) {
+              console.log(`스트로크 그리기: 타입=${stroke.tool}, 타임스탬프 ${stroke.timestamp.toFixed(2)}s, 재생 시간 ${currentPlaybackTime.toFixed(2)}s`);
+              if (markupCanvas) {
+                const context = markupCanvas.getContext('2d');
+                
+                context.save();
+                
+                if (enableStrokeAnimation && stroke.points && stroke.points.length > 5) {
+                  // 애니메이션 모드: 점진적으로 그리기
+                  if (!stroke.animationIndex) {
+                    stroke.animationIndex = 0;
+                  }
+                  
+                  // 프레임당 그릴 포인트 수 (빠르게)
+                  const pointsPerFrame = Math.max(3, Math.floor(stroke.points.length / 10));
+                  const endIndex = Math.min(stroke.animationIndex + pointsPerFrame, stroke.points.length);
+                  
+                  if (stroke.tool === 'eraser') {
+                    // 지우개 애니메이션
+                    context.globalCompositeOperation = 'destination-out';
+                    const eraserSize = stroke.brushSize * 10 || 30;
+                    
+                    for (let i = stroke.animationIndex; i < endIndex; i++) {
+                      context.beginPath();
+                      context.arc(stroke.points[i].x, stroke.points[i].y, eraserSize, 0, 2 * Math.PI);
+                      context.fill();
+                    }
+                  } else {
+                    // 펜 애니메이션
+                    context.beginPath();
+                    context.lineWidth = stroke.brushSize || 3;
+                    context.lineCap = 'round';
+                    context.lineJoin = 'round';
+                    context.strokeStyle = stroke.color || '#ef4444';
+                    
+                    if (stroke.animationIndex === 0) {
+                      context.moveTo(stroke.points[0].x, stroke.points[0].y);
+                    } else {
+                      context.moveTo(stroke.points[stroke.animationIndex - 1].x, stroke.points[stroke.animationIndex - 1].y);
+                    }
+                    
+                    for (let i = stroke.animationIndex; i < endIndex; i++) {
+                      context.lineTo(stroke.points[i].x, stroke.points[i].y);
+                    }
+                    context.stroke();
+                  }
+                  
+                  stroke.animationIndex = endIndex;
+                  
+                  // 애니메이션 완료 확인
+                  if (stroke.animationIndex >= stroke.points.length) {
+                    stroke.drawn = true;
+                    delete stroke.animationIndex;
+                  }
+                } else {
+                  // 애니메이션 없음: 한번에 그리기 (기존 방식)
+                  if (stroke.tool === 'eraser') {
+                    // 지우개 스트로크 재생
+                    context.globalCompositeOperation = 'destination-out';
+                    const eraserSize = stroke.brushSize * 10 || 30;
+                    
+                    if (stroke.points && stroke.points.length > 0) {
+                      for (let i = 0; i < stroke.points.length; i++) {
+                        context.beginPath();
+                        context.arc(stroke.points[i].x, stroke.points[i].y, eraserSize, 0, 2 * Math.PI);
+                        context.fill();
+                      }
+                    }
+                  } else {
+                    // 펜 스트로크 그리기
+                    context.beginPath();
+                    context.lineWidth = stroke.brushSize || 3;
+                    context.lineCap = 'round';
+                    context.lineJoin = 'round';
+                    context.strokeStyle = stroke.color || '#ef4444';
+                    
+                    if (stroke.points && stroke.points.length > 1) {
+                      context.moveTo(stroke.points[0].x, stroke.points[0].y);
+                      for (let i = 1; i < stroke.points.length; i++) {
+                        context.lineTo(stroke.points[i].x, stroke.points[i].y);
+                      }
+                      context.stroke();
+                    }
+                  }
+                  
+                  // 그려진 것으로 표시
+                  stroke.drawn = true;
+                }
+                
+                context.restore();
+              }
             }
-            context.stroke();
+          });
+          
+          // 진행률 업데이트
+          const drawnStrokes = recordingStrokes.filter(stroke => stroke.drawn).length;
+          const progress = recordingStrokes.length > 0 ? (drawnStrokes / recordingStrokes.length) * 100 : 100;
+          setReplayProgress(progress);
+          
+          // 오디오 없이 스트로크만 재생하는 경우: 모든 스트로크가 그려졌으면 종료
+          if (!hasAudio && drawnStrokes === recordingStrokes.length) {
+            console.log('✅ 모든 스트로크 재생 완료 (오디오 없음)');
+            clearInterval(syncIntervalId);
+            setIsReplaying(false);
+            setIsPlaying(false);
+            setReplayProgress(100);
           }
-        }
-
-        currentStroke++;
-        setReplayProgress((currentStroke / strokeData.length) * 100);
-      }, 100); // 100ms 간격으로 재생
-    } else {
-      // 필기가 없으면 음성만 재생
-      setIsReplaying(false);
+      }, 50); // 50ms 간격으로 체크
+    } else if (recordingStrokes.length === 0 && audioInstance) {
+      // 녹음 중 필기가 없으면 음성만 재생
+      console.log('녹음 중 필기 없음, 음성만 재생');
       setReplayProgress(100);
     }
   };
@@ -785,8 +971,43 @@ function App() {
 
   // 스트로크 데이터 변경 핸들러 (메모이제이션)
   const handleStrokeDataChange = useCallback((newStrokeData) => {
-    setStrokeData(newStrokeData);
-  }, []);
+    console.log('📝 handleStrokeDataChange 호출됨, 스트로크 수:', newStrokeData.length, 'isRecording:', isRecording);
+    
+    // recordingStartTime이 있으면 타임스탬프 변환 (녹음 중이든 아니든)
+    if (recordingStartTime) {
+      const updatedStrokeData = newStrokeData.map((stroke) => {
+        // isRecording 플래그가 있고 타임스탬프가 밀리초(숫자)인 경우
+        if (stroke.isRecording && typeof stroke.timestamp === 'number' && stroke.timestamp > 1000000) {
+          // 밀리초를 녹음 시작 이후의 초 단위로 변환
+          const timestamp = (stroke.timestamp - recordingStartTime) / 1000;
+          console.log('⏱️ 타임스탬프 변환:', {
+            id: stroke.id,
+            tool: stroke.tool,
+            원본밀리초: stroke.timestamp,
+            녹음시작: recordingStartTime,
+            변환된초: timestamp.toFixed(3) + 's'
+          });
+          return {
+            ...stroke,
+            timestamp: timestamp // 녹음 시작 후 경과 시간 (초)
+          };
+        }
+        return stroke;
+      });
+      
+      console.log('✅ 타임스탬프 변환 완료. 녹음 스트로크:', 
+        updatedStrokeData.filter(s => s.isRecording).map(s => ({
+          id: s.id,
+          tool: s.tool,
+          timestamp: typeof s.timestamp === 'number' ? s.timestamp.toFixed(3) + 's' : s.timestamp
+        }))
+      );
+      
+      setStrokeData(updatedStrokeData);
+    } else {
+      setStrokeData(newStrokeData);
+    }
+  }, [recordingStartTime]);
 
   // 페이지 카운트 변경 핸들러 (메모이제이션)
   const handlePageCountChange = useCallback((count) => {
@@ -1219,7 +1440,7 @@ function App() {
             {isCurrentFilePDF ? (
               <StaticPDFViewer
                 ref={pdfViewerRef}
-                pdfFileName={currentFile.url.replace('/', '')}
+                pdfFileName={currentFile.url}
                 pageNum={currentPageNum}
                 zoomScale={zoomScale}
                 selectedTool={selectedTool}
@@ -1514,7 +1735,7 @@ function App() {
           pdfCanvasRef={pdfViewerRef?.current?.canvasRef}
           markupCanvasRef={pdfViewerRef?.current?.markupCanvasRef}
           currentPageNum={currentPageNum}
-          pdfFileName={currentFile?.url?.replace('/', '') || 'unknown.pdf'}
+          pdfFileName={currentFile?.url || 'unknown.pdf'}
         />
       </div>
     );
@@ -1880,7 +2101,7 @@ function App() {
           {isCurrentFilePDF ? (
             <StaticPDFViewer
               ref={pdfViewerRef}
-              pdfFileName={currentFile.url.replace('/', '')}
+              pdfFileName={currentFile.url}
               pageNum={currentPageNum}
               zoomScale={zoomScale}
               selectedTool={selectedTool}
@@ -2468,43 +2689,77 @@ function App() {
 
             {/* 통합 재생 버튼 (필기 + 음성) */}
             {(audioUrl || strokeData.length > 0) && !isRecording && (
-              <button
-                onClick={handleCombinedReplay}
-                disabled={isReplaying || isPlaying}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                  padding: '0.75rem 1rem',
-                  borderRadius: '12px',
-                  backgroundColor: '#1f2937',
-                  border: '2px solid #f59e0b',
-                  color: (isReplaying || isPlaying) ? '#6b7280' : '#f59e0b',
-                  cursor: (isReplaying || isPlaying) ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.2s ease',
-                  opacity: (isReplaying || isPlaying) ? 0.6 : 1,
-                  width: '100%'
-                }}
-                onMouseEnter={(e) => {
-                  if (!isReplaying && !isPlaying) {
+              <>
+                <button
+                  onClick={handleCombinedReplay}
+                  disabled={isReplaying || isPlaying}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    padding: '0.75rem 1rem',
+                    borderRadius: '12px',
+                    backgroundColor: '#1f2937',
+                    border: '2px solid #f59e0b',
+                    color: (isReplaying || isPlaying) ? '#6b7280' : '#f59e0b',
+                    cursor: (isReplaying || isPlaying) ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.2s ease',
+                    opacity: (isReplaying || isPlaying) ? 0.6 : 1,
+                    width: '100%'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isReplaying && !isPlaying) {
+                      e.target.style.backgroundColor = '#111827';
+                      e.target.style.borderColor = '#fbbf24';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isReplaying && !isPlaying) {
+                      e.target.style.backgroundColor = '#1f2937';
+                      e.target.style.borderColor = '#f59e0b';
+                    }
+                  }}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M8 5v14l11-7z"/>
+                  </svg>
+                  <span style={{ fontSize: '0.875rem', fontFamily: 'var(--font-ui)' }}>
+                    {(isReplaying || isPlaying) ? '재생 중...' : '학습 재생'}
+                  </span>
+                </button>
+                
+                {/* 애니메이션 토글 버튼 */}
+                <button
+                  onClick={() => setEnableStrokeAnimation(!enableStrokeAnimation)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    padding: '0.5rem 0.75rem',
+                    borderRadius: '8px',
+                    backgroundColor: '#1f2937',
+                    border: enableStrokeAnimation ? '2px solid #8b5cf6' : '2px solid #4b5563',
+                    color: enableStrokeAnimation ? '#8b5cf6' : '#9ca3af',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    width: '100%',
+                    fontSize: '0.75rem'
+                  }}
+                  onMouseEnter={(e) => {
                     e.target.style.backgroundColor = '#111827';
-                    e.target.style.borderColor = '#fbbf24';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isReplaying && !isPlaying) {
+                  }}
+                  onMouseLeave={(e) => {
                     e.target.style.backgroundColor = '#1f2937';
-                    e.target.style.borderColor = '#f59e0b';
-                  }
-                }}
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M8 5v14l11-7z"/>
-                </svg>
-                <span style={{ fontSize: '0.875rem', fontFamily: 'var(--font-ui)' }}>
-                  {(isReplaying || isPlaying) ? '재생 중...' : '학습 재생'}
-                </span>
-              </button>
+                  }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
+                  </svg>
+                  <span style={{ fontFamily: 'var(--font-ui)' }}>
+                    {enableStrokeAnimation ? '애니메이션 ON' : '애니메이션 OFF'}
+                  </span>
+                </button>
+              </>
             )}
           </div>
 
@@ -2859,7 +3114,7 @@ function App() {
         pdfCanvasRef={pdfViewerRef?.current?.canvasRef}
         markupCanvasRef={pdfViewerRef?.current?.markupCanvasRef}
         currentPageNum={currentPageNum}
-        pdfFileName={currentFile?.url?.replace('/', '') || 'unknown.pdf'}
+        pdfFileName={currentFile?.url || 'unknown.pdf'}
       />
 
 
