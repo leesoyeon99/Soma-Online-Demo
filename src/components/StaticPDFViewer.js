@@ -48,6 +48,7 @@ const StaticPDFViewer = forwardRef(({
   const [isDrawing, setIsDrawing] = useState(false);
   const [lastPos, setLastPos] = useState({ x: 0, y: 0 });
   const [currentPath, setCurrentPath] = useState([]);
+  const [strokeStartTime, setStrokeStartTime] = useState(null); // 스트로크 시작 시간
   
   // 지우개 커서 상태
   const [eraserCursor, setEraserCursor] = useState({ x: 0, y: 0, show: false });
@@ -71,7 +72,7 @@ const StaticPDFViewer = forwardRef(({
         console.log('PDF 로딩 시작:', pdfFileName);
         
         // 정적 경로로 PDF 로드 (PUBLIC_URL 포함)
-        const pdfUrl = `${process.env.PUBLIC_URL}/${pdfFileName}`;
+        const pdfUrl = `${process.env.PUBLIC_URL || ''}${pdfFileName}`;
         console.log('PDF URL:', pdfUrl);
         console.log('PUBLIC_URL:', process.env.PUBLIC_URL);
         console.log('pdfFileName:', pdfFileName);
@@ -669,7 +670,14 @@ const StaticPDFViewer = forwardRef(({
     setIsDrawing(true);
     setLastPos(pos);
     setCurrentPath([pos]);
-  }, [selectedTool, getEventPos]);
+    
+    // 녹음 중이라면 현재 시간 기록 (스트로크 시작 시간)
+    if (isRecording) {
+      const startTime = Date.now();
+      setStrokeStartTime(startTime);
+      console.log('🎨 스트로크 시작 (녹음 중), 시작 시간:', startTime);
+    }
+  }, [selectedTool, getEventPos, isRecording]);
 
   // 마우스 이동 감지 (지우개 커서용)
   const handleMouseMove = useCallback((e) => {
@@ -774,9 +782,17 @@ const StaticPDFViewer = forwardRef(({
         color: selectedColor,
         brushSize: brushSize,
         points: currentPath,
-        timestamp: new Date().toISOString(),
+        timestamp: strokeStartTime, // 스트로크 시작 시간 (밀리초)
         isRecording: isRecording
       };
+      
+      console.log('✏️ 스트로크 저장됨:', {
+        id: newDrawing.id,
+        tool: newDrawing.tool,
+        isRecording: newDrawing.isRecording,
+        strokeStartTime: strokeStartTime,
+        pointsLength: newDrawing.points.length
+      });
       
       // 현재 페이지의 필기 데이터에 추가
       setSavedDrawings(prev => {
@@ -806,7 +822,8 @@ const StaticPDFViewer = forwardRef(({
     
     setIsDrawing(false);
     setCurrentPath([]);
-  }, [isDrawing, currentPath, selectedTool, selectedColor, brushSize, isRecording, onStrokeDataChange, pageNum]);
+    setStrokeStartTime(null); // 스트로크 시작 시간 초기화
+  }, [isDrawing, currentPath, selectedTool, selectedColor, brushSize, isRecording, onStrokeDataChange, pageNum, isTeacherMode, pdfFileName, strokeStartTime]);
 
   return (
     <div style={{ display: 'flex', height: '100%', gap: '1rem' }}>
