@@ -3,13 +3,18 @@ import TeacherSubmissionPage from './TeacherSubmissionPage';
 
 const TeacherBookListPage = ({ files, onBookSelect, onBackToLogin, onGoToSubmissions, notifications, setNotifications }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [favorites, setFavorites] = useState(new Set());
+  const [favorites, setFavorites] = useState(new Set([0]));
   const [activeTab, setActiveTab] = useState('books'); // 'books' 또는 'submissions'
 
   const handleFavoriteToggle = (index) => {
+    const somaIndex = files.findIndex(f => f.title === '2023 소마 프리미어 초급2');
+    
     const newFavorites = new Set(favorites);
     if (newFavorites.has(index)) {
-      newFavorites.delete(index);
+      // 소마 프리미어는 제거 불가
+      if (index !== somaIndex) {
+        newFavorites.delete(index);
+      }
     } else {
       newFavorites.add(index);
     }

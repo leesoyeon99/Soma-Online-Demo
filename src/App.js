@@ -217,21 +217,21 @@ function App() {
   // 파일 목록 - 소마 프리미어 교재들
   const files = [
     { 
-      id: 1, 
+      id: 1,
+      title: '2023 소마 프리미어 초급2',
+      url: '/assets/pdf/2023-프리미어 초급2-내지_DEMO_compressed.pdf',
+      type: 'pdf'
+    },
+    { 
+      id: 2, 
       title: '2023 소마 프리미어', 
       url: '/assets/pdf/mvp_2023_소마_프리미어.pdf',
       type: 'pdf'
     },
     { 
-      id: 2, 
+      id: 3, 
       title: '2023 미래탐구 수학중3-1응용심화 셀프북 교사용', 
       url: '/assets/pdf/mvp_2022_미래탐구_수학중3-1응용심화_셀프북_교사용.pdf',
-      type: 'pdf'
-    },
-    { 
-      id: 3, 
-      title: '2023 프리미어 초급2', 
-      url: '/assets/pdf/2023-프리미어 초급2-내지_DEMO_compressed.pdf',
       type: 'pdf'
     }
   ];
@@ -333,9 +333,6 @@ function App() {
     setSelectedSubmission(submission);
     setCurrentPage('teacherSubmission');
   };
-
-
-
 
   const handlePrevPage = useCallback(() => {
     if (currentPageNum > 1) {
@@ -748,6 +745,23 @@ function App() {
       const context = markupCanvas.getContext('2d');
       context.clearRect(0, 0, markupCanvas.width, markupCanvas.height);
       
+      // 현재 캔버스 크기 (상대 좌표 → 절대 좌표 변환용)
+      const currentCanvasWidth = markupCanvas.width;
+      const currentCanvasHeight = markupCanvas.height;
+      
+      // 상대 좌표를 절대 좌표로 변환하는 헬퍼 함수
+      const denormalizePoints = (points) => {
+        return points.map(point => {
+          if (point.x <= 1 && point.y <= 1) {
+            // 상대 좌표 → 절대 좌표
+            return { x: point.x * currentCanvasWidth, y: point.y * currentCanvasHeight };
+          } else {
+            // 이미 절대 좌표 (기존 데이터 호환)
+            return point;
+          }
+        });
+      };
+      
       // 기존 그림들(녹음 전)을 먼저 그리기 - 즉시 표시 (배경)
       const allStrokes = strokeData || [];
       // 녹음 전 펨 스트로크만 필터링 (지우개는 제외 - 지우개는 녹음 재생 시에만 적용)
@@ -759,6 +773,9 @@ function App() {
       // 펜 스트로크만 배경으로 그리기
       backgroundStrokes.forEach(stroke => {
         if (stroke.points && stroke.points.length > 1) {
+          // 상대 좌표 → 절대 좌표 변환
+          const absolutePoints = denormalizePoints(stroke.points);
+          
           // 펜 스트로크 처리
           context.save();
           context.beginPath();
@@ -768,9 +785,9 @@ function App() {
           context.strokeStyle = stroke.color || '#ef4444';
           context.globalAlpha = 1;
           
-          context.moveTo(stroke.points[0].x, stroke.points[0].y);
-          for (let i = 1; i < stroke.points.length; i++) {
-            context.lineTo(stroke.points[i].x, stroke.points[i].y);
+          context.moveTo(absolutePoints[0].x, absolutePoints[0].y);
+          for (let i = 1; i < absolutePoints.length; i++) {
+            context.lineTo(absolutePoints[i].x, absolutePoints[i].y);
           }
           context.stroke();
           context.restore();
@@ -884,17 +901,35 @@ function App() {
               if (markupCanvas) {
                 const context = markupCanvas.getContext('2d');
                 
+                // 현재 캔버스 크기 (상대 좌표 → 절대 좌표 변환용)
+                const currentCanvasWidth = markupCanvas.width;
+                const currentCanvasHeight = markupCanvas.height;
+                
+                // 상대 좌표를 절대 좌표로 변환
+                const denormalizePoints = (points) => {
+                  return points.map(point => {
+                    if (point.x <= 1 && point.y <= 1) {
+                      return { x: point.x * currentCanvasWidth, y: point.y * currentCanvasHeight };
+                    } else {
+                      return point;
+                    }
+                  });
+                };
+                
+                // 스트로크 포인트를 절대 좌표로 변환
+                const absolutePoints = stroke.points ? denormalizePoints(stroke.points) : [];
+                
                 context.save();
                 
-                if (enableStrokeAnimation && stroke.points && stroke.points.length > 5) {
+                if (enableStrokeAnimation && absolutePoints.length > 5) {
                   // 애니메이션 모드: 점진적으로 그리기
                   if (!stroke.animationIndex) {
                     stroke.animationIndex = 0;
                   }
                   
                   // 프레임당 그릴 포인트 수 (빠르게)
-                  const pointsPerFrame = Math.max(3, Math.floor(stroke.points.length / 10));
-                  const endIndex = Math.min(stroke.animationIndex + pointsPerFrame, stroke.points.length);
+                  const pointsPerFrame = Math.max(3, Math.floor(absolutePoints.length / 10));
+                  const endIndex = Math.min(stroke.animationIndex + pointsPerFrame, absolutePoints.length);
                   
                   if (stroke.tool === 'eraser') {
                     // 지우개 애니메이션
@@ -903,7 +938,7 @@ function App() {
                     
                     for (let i = stroke.animationIndex; i < endIndex; i++) {
                       context.beginPath();
-                      context.arc(stroke.points[i].x, stroke.points[i].y, eraserSize, 0, 2 * Math.PI);
+                      context.arc(absolutePoints[i].x, absolutePoints[i].y, eraserSize, 0, 2 * Math.PI);
                       context.fill();
                     }
                   } else {
@@ -915,13 +950,13 @@ function App() {
                     context.strokeStyle = stroke.color || '#ef4444';
                     
                     if (stroke.animationIndex === 0) {
-                      context.moveTo(stroke.points[0].x, stroke.points[0].y);
+                      context.moveTo(absolutePoints[0].x, absolutePoints[0].y);
                     } else {
-                      context.moveTo(stroke.points[stroke.animationIndex - 1].x, stroke.points[stroke.animationIndex - 1].y);
+                      context.moveTo(absolutePoints[stroke.animationIndex - 1].x, absolutePoints[stroke.animationIndex - 1].y);
                     }
                     
                     for (let i = stroke.animationIndex; i < endIndex; i++) {
-                      context.lineTo(stroke.points[i].x, stroke.points[i].y);
+                      context.lineTo(absolutePoints[i].x, absolutePoints[i].y);
                     }
                     context.stroke();
                   }
@@ -929,7 +964,7 @@ function App() {
                   stroke.animationIndex = endIndex;
                   
                   // 애니메이션 완료 확인
-                  if (stroke.animationIndex >= stroke.points.length) {
+                  if (stroke.animationIndex >= absolutePoints.length) {
                     stroke.drawn = true;
                     delete stroke.animationIndex;
                   }
@@ -940,10 +975,10 @@ function App() {
                     context.globalCompositeOperation = 'destination-out';
                     const eraserSize = stroke.brushSize * 10 || 30;
                     
-                    if (stroke.points && stroke.points.length > 0) {
-                      for (let i = 0; i < stroke.points.length; i++) {
+                    if (absolutePoints.length > 0) {
+                      for (let i = 0; i < absolutePoints.length; i++) {
                         context.beginPath();
-                        context.arc(stroke.points[i].x, stroke.points[i].y, eraserSize, 0, 2 * Math.PI);
+                        context.arc(absolutePoints[i].x, absolutePoints[i].y, eraserSize, 0, 2 * Math.PI);
                         context.fill();
                       }
                     }
@@ -955,10 +990,10 @@ function App() {
                     context.lineJoin = 'round';
                     context.strokeStyle = stroke.color || '#ef4444';
                     
-                    if (stroke.points && stroke.points.length > 1) {
-                      context.moveTo(stroke.points[0].x, stroke.points[0].y);
-                      for (let i = 1; i < stroke.points.length; i++) {
-                        context.lineTo(stroke.points[i].x, stroke.points[i].y);
+                    if (absolutePoints.length > 1) {
+                      context.moveTo(absolutePoints[0].x, absolutePoints[0].y);
+                      for (let i = 1; i < absolutePoints.length; i++) {
+                        context.lineTo(absolutePoints[i].x, absolutePoints[i].y);
                       }
                       context.stroke();
                     }
