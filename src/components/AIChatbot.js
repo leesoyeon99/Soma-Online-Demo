@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 
 // API 설정 - 환경변수로 분리 가능
-// const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://aiapi-fastapi-dev.t-ime.com';
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000';
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://aiapi-fastapi-dev.t-ime.com';
+// const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000';
 
 const AIChatbot = ({ 
   isOpen, 
