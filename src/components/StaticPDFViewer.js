@@ -333,13 +333,6 @@ const StaticPDFViewer = forwardRef(({
           context.stroke();
         }
         
-        // 점수 표시 (선택사항)
-        context.fillStyle = mark.type === 'correct' ? '#10b981' : '#ef4444';
-        context.font = 'bold 12px Arial';
-        context.textAlign = 'center';
-        context.textBaseline = 'top';
-        context.fillText(`${mark.score}/${mark.maxScore}`, mark.x, mark.y + 25);
-        
         context.restore();
       });
     };
