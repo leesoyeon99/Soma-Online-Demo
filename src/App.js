@@ -722,7 +722,7 @@ function App() {
       console.log('📤 AI 채점 요청:', { bookTitle, pageNumber });
       
       // 4. API 요청
-      const response = await fetch('http://localhost:8000/api/v1/soma-online/auto-grading', {
+      const response = await fetch('https://aiapi-fastapi-dev.t-ime.com/api/v1/soma-online/auto-grading', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
