@@ -7,7 +7,7 @@ const TeacherBookListPage = ({ files, onBookSelect, onBackToLogin, onGoToSubmiss
   const [activeTab, setActiveTab] = useState('books'); // 'books' 또는 'submissions'
 
   const handleFavoriteToggle = (index) => {
-    const somaIndex = files.findIndex(f => f.title === '2023 소마 프리미어 초급2');
+    const somaIndex = files.findIndex(f => f.title === '2023 소마 프리미어');
     
     const newFavorites = new Set(favorites);
     if (newFavorites.has(index)) {
