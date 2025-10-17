@@ -36,7 +36,7 @@ const BookListPage = ({
     e.stopPropagation();
     
     // "2023 소마 프리미어"의 ID 찾기
-    const somaFile = files.find(f => f.title === '2023 소마 프리미어 초급2');
+    const somaFile = files.find(f => f.title === '2023 소마 프리미어');
     
     const newFavorites = new Set(favorites);
     if (newFavorites.has(fileId)) {
