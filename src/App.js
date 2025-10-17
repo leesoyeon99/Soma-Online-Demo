@@ -735,14 +735,24 @@ function App() {
         })
       });
       
-      if (!response.ok) {
-        throw new Error(`API 요청 실패: ${response.status}`);
-      }
-      
       const apiResponse = await response.json();
       console.log('📥 AI 채점 응답:', apiResponse);
       
-      // 5. 응답 데이터 파싱 (data.result에 있음!)
+      // 5. 에러 코드 체크 (문제 없음 에러)
+      if (apiResponse.result_code === "9999") {
+        clearInterval(progressInterval);
+        setIsAIGrading(false);
+        setGradingProgress(0);
+        alert('채점할 문제가 없습니다. 다음 페이지로 넘어가세요!');
+        return;
+      }
+      
+      // HTTP 상태 코드 체크 (9999 아닌 다른 에러)
+      if (!response.ok) {
+        throw new Error(`API 요청 실패: ${response.status} - ${apiResponse.result_message || 'Unknown error'}`);
+      }
+      
+      // 6. 응답 데이터 파싱 (data.result에 있음!)
       const resultList = apiResponse.data?.result || [];
       console.log('📋 resultList:', resultList);
       
@@ -752,7 +762,7 @@ function App() {
       
       console.log('✅ correctCount:', correctCount, 'totalCount:', totalCount);
       
-      // 6. 프론트엔드 형식으로 변환
+      // 7. 프론트엔드 형식으로 변환
       const gradingResult = {
         totalScore: `${correctCount}/${totalCount}`, // "2/3" 형식
         maxScore: totalCount,
@@ -1251,7 +1261,7 @@ function App() {
   }
 
   if (currentPage === 'admin') {
-    return <AdminPage />;
+    return <AdminPage onBackToHome={() => setCurrentPage('landing')} />;
   }
 
   // 선생님 첨삭 카드 목록 페이지

@@ -3,9 +3,9 @@ import MathProblemImage from "./MathProblemImage";
 
 // Mock data
 const MOCK_TEXTBOOKS = [
-  { id: "bk1", title: "중1 1학기 2022개정 수학 개념 진도북_1단원_단원TEST" },
-  { id: "bk2", title: "중1 2학기 2022개정 수학 개념 진도북_2단원_단원TEST" },
-  { id: "bk3", title: "중2 1학기 2022개정 수학 개념 진도북_1단원_단원TEST" },
+  { id: "bk1", title: "2022 개정 미래탐구 중1-1 수학 개념 진도북" },
+  { id: "bk2", title: "중1 2학기 2022개정 수학 개념 진도북_2단원_단원" },
+  { id: "bk3", title: "중2 1학기 2022개정 수학 개념 진도북_1단원_단원" },
   { id: "bk4", title: "사고력 연산 지도사 과정 1 (M1)" },
 ];
 
@@ -71,7 +71,7 @@ const sampleProblem = {
   type: "소수"
 };
 
-export default function AdminPage() {
+export default function AdminPage({ onBackToHome }) {
   const [step, setStep] = useState(1);
   const [bookId, setBookId] = useState(MOCK_TEXTBOOKS[0].id);
   const [selectedPages, setSelectedPages] = useState(["0023"]);
@@ -93,6 +93,55 @@ export default function AdminPage() {
   // 범위 선택을 위한 상태들
   const [rangeStart, setRangeStart] = useState('');
   const [rangeEnd, setRangeEnd] = useState('');
+  
+  // 미리보기 문제 인덱스
+  const [previewProblemIndex, setPreviewProblemIndex] = useState(0);
+  
+  // 미리보기용 문제 샘플 데이터
+  const previewProblems = [
+    {
+      type: "다항식",
+      title: "개념유형 1) 다항식의 연산",
+      question: "(3x² + 2x - 1) + (2x² - 3x + 4)",
+      description: "다항식의 덧셈과 뺄셈을 계산하여 정리하시오."
+    },
+    {
+      type: "이차방정식",
+      title: "개념유형 2) 이차방정식의 해",
+      question: "x² - 5x + 6 = 0",
+      description: "다음 이차방정식을 풀어라."
+    },
+    {
+      type: "함수",
+      title: "개념유형 3) 일차함수와 이차함수",
+      question: "f(x) = 2x + 3",
+      description: "다음 함수의 그래프를 그리고 성질을 설명하시오."
+    },
+    {
+      type: "기하",
+      title: "개념유형 4) 평면도형의 성질",
+      question: "반지름이 5cm인 원의 넓이",
+      description: "다음 도형의 넓이를 구하시오."
+    },
+    {
+      type: "확률",
+      title: "개념유형 5) 확률과 통계",
+      question: "주사위를 한 번 던져서 3이 나올 확률",
+      description: "다음 확률을 구하시오."
+    }
+  ];
+  
+  // 현재 미리보기 문제
+  const currentPreviewProblem = previewProblems[previewProblemIndex];
+  
+  // 미리보기 문제 이동 핸들러
+  const handlePrevPreview = () => {
+    setPreviewProblemIndex((prev) => (prev - 1 + previewProblems.length) % previewProblems.length);
+  };
+  
+  const handleNextPreview = () => {
+    setPreviewProblemIndex((prev) => (prev + 1) % previewProblems.length);
+  };
 
   // 페이지 섹션 계산 (20페이지씩 그룹화)
   const pageSections = Array.from({ length: Math.ceil(MOCK_PAGES.length / 20) }, (_, i) => ({
@@ -278,44 +327,49 @@ export default function AdminPage() {
     // 문제 유형에 따른 AI 분류 결과 생성
     const getMockResults = (problemType) => {
       const results = {
-        소수: {
-          기본정답: "3",
-          추가정답: "세 개, 03, 3개",
-          개념: "소수의 정의와 판별법",
-          풀이전략: "주어진 수들을 하나씩 확인하여 소수인지 판별한다. 소수는 1과 자기 자신으로만 나누어떨어지는 수이다.",
-          풀이과정: "2: 소수 (1과 2로만 나누어떨어짐)\n9: 합성수 (3×3)\n14: 합성수 (2×7)\n23: 소수 (1과 23으로만 나누어떨어짐)\n34: 합성수 (2×17)\n47: 소수 (1과 47로만 나누어떨어짐)\n81: 합성수 (3×3×3×3)\n\n따라서 소수는 2, 23, 47로 총 3개이다."
+        다항식: {
+          기본정답: "(1) 5x² - x + 3  (2) x² - x - 6  (3) 4x² + 4x + 1",
+          추가정답: "(1) 5x²-x+3 (2) x²-x-6 (3) 4x²+4x+1",
+          개념: "다항식의 연산",
+          문제유형: "다항식의 덧셈, 뺄셈, 곱셈",
+          풀이전략: "다항식의 덧셈은 동류항끼리 모아서 계산하고, 곱셈은 분배법칙을 이용하여 전개한다. 완전제곱식의 경우 공식 (a+b)² = a² + 2ab + b²를 활용한다.",
+          풀이과정: "(1) (3x² + 2x - 1) + (2x² - 3x + 4)\n= 3x² + 2x² + 2x - 3x - 1 + 4\n= 5x² - x + 3\n\n(2) (x + 2)(x - 3)\n= x² - 3x + 2x - 6\n= x² - x - 6\n\n(3) (2x + 1)²\n= (2x)² + 2·(2x)·1 + 1²\n= 4x² + 4x + 1\n\n따라서 답은 (1) 5x² - x + 3  (2) x² - x - 6  (3) 4x² + 4x + 1"
         },
-        방정식: {
-          기본정답: "4",
-          추가정답: "x=4",
-          개념: "일차방정식의 풀이법",
-          풀이전략: "등식의 성질을 이용하여 미지수를 구한다. 양변에 같은 수를 더하거나 빼거나 곱하거나 나눌 수 있다.",
-          풀이과정: "2x + 5 = 13\n2x = 13 - 5 (양변에서 5 빼기)\n2x = 8\nx = 4 (양변을 2로 나누기)\n\n따라서 x = 4이다."
+        이차방정식: {
+          기본정답: "(1) x = 2, 3  (2) x = -3, -1/2  (3) x = ±2",
+          추가정답: "(1) x=2 또는 x=3 (2) x=-3 또는 x=-0.5 (3) x=2 또는 x=-2",
+          개념: "이차방정식의 해",
+          문제유형: "인수분해를 이용한 이차방정식 풀이",
+          풀이전략: "이차방정식을 인수분해하여 (x-a)(x-b)=0 꼴로 만든 후, 각 인수가 0이 되는 x의 값을 구한다. 완전제곱식이나 제곱근을 이용한 방법도 활용한다.",
+          풀이과정: "(1) x² - 5x + 6 = 0\n(x - 2)(x - 3) = 0\nx - 2 = 0 또는 x - 3 = 0\n∴ x = 2 또는 x = 3\n\n(2) 2x² + 7x + 3 = 0\n(2x + 1)(x + 3) = 0\n2x + 1 = 0 또는 x + 3 = 0\n∴ x = -1/2 또는 x = -3\n\n(3) x² - 4 = 0\nx² = 4\n∴ x = ±2\n\n따라서 답은 (1) x = 2, 3  (2) x = -3, -1/2  (3) x = ±2"
+        },
+        함수: {
+          기본정답: "(1) 기울기 2, y절편 3  (2) 꼭짓점 (2, -1)  (3) 꼭짓점 (1, 2)",
+          추가정답: "(1) 일차함수, 증가 (2) 아래로 볼록, 최솟값 -1 (3) 위로 볼록, 최댓값 2",
+          개념: "일차함수와 이차함수의 성질",
+          문제유형: "함수의 그래프와 성질 분석",
+          풀이전략: "일차함수는 y = ax + b 형태로 기울기와 y절편을 파악한다. 이차함수는 y = a(x-p)² + q 꼴로 변형하여 꼭짓점, 축, 최댓값/최솟값을 구한다.",
+          풀이과정: "(1) f(x) = 2x + 3\n일차함수로 기울기는 2, y절편은 3이다.\nx가 1 증가할 때 y가 2 증가하는 직선이다.\n\n(2) g(x) = x² - 4x + 3\n= (x² - 4x + 4) - 4 + 3\n= (x - 2)² - 1\n꼭짓점: (2, -1), 축: x = 2\n아래로 볼록한 포물선, 최솟값 -1\n\n(3) h(x) = -x² + 2x + 1\n= -(x² - 2x) + 1\n= -(x² - 2x + 1 - 1) + 1\n= -(x - 1)² + 1 + 1\n= -(x - 1)² + 2\n꼭짓점: (1, 2), 축: x = 1\n위로 볼록한 포물선, 최댓값 2\n\n따라서 답은 (1) 기울기 2, y절편 3  (2) 꼭짓점 (2, -1)  (3) 꼭짓점 (1, 2)"
         },
         기하: {
-          기본정답: "12",
-          추가정답: "12cm², 12제곱센티미터",
-          개념: "삼각형의 넓이 공식",
-          풀이전략: "삼각형의 넓이는 (밑변 × 높이) ÷ 2 공식을 사용한다.",
-          풀이과정: "삼각형의 넓이 = (밑변 × 높이) ÷ 2\n= (6 × 4) ÷ 2\n= 24 ÷ 2\n= 12\n\n따라서 삼각형의 넓이는 12cm²이다."
+          기본정답: "(1) 25π cm²  (2) 24 cm²  (3) 70 cm²",
+          추가정답: "(1) 78.5cm² (2) 24제곱센티미터 (3) 70제곱센티미터",
+          개념: "평면도형의 넓이",
+          문제유형: "원, 삼각형, 사각형의 넓이 계산",
+          풀이전략: "각 도형의 넓이 공식을 활용한다. 원의 넓이는 πr², 삼각형은 (밑변 × 높이) ÷ 2, 직사각형은 가로 × 세로를 이용한다.",
+          풀이과정: "(1) 반지름이 5cm인 원의 넓이\n원의 넓이 = πr²\n= π × 5²\n= 25π (cm²)\n≈ 78.5 cm²\n\n(2) 밑변이 8cm, 높이가 6cm인 삼각형의 넓이\n삼각형의 넓이 = (밑변 × 높이) ÷ 2\n= (8 × 6) ÷ 2\n= 48 ÷ 2\n= 24 (cm²)\n\n(3) 가로 10cm, 세로 7cm인 직사각형의 넓이\n직사각형의 넓이 = 가로 × 세로\n= 10 × 7\n= 70 (cm²)\n\n따라서 답은 (1) 25π cm²  (2) 24 cm²  (3) 70 cm²"
         },
-        분수: {
-          기본정답: "2/3",
-          추가정답: "⅔",
-          개념: "기약분수와 약분",
-          풀이전략: "분자와 분모의 최대공약수로 나누어 기약분수로 만든다.",
-          풀이과정: "12/18의 분자와 분모의 최대공약수는 6이다.\n12 ÷ 6 = 2\n18 ÷ 6 = 3\n\n따라서 12/18 = 2/3이다."
-        },
-        비례: {
-          기본정답: "9",
-          추가정답: "x=9",
-          개념: "비례식의 성질",
-          풀이전략: "비례식에서 내항의 곱과 외항의 곱이 같다는 성질을 이용한다.",
-          풀이과정: "3:4 = x:12\n내항의 곱 = 4 × x = 4x\n외항의 곱 = 3 × 12 = 36\n4x = 36\nx = 9\n\n따라서 x = 9이다."
+        확률: {
+          기본정답: "(1) 1/6  (2) 1/4  (3) 3/10",
+          추가정답: "(1) 6분의 1 (2) 0.25 (3) 0.3",
+          개념: "확률의 기본 개념과 계산",
+          문제유형: "경우의 수를 이용한 확률 계산",
+          풀이전략: "확률 = (원하는 경우의 수) / (전체 경우의 수) 공식을 이용한다. 각 상황에서 가능한 모든 경우를 파악하고, 그 중 구하고자 하는 조건을 만족하는 경우를 센다.",
+          풀이과정: "(1) 주사위를 한 번 던져서 3이 나올 확률\n전체 경우의 수: 6 (1, 2, 3, 4, 5, 6)\n3이 나오는 경우의 수: 1\n확률 = 1/6\n\n(2) 동전을 두 번 던져서 모두 앞면이 나올 확률\n전체 경우의 수: 4 (앞앞, 앞뒤, 뒤앞, 뒤뒤)\n모두 앞면인 경우의 수: 1 (앞앞)\n확률 = 1/4\n\n(3) 1부터 10까지의 수 중에서 3의 배수를 뽑을 확률\n전체 경우의 수: 10 (1~10)\n3의 배수: 3, 6, 9 → 3개\n확률 = 3/10\n\n따라서 답은 (1) 1/6  (2) 1/4  (3) 3/10"
         }
       };
       
-      return results[problemType] || results.소수;
+      return results[problemType] || results.다항식;
     };
     
     // 모든 문제에 대해 AI 분류 실행
@@ -457,8 +511,9 @@ export default function AdminPage() {
           }}>
             {/* Left side - Book info */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              {/* 홈으로 돌아가기 버튼 */}
               <button
-                onClick={() => setStep(1)}
+                onClick={onBackToHome}
                 style={{
                   width: '32px',
                   height: '32px',
@@ -473,18 +528,52 @@ export default function AdminPage() {
                   color: '#667eea'
                 }}
                 onMouseEnter={(e) => {
-                  e.target.style.background = '#f8fafc';
-                  e.target.style.borderColor = '#667eea';
+                  e.currentTarget.style.background = '#f8fafc';
+                  e.currentTarget.style.borderColor = '#667eea';
                 }}
                 onMouseLeave={(e) => {
-                  e.target.style.background = 'white';
-                  e.target.style.borderColor = '#e5e7eb';
+                  e.currentTarget.style.background = 'white';
+                  e.currentTarget.style.borderColor = '#e5e7eb';
                 }}
+                title="홈으로"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M19 12H5M12 19l-7-7 7-7"/>
+                  <path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
                 </svg>
               </button>
+              
+              {/* 이전 단계로 돌아가기 버튼 (step > 1일 때만 표시) */}
+              {step > 1 && (
+                <button
+                  onClick={() => setStep(step - 1)}
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '8px',
+                    border: '1px solid #e5e7eb',
+                    background: 'white',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    color: '#667eea'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = '#f8fafc';
+                    e.currentTarget.style.borderColor = '#667eea';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'white';
+                    e.currentTarget.style.borderColor = '#e5e7eb';
+                  }}
+                  title="이전 단계"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                  </svg>
+                </button>
+              )}
               <div style={{ 
                 padding: '8px 0px', 
                 color: '#667eea', 
@@ -889,16 +978,28 @@ export default function AdminPage() {
                       선택할 페이지를 미리 확인하세요
                     </p>
                   </div>
-                  <div style={{
-                    padding: '8px 16px',
-                    background: 'white',
-                    borderRadius: '20px',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    color: '#667eea',
-                    border: '1px solid #667eea'
-                  }}>
-                    페이지 {selectedPages.length > 0 ? selectedPages[0] : '0001'}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{
+                      padding: '8px 16px',
+                      background: 'white',
+                      borderRadius: '20px',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: '#667eea',
+                      border: '1px solid #667eea'
+                    }}>
+                      페이지 {selectedPages.length > 0 ? selectedPages[0] : '0001'}
+                    </div>
+                    <div style={{
+                      padding: '6px 12px',
+                      background: 'rgba(102, 126, 234, 0.1)',
+                      borderRadius: '12px',
+                      fontSize: '12px',
+                      fontWeight: '600',
+                      color: '#667eea'
+                    }}>
+                      {previewProblemIndex + 1} / {previewProblems.length}
+                    </div>
                   </div>
                 </div>
 
@@ -932,7 +1033,7 @@ export default function AdminPage() {
                         fontWeight: 'bold',
                         color: '#667eea'
                       }}>
-                        2023 프리미어 초급2
+                        2022 개정 미래탐구 중1-1 수학 개념 진도북
                       </h2>
                       <p style={{
                         margin: '4px 0 0 0',
@@ -950,7 +1051,7 @@ export default function AdminPage() {
                         color: '#374151',
                         marginBottom: '12px'
                       }}>
-                        개념유형 1) 다항식의 연산
+                        {currentPreviewProblem.title}
                       </div>
                       
                       <div style={{
@@ -966,7 +1067,7 @@ export default function AdminPage() {
                           color: '#1f2937',
                           lineHeight: '1.5'
                         }}>
-                          (3x² + 2x - 1) + (2x² - 3x + 4)
+                          {currentPreviewProblem.question}
                         </div>
                       </div>
 
@@ -975,7 +1076,7 @@ export default function AdminPage() {
                         color: '#6b7280',
                         lineHeight: '1.4'
                       }}>
-                        다항식의 덧셈과 뺄셈을 계산하여 정리하시오.
+                        {currentPreviewProblem.description}
                       </div>
                     </div>
 
@@ -1013,45 +1114,75 @@ export default function AdminPage() {
                     </div>
                   </div>
 
-                  <button style={{
-                    position: 'absolute',
-                    left: '20px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '50%',
-                    border: 'none',
-                    background: 'rgba(255, 255, 255, 0.9)',
-                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '18px',
-                    color: '#667eea'
-                  }}>
+                  <button 
+                    onClick={handlePrevPreview}
+                    style={{
+                      position: 'absolute',
+                      left: '20px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '50%',
+                      border: 'none',
+                      background: 'rgba(255, 255, 255, 0.9)',
+                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '18px',
+                      color: '#667eea',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = '#667eea';
+                      e.currentTarget.style.color = 'white';
+                      e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.9)';
+                      e.currentTarget.style.color = '#667eea';
+                      e.currentTarget.style.transform = 'translateY(-50%) scale(1)';
+                    }}
+                    title="이전 문제 유형"
+                  >
                     ←
                   </button>
                   
-                  <button style={{
-                    position: 'absolute',
-                    right: '20px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '50%',
-                    border: 'none',
-                    background: 'rgba(255, 255, 255, 0.9)',
-                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '18px',
-                    color: '#667eea'
-                  }}>
+                  <button 
+                    onClick={handleNextPreview}
+                    style={{
+                      position: 'absolute',
+                      right: '20px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '50%',
+                      border: 'none',
+                      background: 'rgba(255, 255, 255, 0.9)',
+                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '18px',
+                      color: '#667eea',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = '#667eea';
+                      e.currentTarget.style.color = 'white';
+                      e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.9)';
+                      e.currentTarget.style.color = '#667eea';
+                      e.currentTarget.style.transform = 'translateY(-50%) scale(1)';
+                    }}
+                    title="다음 문제 유형"
+                  >
                     →
                   </button>
                 </div>
@@ -2000,7 +2131,8 @@ export default function AdminPage() {
               <button 
                 onClick={() => {
                   setShowCompletionModal(false);
-                  setStep(1);
+                  // setStep(1);
+                  onBackToHome();
                 }}
                 style={{
                   ...buttonStyle,
@@ -2012,10 +2144,13 @@ export default function AdminPage() {
                 처음으로
               </button>
               <button 
-                onClick={() => setShowCompletionModal(false)}
+                onClick={() => {
+                  setShowCompletionModal(false);
+                  setStep(1);
+                }}
                 style={primaryButtonStyle}
               >
-                문제편집으로 돌아가기
+                교재선택으로 돌아가기
               </button>
             </div>
           </div>

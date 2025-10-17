@@ -51,6 +51,21 @@ const LandingPage = ({ onSelectUserType }) => {
       isPrimary: false
     },
     {
+      id: 'student',
+      title: '학습 & 문제풀이',
+      subtitle: '학생 데모',
+      description: '교재 학습, 문제 풀이, 필기 연습',
+      icon: (
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2L15.09 8.26L22 9L17 14L18.18 21L12 18L5.82 21L7 14L2 9L8.91 8.26L12 2Z" fill="currentColor"/>
+          <path d="M12 6L13.5 10.5L18 10.5L14.5 13.5L15.5 18L12 15.5L8.5 18L9.5 13.5L6 10.5L10.5 10.5L12 6Z" fill="white" fillOpacity="0.3"/>
+        </svg>
+      ),
+      color: '#F59E0B', // 주황색
+      badge: 'Demo',
+      isPrimary: false
+    },
+    {
       id: 'teacher',
       title: '채점 & 피드백',
       subtitle: '강사 데모',
@@ -65,21 +80,6 @@ const LandingPage = ({ onSelectUserType }) => {
       badge: 'Demo',
       isPrimary: false
     },
-    {
-      id: 'student',
-      title: '학습 & 문제풀이',
-      subtitle: '학생 데모',
-      description: '교재 학습, 문제 풀이, 필기 연습',
-      icon: (
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 2L15.09 8.26L22 9L17 14L18.18 21L12 18L5.82 21L7 14L2 9L8.91 8.26L12 2Z" fill="currentColor"/>
-          <path d="M12 6L13.5 10.5L18 10.5L14.5 13.5L15.5 18L12 15.5L8.5 18L9.5 13.5L6 10.5L10.5 10.5L12 6Z" fill="white" fillOpacity="0.3"/>
-        </svg>
-      ),
-      color: '#F59E0B', // 주황색
-      badge: 'Demo',
-      isPrimary: false
-    }
   ];
 
   return (
