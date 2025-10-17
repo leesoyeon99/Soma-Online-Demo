@@ -724,7 +724,7 @@ function App() {
       // 4. API 요청
       const response = await fetch('https://aiapi-fastapi-dev.t-ime.com/api/v1/soma-online/auto-grading', {
       // const response = await fetch('http://localhost:8080/api/v1/soma-online/auto-grading', {
-      //     method: 'POST',
+          method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
