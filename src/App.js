@@ -1251,7 +1251,7 @@ function App() {
   }
 
   if (currentPage === 'admin') {
-    return <AdminPage />;
+    return <AdminPage onBackToHome={() => setCurrentPage('landing')} />;
   }
 
   // 선생님 첨삭 카드 목록 페이지

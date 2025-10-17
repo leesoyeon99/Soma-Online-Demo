@@ -45,6 +45,10 @@ const StaticPDFViewer = forwardRef(({
   const [showThumbnails, setShowThumbnails] = useState(false);
   const THUMBNAIL_ENABLED = false; // 썸네일 기능 활성화/비활성화 플래그
   
+  // 오디오 재생 관련 상태
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  const audioRef = useRef(null);
+  
   // Drawing state
   const [isDrawing, setIsDrawing] = useState(false);
   const [lastPos, setLastPos] = useState({ x: 0, y: 0 });
@@ -1143,46 +1147,87 @@ const StaticPDFViewer = forwardRef(({
 
             {/* 음성 버튼 - 2페이지에만 표시 */}
             {pageNum === 2 && (
-              <button
-                onClick={() => {
-                  // 음성 재생 기능 (임시)
-                  alert('음성 재생 기능입니다!');
-                }}
-                style={{
-                  position: 'absolute',
-                  top: '17%',
-                  left: '45%',
-                  background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '50%',
-                  width: '56px',
-                  height: '56px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow: '0 4px 16px rgba(249, 115, 22, 0.4)',
-                  transition: 'all 0.3s ease',
-                  zIndex: 10,
-                  pointerEvents: 'auto',
-                  opacity: 0.9
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.transform = 'scale(1.1)';
-                  e.target.style.boxShadow = '0 6px 24px rgba(249, 115, 22, 0.6)';
-                  e.target.style.opacity = '1';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.transform = 'scale(1)';
-                  e.target.style.boxShadow = '0 4px 16px rgba(249, 115, 22, 0.4)';
-                  e.target.style.opacity = '0.9';
-                }}
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 1c-4.97 0-9 4.03-9 9v7c0 1.66 1.34 3 3 3h3v-8H5v-2c0-3.87 3.13-7 7-7s7 3.13 7 7v2h-4v8h4c1.66 0 3-1.34 3-3v-7c0-4.97-4.03-9-9-9z"/>
-                </svg>
-              </button>
+              <>
+                {/* 숨겨진 오디오 엘리먼트 */}
+                <audio
+                  ref={audioRef}
+                  // src="/assets/audio/소마온라인_TTS_최종.wav"
+                  src={`${process.env.PUBLIC_URL}/assets/audio/소마온라인_TTS_최종.wav`}
+                  onEnded={() => setIsAudioPlaying(false)}
+                  onPause={() => setIsAudioPlaying(false)}
+                  onPlay={() => setIsAudioPlaying(true)}
+                />
+                
+                {/* 헤드셋 재생/일시정지 버튼 */}
+                <button
+                  onClick={() => {
+                    if (!audioRef.current) return;
+                    
+                    if (isAudioPlaying) {
+                      // 재생 중이면 일시정지
+                      audioRef.current.pause();
+                    } else {
+                      // 일시정지 중이면 재생
+                      audioRef.current.play().catch(error => {
+                        console.error('오디오 재생 오류:', error);
+                        alert('오디오 파일을 찾을 수 없습니다. 경로를 확인해주세요.');
+                      });
+                    }
+                  }}
+                  style={{
+                    position: 'absolute',
+                    top: '17%',
+                    left: '45%',
+                    background: isAudioPlaying 
+                      ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' 
+                      : 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '50%',
+                    width: '56px',
+                    height: '56px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: isAudioPlaying
+                      ? '0 4px 16px rgba(239, 68, 68, 0.4)'
+                      : '0 4px 16px rgba(249, 115, 22, 0.4)',
+                    transition: 'all 0.3s ease',
+                    zIndex: 10,
+                    pointerEvents: 'auto',
+                    opacity: 0.9
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'scale(1.1)';
+                    e.currentTarget.style.boxShadow = isAudioPlaying
+                      ? '0 6px 24px rgba(239, 68, 68, 0.6)'
+                      : '0 6px 24px rgba(249, 115, 22, 0.6)';
+                    e.currentTarget.style.opacity = '1';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'scale(1)';
+                    e.currentTarget.style.boxShadow = isAudioPlaying
+                      ? '0 4px 16px rgba(239, 68, 68, 0.4)'
+                      : '0 4px 16px rgba(249, 115, 22, 0.4)';
+                    e.currentTarget.style.opacity = '0.9';
+                  }}
+                  title={isAudioPlaying ? '일시정지' : '재생'}
+                >
+                  {isAudioPlaying ? (
+                    // 일시정지 아이콘
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                      <rect x="6" y="4" width="4" height="16" rx="1"/>
+                      <rect x="14" y="4" width="4" height="16" rx="1"/>
+                    </svg>
+                  ) : (
+                    // 헤드셋 아이콘
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 1c-4.97 0-9 4.03-9 9v7c0 1.66 1.34 3 3 3h3v-8H5v-2c0-3.87 3.13-7 7-7s7 3.13 7 7v2h-4v8h4c1.66 0 3-1.34 3-3v-7c0-4.97-4.03-9-9-9z"/>
+                    </svg>
+                  )}
+                </button>
+              </>
             )}
           </div>
         </div>
