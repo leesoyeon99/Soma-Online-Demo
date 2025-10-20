@@ -622,7 +622,7 @@ function App() {
       });
 
       // 학생에게 첨삭 알림 표시
-      setFeedbackAlert(true);
+      // setFeedbackAlert(true);
 
       // 알림 추가
       const feedbackNotification = {
@@ -1849,7 +1849,7 @@ console.log("submission =============== ", submission);
                 ×
               </button>
             {/* 학생 제출물 확인 섹션 */}
-            <div style={{
+            {/* <div style={{
               display: 'flex',
               flexDirection: 'column',
               gap: '0.75rem',
@@ -1907,7 +1907,7 @@ console.log("submission =============== ", submission);
                   제출물 확인
                 </span>
               </button>
-            </div>
+            </div> */}
 
             {/* AI 첨삭 섹션 */}
             <div style={{
@@ -1923,7 +1923,7 @@ console.log("submission =============== ", submission);
                 marginBottom: '0.5rem',
                 fontFamily: 'var(--font-ui)'
               }}>
-                🤖 AI 첨삭
+                🤖 AI 도우미
               </div>
 
               <button
@@ -1965,13 +1965,13 @@ console.log("submission =============== ", submission);
                   </g>
                 </svg>
                 <span style={{ fontSize: '0.875rem', fontFamily: 'var(--font-ui)' }}>
-                  AI 첨삭
+                  AI 챗봇
                 </span>
               </button>
             </div>
 
             {/* 성적 관리 섹션 */}
-            <div style={{
+            {/* <div style={{
               display: 'flex',
               flexDirection: 'column',
               gap: '0.75rem'
@@ -2021,7 +2021,7 @@ console.log("submission =============== ", submission);
                   성적 입력
                 </span>
               </button>
-            </div>
+            </div> */}
           </div>
         )}
       </div>
