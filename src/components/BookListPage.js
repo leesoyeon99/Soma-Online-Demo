@@ -1,6 +1,12 @@
 import React, { useState } from 'react';
 import StudentFeedbackViewer from './StudentFeedbackViewer';
 
+import * as commonJs from '../component/CommonJs';
+//import GlobalStore from '../store/GlobalStore';
+import { API_RES_CODE,  } from '../component/AppConstants';
+import { Base64 } from 'js-base64';
+import CommonUtils from '../utils/CommonUtils';
+
 const BookListPage = ({
   files,
   onBookSelect,
@@ -70,6 +76,31 @@ const BookListPage = ({
       window.sessionStorage.removeItem("noma@secure_token");
       onBackToLogin();
   }
+
+  const studentSubmissionList = async() => {
+        const mem_seq = Base64.decode(window.sessionStorage.getItem("noma@mem_seq"));
+
+        let bodyData = {
+            mem_seq:mem_seq,
+        };
+        commonJs.fetchApiCall("S", "teacherSubmissionList", bodyData)
+        .then(responseJson => {
+            if (responseJson.result_code === API_RES_CODE.SUCCESS) {
+                let subList = responseJson.teacherSubmissionList;
+                let newSubList = [];
+                for(var i=0; i<subList.length; i++){
+                    subList[i].feedbackStrokeData = JSON.parse(subList[i].feedbackStrokeData);
+                }
+
+                window.localStorage.setItem("teacherFeedbacks", JSON.stringify(subList));
+                setCurrentPage('teacherFeedbackCards');
+            } else {
+                CommonUtils.showServerErr(responseJson.result_code, responseJson.result_message);
+            }
+        });
+
+
+    }
 
   return (
     <div style={{
@@ -213,7 +244,7 @@ const BookListPage = ({
               교재
             </button>
             <button
-              onClick={() => setCurrentPage('teacherFeedbackCards')}
+              onClick={() => studentSubmissionList()}
               style={{
                 background: 'transparent',
                 color: '#64748b',

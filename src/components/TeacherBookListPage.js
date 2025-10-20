@@ -68,9 +68,11 @@ const TeacherBookListPage = ({ files, onBookSelect, onBackToLogin, onGoToSubmiss
             if (responseJson.result_code === API_RES_CODE.SUCCESS) {
                 let subList = responseJson.studentSubmissionList;
                 let newSubList = [];
+                let newSubList1 = [];
                 for(var i=0; i<subList.length; i++){
                     newSubList.push(JSON.parse(subList[i].strokeData));
                 }
+                newSubList1.push(newSubList);
 
                 window.localStorage.setItem("studentSubmissions", ...newSubList);
                 setActiveTab('submissions');

@@ -5,14 +5,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="bf25bc1e-b462-4206-9f9e-fe22d5ddfec4" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/package-lock.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/App.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/App.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/components/BookListPage.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/BookListPage.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/LoginPage.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/LoginPage.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/StaticPDFViewer.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/StaticPDFViewer.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/components/TeacherBookListPage.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/TeacherBookListPage.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/TeacherLoginPage.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/TeacherLoginPage.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/TeacherSubmissionPage.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/TeacherSubmissionPage.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/TeacherSubmissionViewer.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/TeacherSubmissionViewer.js" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

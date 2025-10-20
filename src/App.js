@@ -71,7 +71,7 @@ function App() {
       }
     } else {
       // 데모용 샘플 첨삭 데이터 생성
-      const demoFeedbacks = [
+      /*const demoFeedbacks = [
         {
           id: Date.now() - 86400000, // 1일 전
           teacherId: 'teacher1',
@@ -215,7 +215,7 @@ function App() {
 
       // 가장 최신 첨삭을 단일 첨삭으로도 설정
       setTeacherFeedback(demoFeedbacks[0]);
-      localStorage.setItem('teacherFeedback', JSON.stringify(demoFeedbacks[0]));
+      localStorage.setItem('teacherFeedback', JSON.stringify(demoFeedbacks[0]));*/
     }
   }, []);
 
