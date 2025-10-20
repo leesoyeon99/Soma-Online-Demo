@@ -1382,20 +1382,34 @@ console.log("submission =============== ", submission);
       <TeacherFeedbackCards
         feedbacks={teacherFeedbacks}
         onSelectFeedback={(feedback) => {
+          console.log('📤 학생이 선택한 첨삭:', feedback);
+          
           // 선택된 첨삭을 단일 첨삭으로 설정하고 상세 페이지로 이동
           setTeacherFeedback(feedback);
-          const mockSubmission = {
-            id: Date.now(),
-            studentId: 'student1',
-            studentName: '학생',
-            timestamp: new Date().toISOString(),
-            strokeData: [],
-            audioUrl: null,
-            bookTitle: feedback.bookTitle,
-            bookUrl: feedback.bookUrl,
-            submittedAt: new Date().toISOString()
+          
+          // 실제 선생 첨삭 데이터를 submission으로 변환
+          const feedbackSubmission = {
+            id: feedback.id || Date.now(),
+            studentId: feedback.studentId || 'student1',
+            studentName: feedback.studentName || '학생',
+            timestamp: feedback.timestamp || new Date().toISOString(),
+            strokeData: feedback.feedbackStrokeData || [], // 선생 스트로크 데이터
+            audioUrl: feedback.teacherAudioUrl || null,
+            audioBase64: feedback.teacherAudioBase64 || null, // ✅ Base64 오디오 추가
+            recordingStartTime: feedback.recordingStartTime || null, // ✅ 타임스탬프 동기화
+            bookTitle: feedback.bookTitle || '교재',
+            bookUrl: feedback.bookUrl || feedback.pdfFileName || '',
+            pdfFileName: feedback.pdfFileName || feedback.bookUrl || '',
+            currentPage: feedback.currentPage || 1, // ✅ PDF 페이지 번호
+            submittedAt: feedback.timestamp || new Date().toISOString(),
+            teacherName: feedback.teacherName || '선생님',
+            // 선생 첨삭 플래그
+            isTeacherFeedback: true
           };
-          setSelectedSubmission(mockSubmission);
+          
+          console.log('✅ 변환된 feedbackSubmission:', feedbackSubmission);
+          
+          setSelectedSubmission(feedbackSubmission);
           setCurrentPage('teacherAnnotation');
         }}
         onBackToBookList={() => setCurrentPage('bookList')}
@@ -3133,7 +3147,7 @@ console.log("submission =============== ", submission);
                 </button>*/}
 
                 {/* 애니메이션 토글 버튼 */}
-                <button
+                {/* <button
                   onClick={() => setEnableStrokeAnimation(!enableStrokeAnimation)}
                   style={{
                     display: 'flex',
@@ -3162,7 +3176,7 @@ console.log("submission =============== ", submission);
                   <span style={{ fontFamily: 'var(--font-ui)' }}>
                     {enableStrokeAnimation ? '애니메이션 ON' : '애니메이션 OFF'}
                   </span>
-                </button>
+                </button> */}
               </>
             )}
           </div>
@@ -3188,7 +3202,7 @@ console.log("submission =============== ", submission);
             </div>
 
             {/* 다시 녹음 버튼 */}
-            {(audioUrl || strokeData.length > 0) && !isRecording && (
+            {/* {(audioUrl || strokeData.length > 0) && !isRecording && (
               <button
                 onClick={handleRerecord}
                 style={{
@@ -3220,7 +3234,7 @@ console.log("submission =============== ", submission);
                   다시 녹음
                 </span>
               </button>
-            )}
+            )} */}
 
             {/* 학생 제출 버튼 (학생 모드) */}
             {(strokeData.length > 0 || audioUrl) && !isRecording && !studentSubmission && (
@@ -3332,7 +3346,7 @@ console.log("submission =============== ", submission);
           </div>
 
           {/* 선생님 첨삭 on/off 버튼 */}
-          {teacherFeedback && (
+          {/* {teacherFeedback && (
             <div style={{
               display: 'flex',
               flexDirection: 'column',
@@ -3384,7 +3398,7 @@ console.log("submission =============== ", submission);
                 </span>
               </button>
             </div>
-          )}
+          )} */}
 
 
           {/* AI 섹션 */}

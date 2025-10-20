@@ -26,6 +26,20 @@ const TeacherSubmissionViewer = ({
   // 첨삭 데이터
   const [teacherAnnotations, setTeacherAnnotations] = useState([]);
   
+  // 강사 녹음 관련 상태
+  const [isRecording, setIsRecording] = useState(false);
+  const [mediaRecorder, setMediaRecorder] = useState(null);
+  const [teacherAudioUrl, setTeacherAudioUrl] = useState(null);
+  const [teacherAudioBase64, setTeacherAudioBase64] = useState(null);
+  const [recordingStartTime, setRecordingStartTime] = useState(null);
+  
+  // 선생 첨삭 재생 관련 상태
+  const [isTeacherReplaying, setIsTeacherReplaying] = useState(false);
+  const [teacherReplayProgress, setTeacherReplayProgress] = useState(0);
+  const [currentTeacherAudio, setCurrentTeacherAudio] = useState(null);
+  const [enableStrokeAnimation] = useState(true); // 스트로크 애니메이션 활성화
+  const [teacherAudioDuration, setTeacherAudioDuration] = useState(0); // 선생 오디오 길이
+  
   // 샘플 첨삭 텍스트 (PDF 위에 표시될 내용)
   const sampleFeedbackTexts = [
     { text: "좋아요! 계산이 정확해요", x: 200, y: 300, color: '#ef4444' },
@@ -54,6 +68,62 @@ const TeacherSubmissionViewer = ({
     });
     console.log('📦 전체 submission 객체:', submission);
   }, [submission]);
+
+  // localStorage에서 선생 피드백 불러오기 (컴포넌트 마운트 시)
+  useEffect(() => {
+    if (!submission?.id) return;
+    
+    const feedbackKey = `teacherFeedback_${submission.id}`;
+    const savedFeedback = localStorage.getItem(feedbackKey);
+    
+    if (savedFeedback) {
+      try {
+        const feedback = JSON.parse(savedFeedback);
+        console.log('💾 저장된 선생 피드백 불러오기:', feedback);
+        
+        // 저장된 피드백 복원
+        if (feedback.feedbackStrokeData) {
+          setTeacherAnnotations(feedback.feedbackStrokeData);
+        }
+        if (feedback.teacherAudioBase64) {
+          setTeacherAudioBase64(feedback.teacherAudioBase64);
+          // Base64를 Blob URL로 변환
+          const byteCharacters = atob(feedback.teacherAudioBase64.split(',')[1]);
+          const byteNumbers = new Array(byteCharacters.length);
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+          }
+          const byteArray = new Uint8Array(byteNumbers);
+          const blob = new Blob([byteArray], { type: 'audio/webm' });
+          const url = URL.createObjectURL(blob);
+          setTeacherAudioUrl(url);
+        }
+        if (feedback.recordingStartTime) {
+          setRecordingStartTime(feedback.recordingStartTime);
+        }
+        
+        console.log('✅ 선생 피드백 복원 완료');
+      } catch (error) {
+        console.error('❌ 선생 피드백 불러오기 오류:', error);
+      }
+    } else {
+      console.log('ℹ️ 저장된 선생 피드백 없음');
+    }
+  }, [submission?.id]);
+
+  // 선생 오디오 길이 업데이트
+  useEffect(() => {
+    if (teacherAudioUrl) {
+      const audio = new Audio(teacherAudioUrl);
+      audio.onloadedmetadata = () => {
+        setTeacherAudioDuration(audio.duration);
+        console.log('🎵 선생 오디오 길이:', audio.duration);
+      };
+      audio.load();
+    } else {
+      setTeacherAudioDuration(0);
+    }
+  }, [teacherAudioUrl]);
 
   // PDF 파일 경로 추출 (useMemo로 최적화)
   const pdfFilePath = useMemo(() => {
@@ -135,7 +205,460 @@ const TeacherSubmissionViewer = ({
     }
   };
 
-  // 첨삭 저장
+  // Base64 변환 함수 (App.js와 동일)
+  const convertAudioToBase64 = async (audioUrl) => {
+    try {
+      const response = await fetch(audioUrl);
+      const blob = await response.blob();
+      
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64String = reader.result;
+          resolve(base64String);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      console.error('오디오 Base64 변환 오류:', error);
+      return null;
+    }
+  };
+
+  // 다시 녹음 핸들러
+  const handleTeacherRerecord = () => {
+    if (window.confirm('정말로 다시 녹음하시겠습니까? 현재 녹음과 첨삭이 모두 삭제됩니다.')) {
+      // 기존 녹음 데이터 초기화
+      setTeacherAnnotations([]);
+      if (teacherAudioUrl) {
+        URL.revokeObjectURL(teacherAudioUrl);
+        setTeacherAudioUrl(null);
+      }
+      setTeacherAudioBase64(null);
+      setRecordingStartTime(null);
+      setIsTeacherReplaying(false);
+      setTeacherReplayProgress(0);
+      
+      // localStorage에서도 삭제
+      const feedbackKey = `teacherFeedback_${submission.id}`;
+      localStorage.removeItem(feedbackKey);
+      console.log('🗑️ 선생 피드백 초기화 완료');
+      
+      // 녹음 시작
+      setTimeout(() => {
+        handleTeacherRecordingToggle();
+      }, 100);
+    }
+  };
+
+  // 강사 녹음 핸들러
+  const handleTeacherRecordingToggle = async () => {
+    if (isRecording) {
+      // 녹음 중지
+      if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.stop();
+        setIsRecording(false);
+        console.log('강사 녹음 중지, 첨삭 스트로크 수:', teacherAnnotations.length);
+      }
+    } else {
+      try {
+        // 마이크 권한 요청 및 녹음 시작
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const recorder = new MediaRecorder(stream);
+        const chunks = [];
+
+        recorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            chunks.push(event.data);
+          }
+        };
+
+        recorder.onstop = async () => {
+          const audioBlob = new Blob(chunks, { type: 'audio/wav' });
+          const audioUrl = URL.createObjectURL(audioBlob);
+          
+          // Base64 변환
+          const audioBase64 = await convertAudioToBase64(audioUrl);
+          
+          setTeacherAudioUrl(audioUrl);
+          setTeacherAudioBase64(audioBase64);
+          
+          // 스트림 정리
+          stream.getTracks().forEach(track => track.stop());
+          
+          console.log('강사 녹음 완료, Base64 변환:', !!audioBase64);
+          
+          // localStorage에 저장 (녹음 완료 후)
+          const feedbackKey = `teacherFeedback_${submission.id}`;
+          const feedback = {
+            id: Date.now(),
+            teacherId: Base64.decode(window.sessionStorage.getItem("noma@login_id")),
+            teacherName: Base64.decode(window.sessionStorage.getItem("noma@mem_name")),
+            timestamp: new Date().toISOString(),
+            feedbackStrokeData: teacherAnnotations,
+            teacherAudioBase64: audioBase64,
+            recordingStartTime: recordingStartTime,
+            studentSubmissionId: submission.id,
+            currentPage: submission.currentPage,
+            bookTitle: submission.bookTitle,
+            bookUrl: submission.bookUrl,
+            pdfFileName: submission.pdfFileName
+          };
+          
+          localStorage.setItem(feedbackKey, JSON.stringify(feedback));
+          console.log('💾 선생 피드백 localStorage 저장 완료:', feedbackKey);
+        };
+
+        recorder.start();
+        setMediaRecorder(recorder);
+        setIsRecording(true);
+        setRecordingStartTime(Date.now()); // 녹음 시작 시간 기록
+        
+        // 기존 녹음 첨삭 스트로크 제거 (녹음 전 첨삭은 유지)
+        setTeacherAnnotations(prev => prev.filter(stroke => !stroke.isRecording));
+        
+        console.log('강사 녹음 시작, recordingStartTime:', Date.now());
+      } catch (error) {
+        console.error('마이크 권한 오류:', error);
+        alert('마이크 권한이 필요합니다.');
+      }
+    }
+  };
+
+  // 학생에게 첨삭 전송
+  const handleSendToStudent = () => {
+    if (!teacherAudioBase64 && teacherAnnotations.length === 0) {
+      alert('전송할 첨삭 내용이 없습니다.');
+      return;
+    }
+    
+    const mem_seq = Base64.decode(window.sessionStorage.getItem("noma@mem_seq"));
+    const teacherId = Base64.decode(window.sessionStorage.getItem("noma@login_id"));
+    const teacherName = Base64.decode(window.sessionStorage.getItem("noma@mem_name"));
+    
+    const feedback = {
+      id: Date.now(),
+      mem_seq: mem_seq,
+      teacherId: teacherId,
+      teacherName: teacherName,
+      timestamp: new Date().toISOString(),
+      feedbackStrokeData: teacherAnnotations,  // 타임스탬프 포함된 스트로크
+      teacherAudioUrl: teacherAudioUrl,
+      teacherAudioBase64: teacherAudioBase64,  // ✅ 오디오 추가
+      recordingStartTime: recordingStartTime,  // ✅ 타임스탬프 동기화
+      studentSubmissionId: submission.id,
+      currentPage: submission.currentPage,
+      bookTitle: submission.bookTitle,
+      bookUrl: submission.bookUrl,
+      pdfFileName: submission.pdfFileName
+    };
+    
+    console.log('📤 강사 첨삭 전송 데이터:', {
+      strokeCount: feedback.feedbackStrokeData.length,
+      hasAudio: !!feedback.teacherAudioBase64,
+      recordingStartTime: feedback.recordingStartTime
+    });
+    
+    // 백엔드 API 호출
+    commonJs.fetchApiCall("S", "teacherFeedbackSend", feedback)
+      .then(responseJson => {
+        if (responseJson.result_code === API_RES_CODE.SUCCESS) {
+          alert('학생에게 첨삭이 전송되었습니다!');
+          // 전송 후 초기화
+          setTeacherAnnotations([]);
+          setTeacherAudioUrl(null);
+          setTeacherAudioBase64(null);
+          setRecordingStartTime(null);
+        } else {
+          CommonUtils.showServerErr(responseJson.result_code, responseJson.result_message);
+        }
+      });
+  };
+
+  // 선생 첨삭 재생 (학생 스트로크 + 선생 첨삭 스트로크)
+  const handleTeacherReplay = async () => {
+    console.log('🎬 선생 첨삭 재생 시작');
+    console.log('📊 전체 teacherAnnotations:', teacherAnnotations.length, '개');
+    console.log('📊 teacherAnnotations 상세:', teacherAnnotations.map(s => ({
+      id: s.id,
+      tool: s.tool,
+      isRecording: s.isRecording,
+      timestamp: s.timestamp,
+      timestampType: typeof s.timestamp,
+      hasPoints: !!s.points,
+      pointsLength: s.points?.length
+    })));
+    
+    const markupCanvas = pdfViewerRef?.current?.markupCanvasRef?.current;
+    
+    if (!markupCanvas) {
+      console.error('❌ 마크업 캔버스를 찾을 수 없습니다');
+      return;
+    }
+    
+    // 재생 중이면 중지
+    if (isTeacherReplaying) {
+      console.log('⏸️ 재생 중지');
+      if (currentTeacherAudio) {
+        currentTeacherAudio.pause();
+        currentTeacherAudio.currentTime = 0;
+      }
+      setIsTeacherReplaying(false);
+      setTeacherReplayProgress(0);
+      return;
+    }
+    
+    // 재생 시작
+    setIsTeacherReplaying(true);
+    
+    // 캔버스 초기화
+    const context = markupCanvas.getContext('2d');
+    context.clearRect(0, 0, markupCanvas.width, markupCanvas.height);
+    
+    // 1. 학생 스트로크 (배경으로 먼저 그리기)
+    const studentStrokes = submission?.strokeData || [];
+    const studentBackgroundStrokes = studentStrokes.filter(stroke => !stroke.isRecording && stroke.tool !== 'eraser');
+    
+    console.log('👨‍🎓 학생 배경 스트로크:', studentBackgroundStrokes.length, '개');
+    
+    // 현재 캔버스 크기
+    const currentCanvasWidth = markupCanvas.width;
+    const currentCanvasHeight = markupCanvas.height;
+    
+    // 상대 좌표 → 절대 좌표 변환 함수
+    const denormalizePoints = (points) => {
+      return points.map(point => {
+        if (point.x <= 1 && point.y <= 1) {
+          return { x: point.x * currentCanvasWidth, y: point.y * currentCanvasHeight };
+        } else {
+          return point;
+        }
+      });
+    };
+    
+    // 학생 배경 스트로크 그리기
+    studentBackgroundStrokes.forEach((stroke) => {
+      const absolutePoints = stroke.points ? denormalizePoints(stroke.points) : [];
+      
+      context.save();
+      
+      if (stroke.tool === 'eraser') {
+        context.globalCompositeOperation = 'destination-out';
+        const eraserSize = stroke.brushSize * 10 || 30;
+        
+        for (let i = 0; i < absolutePoints.length; i++) {
+          context.beginPath();
+          context.arc(absolutePoints[i].x, absolutePoints[i].y, eraserSize, 0, 2 * Math.PI);
+          context.fill();
+        }
+      } else {
+        context.beginPath();
+        context.lineWidth = stroke.brushSize || 3;
+        context.lineCap = 'round';
+        context.lineJoin = 'round';
+        context.strokeStyle = stroke.color || '#ef4444';
+        
+        if (absolutePoints.length > 1) {
+          context.moveTo(absolutePoints[0].x, absolutePoints[0].y);
+          for (let i = 1; i < absolutePoints.length; i++) {
+            context.lineTo(absolutePoints[i].x, absolutePoints[i].y);
+          }
+          context.stroke();
+        }
+      }
+      
+      context.restore();
+    });
+    
+    // 2. 선생 녹음 스트로크 (타임스탬프 기반 재생)
+    const teacherRecordingStrokes = teacherAnnotations.filter(
+      stroke => stroke.isRecording && typeof stroke.timestamp === 'number' && stroke.timestamp !== null && stroke.timestamp !== undefined
+    );
+    
+    console.log('👨‍🏫 선생 녹음 스트로크:', teacherRecordingStrokes.length, '개');
+    console.log('선생 스트로크 상세:', teacherRecordingStrokes.map(s => ({
+      id: s.id,
+      tool: s.tool,
+      timestamp: s.timestamp,
+      timestampType: typeof s.timestamp,
+      hasPoints: !!s.points,
+      pointsLength: s.points?.length
+    })));
+    
+    if (teacherRecordingStrokes.length === 0) {
+      console.warn('⚠️ 선생 녹음 스트로크가 없습니다!');
+      setIsTeacherReplaying(false);
+      return;
+    }
+    
+    // 3. 오디오 재생 시작
+    let audioInstance = null;
+    let syncIntervalId = null;
+    
+    if (teacherAudioUrl) {
+      try {
+        audioInstance = new Audio(teacherAudioUrl);
+        setCurrentTeacherAudio(audioInstance);
+        
+        audioInstance.onloadedmetadata = () => {
+          console.log('🎵 선생 오디오 길이:', audioInstance.duration);
+        };
+        
+        audioInstance.onended = () => {
+          console.log('🎵 선생 오디오 재생 종료');
+          setIsTeacherReplaying(false);
+          setTeacherReplayProgress(100);
+          
+          if (syncIntervalId) {
+            clearInterval(syncIntervalId);
+          }
+          
+          // drawn 플래그 초기화
+          teacherRecordingStrokes.forEach(stroke => delete stroke.drawn);
+        };
+        
+        audioInstance.onerror = (error) => {
+          console.error('❌ 선생 오디오 재생 오류:', error);
+          setIsTeacherReplaying(false);
+          
+          if (syncIntervalId) {
+            clearInterval(syncIntervalId);
+          }
+        };
+        
+        await audioInstance.play();
+        console.log('🎵 선생 오디오 재생 시작');
+      } catch (error) {
+        console.error('❌ 선생 오디오 재생 오류:', error);
+        setIsTeacherReplaying(false);
+        return;
+      }
+    }
+    
+    // 4. 필기 스트로크 재생 (음성과 동시에 동기화, 또는 오디오 없이 스트로크만 재생)
+    if (teacherRecordingStrokes.length > 0) {
+      const hasAudio = audioInstance !== null;
+      let startTime = Date.now();
+      
+      syncIntervalId = setInterval(() => {
+        let currentPlaybackTime = 0;
+        
+        if (hasAudio && audioInstance && !audioInstance.paused && !audioInstance.ended) {
+          currentPlaybackTime = audioInstance.currentTime;
+        } else if (!hasAudio) {
+          currentPlaybackTime = (Date.now() - startTime) / 1000;
+        } else {
+          clearInterval(syncIntervalId);
+          return;
+        }
+        
+        // 현재 재생 시간에 맞는 스트로크들을 찾아서 그리기
+        teacherRecordingStrokes.forEach((stroke) => {
+          if (stroke.timestamp && stroke.timestamp <= currentPlaybackTime && !stroke.drawn) {
+            console.log(`✏️ 선생 스트로크 그리기: 타입=${stroke.tool}, 타임스탬프 ${stroke.timestamp.toFixed(2)}s, 재생 시간 ${currentPlaybackTime.toFixed(2)}s`);
+            
+            const absolutePoints = stroke.points ? denormalizePoints(stroke.points) : [];
+            
+            context.save();
+            
+            if (enableStrokeAnimation && absolutePoints.length > 5) {
+              // 애니메이션 모드: 점진적으로 그리기
+              if (!stroke.animationIndex) {
+                stroke.animationIndex = 0;
+              }
+              
+              const pointsPerFrame = Math.max(3, Math.floor(absolutePoints.length / 10));
+              const endIndex = Math.min(stroke.animationIndex + pointsPerFrame, absolutePoints.length);
+              
+              if (stroke.tool === 'eraser') {
+                context.globalCompositeOperation = 'destination-out';
+                const eraserSize = stroke.brushSize * 10 || 30;
+                
+                for (let i = stroke.animationIndex; i < endIndex; i++) {
+                  context.beginPath();
+                  context.arc(absolutePoints[i].x, absolutePoints[i].y, eraserSize, 0, 2 * Math.PI);
+                  context.fill();
+                }
+              } else {
+                context.beginPath();
+                context.lineWidth = stroke.brushSize || 3;
+                context.lineCap = 'round';
+                context.lineJoin = 'round';
+                context.strokeStyle = stroke.color || '#ef4444';
+                
+                if (stroke.animationIndex === 0) {
+                  context.moveTo(absolutePoints[0].x, absolutePoints[0].y);
+                } else {
+                  context.moveTo(absolutePoints[stroke.animationIndex - 1].x, absolutePoints[stroke.animationIndex - 1].y);
+                }
+                
+                for (let i = stroke.animationIndex; i < endIndex; i++) {
+                  context.lineTo(absolutePoints[i].x, absolutePoints[i].y);
+                }
+                context.stroke();
+              }
+              
+              stroke.animationIndex = endIndex;
+              
+              if (stroke.animationIndex >= absolutePoints.length) {
+                stroke.drawn = true;
+                delete stroke.animationIndex;
+              }
+            } else {
+              // 애니메이션 없음: 한번에 그리기
+              if (stroke.tool === 'eraser') {
+                context.globalCompositeOperation = 'destination-out';
+                const eraserSize = stroke.brushSize * 10 || 30;
+                
+                for (let i = 0; i < absolutePoints.length; i++) {
+                  context.beginPath();
+                  context.arc(absolutePoints[i].x, absolutePoints[i].y, eraserSize, 0, 2 * Math.PI);
+                  context.fill();
+                }
+              } else {
+                context.beginPath();
+                context.lineWidth = stroke.brushSize || 3;
+                context.lineCap = 'round';
+                context.lineJoin = 'round';
+                context.strokeStyle = stroke.color || '#ef4444';
+                
+                if (absolutePoints.length > 1) {
+                  context.moveTo(absolutePoints[0].x, absolutePoints[0].y);
+                  for (let i = 1; i < absolutePoints.length; i++) {
+                    context.lineTo(absolutePoints[i].x, absolutePoints[i].y);
+                  }
+                  context.stroke();
+                }
+              }
+              
+              stroke.drawn = true;
+            }
+            
+            context.restore();
+          }
+        });
+        
+        // 재생 진행률 업데이트
+        const maxTimestamp = Math.max(...teacherRecordingStrokes.map(s => s.timestamp || 0));
+        const progress = maxTimestamp > 0 ? (currentPlaybackTime / maxTimestamp) * 100 : 0;
+        setTeacherReplayProgress(Math.min(progress, 100));
+        
+        // 오디오 없이 스트로크만 재생하는 경우, 모든 스트로크가 그려지면 종료
+        if (!hasAudio && teacherRecordingStrokes.every(s => s.drawn)) {
+          console.log('✅ 모든 선생 스트로크 재생 완료 (오디오 없음)');
+          clearInterval(syncIntervalId);
+          setIsTeacherReplaying(false);
+          setTeacherReplayProgress(100);
+          
+          // drawn 플래그 초기화
+          teacherRecordingStrokes.forEach(stroke => delete stroke.drawn);
+        }
+      }, 50);
+    }
+  };
+
+  // 첨삭 저장 (기존 로직 유지)
   const handleSaveFeedback = () => {
     if (teacherAnnotations.length === 0) {
       //alert('첨삭할 내용이 없습니다.');
@@ -474,8 +997,14 @@ const TeacherSubmissionViewer = ({
           gap: '1rem',
           marginBottom: '1rem'
         }}>
-          {/* 뒤로가기 버튼 */}
-          <div style={{ alignSelf: 'flex-start' }}>
+          {/* 헤더 - 뒤로가기 + 제목 + 전송 버튼 */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: '1rem'
+          }}>
+            {/* 뒤로가기 버튼 */}
             <button
               onClick={onBackToSubmissions}
               style={{
@@ -487,31 +1016,77 @@ const TeacherSubmissionViewer = ({
                 cursor: 'pointer',
                 fontSize: '0.9rem',
                 fontWeight: '600',
-                transition: 'all 0.2s ease'
+                transition: 'all 0.2s ease',
+                flexShrink: 0
               }}
             >
               ← 제출물 목록으로
             </button>
-          </div>
-          
-          {/* 제목과 학생 정보 */}
-          <div>
-            <h1 style={{
-              color: '#1e3a8a',
-              fontSize: '1.5rem',
-              fontWeight: 'bold',
-              fontFamily: 'var(--font-title)',
-              margin: '0 0 0.25rem 0'
-            }}>
-              {submission.bookTitle} - 강사 첨삭
-            </h1>
-            <p style={{
-              color: '#6b7280',
-              fontSize: '0.875rem',
-              margin: '0'
-            }}>
-              학생: {submission.studentName} | 페이지: {submission.currentPage || '정보 없음'} | 제출: {new Date(submission.submittedAt).toLocaleString()}
-            </p>
+            
+            {/* 제목과 학생 정보 */}
+            <div style={{ flex: 1 }}>
+              <h1 style={{
+                color: '#1e3a8a',
+                fontSize: '1.5rem',
+                fontWeight: 'bold',
+                fontFamily: 'var(--font-title)',
+                margin: '0 0 0.25rem 0'
+              }}>
+                {submission.bookTitle} - 강사 첨삭
+              </h1>
+              <p style={{
+                color: '#6b7280',
+                fontSize: '0.875rem',
+                margin: '0'
+              }}>
+                학생: {submission.studentName} | 페이지: {submission.currentPage || '정보 없음'} | 제출: {new Date(submission.submittedAt).toLocaleString()}
+              </p>
+            </div>
+            
+            {/* 학생에게 첨삭 전송하기 버튼 */}
+            <button
+              onClick={handleSendToStudent}
+              disabled={!teacherAudioBase64 && teacherAnnotations.length === 0}
+              style={{
+                background: (!teacherAudioBase64 && teacherAnnotations.length === 0)
+                  ? 'linear-gradient(135deg, #9ca3af 0%, #6b7280 100%)'
+                  : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '0.75rem 1.5rem',
+                cursor: (!teacherAudioBase64 && teacherAnnotations.length === 0) ? 'not-allowed' : 'pointer',
+                fontSize: '1rem',
+                fontWeight: '600',
+                transition: 'all 0.2s ease',
+                opacity: (!teacherAudioBase64 && teacherAnnotations.length === 0) ? 0.6 : 1,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
+                boxShadow: (!teacherAudioBase64 && teacherAnnotations.length === 0)
+                  ? 'none'
+                  : '0 4px 12px rgba(16, 185, 129, 0.3)'
+              }}
+              onMouseEnter={(e) => {
+                if (teacherAudioBase64 || teacherAnnotations.length > 0) {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(16, 185, 129, 0.4)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (teacherAudioBase64 || teacherAnnotations.length > 0) {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.3)';
+                }
+              }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+              </svg>
+              학생에게 첨삭 전송하기
+            </button>
           </div>
         </div>
 
@@ -645,9 +1220,46 @@ const TeacherSubmissionViewer = ({
             selectedTool={selectedTool}
             selectedColor={selectedColor}
             brushSize={brushSize}
-            isReplaying={isReplaying}
-            onStrokeDataChange={(strokeData) => {
-              setTeacherAnnotations(strokeData);
+            isReplaying={isReplaying || isTeacherReplaying}
+            isRecording={isRecording}
+            recordingStartTime={recordingStartTime}
+            onStrokeDataChange={(newStrokeData) => {
+              console.log('📝 선생 onStrokeDataChange 호출됨, 스트로크 수:', newStrokeData.length, 'isRecording:', isRecording);
+              
+              // recordingStartTime이 있으면 타임스탬프 변환 (App.js와 동일한 로직)
+              if (recordingStartTime) {
+                const updatedStrokeData = newStrokeData.map((stroke) => {
+                  // isRecording 플래그가 있고 타임스탬프가 밀리초(숫자)인 경우
+                  if (stroke.isRecording && typeof stroke.timestamp === 'number' && stroke.timestamp > 1000000) {
+                    // 밀리초를 녹음 시작 이후의 초 단위로 변환
+                    const timestamp = (stroke.timestamp - recordingStartTime) / 1000;
+                    console.log('⏱️ 선생 타임스탬프 변환:', {
+                      id: stroke.id,
+                      tool: stroke.tool,
+                      원본밀리초: stroke.timestamp,
+                      녹음시작: recordingStartTime,
+                      변환된초: timestamp.toFixed(3) + 's'
+                    });
+                    return {
+                      ...stroke,
+                      timestamp: timestamp // 녹음 시작 후 경과 시간 (초)
+                    };
+                  }
+                  return stroke;
+                });
+                
+                console.log('✅ 선생 타임스탬프 변환 완료. 녹음 스트로크:',
+                  updatedStrokeData.filter(s => s.isRecording).map(s => ({
+                    id: s.id,
+                    tool: s.tool,
+                    timestamp: typeof s.timestamp === 'number' ? s.timestamp.toFixed(3) + 's' : s.timestamp
+                  }))
+                );
+                
+                setTeacherAnnotations(updatedStrokeData);
+              } else {
+                setTeacherAnnotations(newStrokeData);
+              }
             }}
             isTeacherMode={true}
             studentStrokeData={null}
@@ -775,7 +1387,8 @@ const TeacherSubmissionViewer = ({
             <div style={{
               display: 'flex',
               justifyContent: 'space-between',
-              alignItems: 'center'
+              alignItems: 'center',
+              marginBottom: '0.5rem'
             }}>
               <span style={{
                 fontSize: '0.875rem',
@@ -791,6 +1404,28 @@ const TeacherSubmissionViewer = ({
                 {teacherAnnotations.length}개
               </span>
             </div>
+            {teacherAudioUrl && (
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <span style={{
+                  fontSize: '0.875rem',
+                  fontWeight: '600',
+                  color: '#374151'
+                }}>
+                  선생 녹음 시간:
+                </span>
+                <span style={{
+                  fontSize: '0.875rem',
+                  color: '#10b981',
+                  fontWeight: '600'
+                }}>
+                  {Math.floor(teacherAudioDuration / 60)}:{Math.floor(teacherAudioDuration % 60).toString().padStart(2, '0')}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* 학습 재생 버튼 (오디오 + 스트로크 동기화) */}
@@ -824,7 +1459,7 @@ const TeacherSubmissionViewer = ({
                   marginBottom: '0.5rem'
                 }}
               >
-                {isReplaying ? '⏸️ 재생 중지' : '▶️ 학습 재생 (오디오+필기)'}
+                {isReplaying ? '⏸️' : '▶️'}
               </button>
               <div style={{
                 fontSize: '0.875rem',
@@ -844,59 +1479,124 @@ const TeacherSubmissionViewer = ({
             </div>
           )}
 
+          {/* 녹음 시작/중지/다시녹음 버튼 */}
           <button
-            onClick={handleSaveFeedback}
+            onClick={() => {
+              if (!isRecording && teacherAudioUrl) {
+                handleTeacherRerecord();
+              } else {
+                handleTeacherRecordingToggle();
+              }
+            }}
             style={{
               width: '100%',
-              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-              color: 'white',
-              border: 'none',
+              background: isRecording ? '#1f2937' : (!isRecording && teacherAudioUrl ? '#dc2626' : '#374151'),
+              border: isRecording ? '2px solid #fbbf24' : (!isRecording && teacherAudioUrl ? '2px solid #ef4444' : '2px solid #6b7280'),
+              color: isRecording ? '#fbbf24' : (!isRecording && teacherAudioUrl ? '#fef2f2' : '#f3f4f6'),
               borderRadius: '8px',
               padding: '0.75rem 1rem',
               cursor: 'pointer',
               fontSize: '1rem',
               fontWeight: '600',
               transition: 'all 0.2s ease',
-              marginBottom: '1rem'
+              marginBottom: '1rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem',
+              animation: isRecording ? 'pulse 2s infinite' : 'none'
             }}
             onMouseEnter={(e) => {
-              e.target.style.transform = 'translateY(-1px)';
-              e.target.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.4)';
+              if (isRecording) return;
+              if (teacherAudioUrl) {
+                e.currentTarget.style.backgroundColor = '#b91c1c';
+                e.currentTarget.style.borderColor = '#dc2626';
+              } else {
+                e.currentTarget.style.backgroundColor = '#1f2937';
+                e.currentTarget.style.borderColor = '#9ca3af';
+              }
             }}
             onMouseLeave={(e) => {
-              e.target.style.transform = 'translateY(0)';
-              e.target.style.boxShadow = 'none';
+              if (isRecording) return;
+              if (teacherAudioUrl) {
+                e.currentTarget.style.backgroundColor = '#dc2626';
+                e.currentTarget.style.borderColor = '#ef4444';
+              } else {
+                e.currentTarget.style.backgroundColor = '#374151';
+                e.currentTarget.style.borderColor = '#6b7280';
+              }
             }}
           >
-            첨삭 저장하기
+            {!isRecording && teacherAudioUrl ? (
+              // 다시 녹음 아이콘
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+              </svg>
+            ) : (
+              // 마이크 아이콘
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+              </svg>
+            )}
+            {isRecording ? '녹음 중지' : (!isRecording && teacherAudioUrl ? '다시 녹음' : '녹음 시작')}
           </button>
 
-          {/* 전체삭제 버튼 */}
+          {/* 선생 첨삭 재생 버튼 */}
           <button
-            onClick={handleClearAll}
+            onClick={handleTeacherReplay}
+            disabled={!teacherAudioUrl && teacherAnnotations.filter(s => s.isRecording).length === 0}
             style={{
               width: '100%',
               padding: '0.75rem 1rem',
               borderRadius: '8px',
-              border: '2px solid #ef4444',
-              background: 'rgba(239, 68, 68, 0.1)',
-              color: '#dc2626',
-              cursor: 'pointer',
+              border: isTeacherReplaying ? '2px solid #fbbf24' : '2px solid #10b981',
+              background: isTeacherReplaying ? 'rgba(251, 191, 36, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+              color: isTeacherReplaying ? '#f59e0b' : '#059669',
+              cursor: (!teacherAudioUrl && teacherAnnotations.filter(s => s.isRecording).length === 0) ? 'not-allowed' : 'pointer',
               transition: 'all 0.2s ease',
               fontSize: '1rem',
-              fontWeight: '600'
+              fontWeight: '600',
+              opacity: (!teacherAudioUrl && teacherAnnotations.filter(s => s.isRecording).length === 0) ? 0.5 : 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem'
             }}
             onMouseEnter={(e) => {
-              e.target.style.transform = 'translateY(-1px)';
-              e.target.style.boxShadow = '0 4px 12px rgba(239, 68, 68, 0.4)';
+              if (!e.currentTarget.disabled) {
+                e.currentTarget.style.transform = 'translateY(-1px)';
+                e.currentTarget.style.boxShadow = isTeacherReplaying 
+                  ? '0 4px 12px rgba(251, 191, 36, 0.4)' 
+                  : '0 4px 12px rgba(16, 185, 129, 0.4)';
+              }
             }}
             onMouseLeave={(e) => {
-              e.target.style.transform = 'translateY(0)';
-              e.target.style.boxShadow = 'none';
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = 'none';
             }}
-            title="전체삭제"
+            title={isTeacherReplaying ? '재생 중지' : '선생 첨삭 재생'}
           >
-            전체삭제
+            <svg 
+              width="20" 
+              height="20" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth="2"
+            >
+              {isTeacherReplaying ? (
+                // 일시정지 아이콘
+                <>
+                  <rect x="6" y="4" width="4" height="16" />
+                  <rect x="14" y="4" width="4" height="16" />
+                </>
+              ) : (
+                // 재생 아이콘
+                <polygon points="5 3 19 12 5 21 5 3" />
+              )}
+            </svg>
+            {isTeacherReplaying ? '재생 중지' : '선생 첨삭 재생'}
           </button>
         </div>
       </div>

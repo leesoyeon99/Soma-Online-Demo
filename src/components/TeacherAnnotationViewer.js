@@ -54,6 +54,11 @@ const TeacherAnnotationViewer = ({
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  
+  // 선생 첨삭 재생 상태
+  const [isTeacherReplaying, setIsTeacherReplaying] = useState(false);
+  const syncIntervalRef = useRef(null);
+  const [enableStrokeAnimation] = useState(true);
 
   // CSS 애니메이션 스타일 추가
   useEffect(() => {
@@ -70,6 +75,26 @@ const TeacherAnnotationViewer = ({
       }
     };
   }, []);
+
+  // 제출물 데이터 디버깅
+  useEffect(() => {
+    console.log('🎓 TeacherAnnotationViewer 렌더링:', {
+      hasSubmission: !!submission,
+      isTeacherFeedback: submission?.isTeacherFeedback,
+      teacherName: submission?.teacherName,
+      hasAudioBase64: !!submission?.audioBase64,
+      hasAudioUrl: !!submission?.audioUrl,
+      strokeCount: submission?.strokeData?.length,
+      recordingStartTime: submission?.recordingStartTime
+    });
+    console.log('📦 전체 submission 객체:', submission);
+    
+    // 선생 첨삭 데이터가 있으면 복원
+    if (submission?.isTeacherFeedback && submission?.strokeData) {
+      setTeacherAnnotations(submission.strokeData);
+      console.log('✅ 선생 첨삭 스트로크 복원:', submission.strokeData.length, '개');
+    }
+  }, [submission]);
 
   // 가상의 학생 필기 이미지 생성
   const createStudentWorkImage = useCallback(() => {
@@ -537,6 +562,175 @@ const TeacherAnnotationViewer = ({
           }
         });
       }, 50);
+    }
+  };
+
+  // 선생 첨삭 재생 (오디오 + 스트로크 동기화)
+  const handleTeacherFeedbackReplay = async () => {
+    console.log('🎬 선생 첨삭 재생 시작');
+    
+    const markupCanvas = markupCanvasRef.current;
+    
+    if (!markupCanvas) {
+      console.error('❌ 마크업 캔버스를 찾을 수 없습니다');
+      return;
+    }
+    
+    // 재생 중이면 중지
+    if (isTeacherReplaying) {
+      console.log('⏸️ 재생 중지');
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+      if (syncIntervalRef.current) {
+        clearInterval(syncIntervalRef.current);
+        syncIntervalRef.current = null;
+      }
+      setIsTeacherReplaying(false);
+      setIsPlaying(false);
+      return;
+    }
+    
+    // 재생 시작
+    setIsTeacherReplaying(true);
+    
+    // 캔버스 초기화
+    const context = markupCanvas.getContext('2d');
+    context.clearRect(0, 0, markupCanvas.width, markupCanvas.height);
+    
+    // 선생 녹음 스트로크 필터링
+    const teacherRecordingStrokes = (submission?.strokeData || []).filter(
+      stroke => stroke.isRecording && typeof stroke.timestamp === 'number' && 
+                stroke.timestamp !== null && stroke.timestamp !== undefined
+    );
+    
+    console.log('👨‍🏫 선생 녹음 스트로크:', teacherRecordingStrokes.length, '개');
+    
+    if (teacherRecordingStrokes.length === 0) {
+      console.warn('⚠️ 선생 녹음 스트로크가 없습니다!');
+      setIsTeacherReplaying(false);
+      return;
+    }
+    
+    // 현재 캔버스 크기
+    const currentCanvasWidth = markupCanvas.width;
+    const currentCanvasHeight = markupCanvas.height;
+    
+    // 상대 좌표 → 절대 좌표 변환
+    const denormalizePoints = (points) => {
+      return points.map(point => {
+        if (point.x <= 1 && point.y <= 1) {
+          return { x: point.x * currentCanvasWidth, y: point.y * currentCanvasHeight };
+        } else {
+          return point;
+        }
+      });
+    };
+    
+    // 오디오 재생
+    let audioInstance = null;
+    if (submission?.audioBase64 || submission?.audioUrl) {
+      try {
+        const audio = audioRef.current;
+        if (audio) {
+          audio.currentTime = 0;
+          await audio.play();
+          setIsPlaying(true);
+          audioInstance = audio;
+          console.log('🎵 선생 오디오 재생 시작');
+        }
+      } catch (error) {
+        console.error('❌ 선생 오디오 재생 오류:', error);
+        setIsTeacherReplaying(false);
+        return;
+      }
+    }
+    
+    // 스트로크 재생 동기화
+    const hasAudio = audioInstance !== null;
+    let startTime = Date.now();
+    
+    syncIntervalRef.current = setInterval(() => {
+      let currentPlaybackTime = 0;
+      
+      if (hasAudio && audioInstance && !audioInstance.paused && !audioInstance.ended) {
+        currentPlaybackTime = audioInstance.currentTime;
+      } else if (!hasAudio) {
+        currentPlaybackTime = (Date.now() - startTime) / 1000;
+      } else {
+        clearInterval(syncIntervalRef.current);
+        syncIntervalRef.current = null;
+        setIsTeacherReplaying(false);
+        setIsPlaying(false);
+        return;
+      }
+      
+      // 현재 재생 시간에 맞는 스트로크 그리기
+      teacherRecordingStrokes.forEach((stroke) => {
+        if (stroke.timestamp && stroke.timestamp <= currentPlaybackTime && !stroke.drawn) {
+          console.log(`✏️ 선생 스트로크 그리기: 타입=${stroke.tool}, 타임스탬프 ${stroke.timestamp.toFixed(2)}s`);
+          
+          const absolutePoints = stroke.points ? denormalizePoints(stroke.points) : [];
+          
+          context.save();
+          
+          if (stroke.tool === 'eraser') {
+            context.globalCompositeOperation = 'destination-out';
+            const eraserSize = stroke.brushSize * 10 || 30;
+            
+            for (let i = 0; i < absolutePoints.length; i++) {
+              context.beginPath();
+              context.arc(absolutePoints[i].x, absolutePoints[i].y, eraserSize, 0, 2 * Math.PI);
+              context.fill();
+            }
+          } else {
+            context.beginPath();
+            context.lineWidth = stroke.brushSize || 3;
+            context.lineCap = 'round';
+            context.lineJoin = 'round';
+            context.strokeStyle = stroke.color || '#ef4444';
+            
+            if (absolutePoints.length > 1) {
+              context.moveTo(absolutePoints[0].x, absolutePoints[0].y);
+              for (let i = 1; i < absolutePoints.length; i++) {
+                context.lineTo(absolutePoints[i].x, absolutePoints[i].y);
+              }
+              context.stroke();
+            }
+          }
+          
+          stroke.drawn = true;
+          context.restore();
+        }
+      });
+      
+      // 오디오 없이 스트로크만 재생하는 경우, 모든 스트로크가 그려지면 종료
+      if (!hasAudio && teacherRecordingStrokes.every(s => s.drawn)) {
+        console.log('✅ 모든 선생 스트로크 재생 완료 (오디오 없음)');
+        clearInterval(syncIntervalRef.current);
+        syncIntervalRef.current = null;
+        setIsTeacherReplaying(false);
+        
+        // drawn 플래그 초기화
+        teacherRecordingStrokes.forEach(stroke => delete stroke.drawn);
+      }
+    }, 50);
+    
+    // 오디오 종료 이벤트
+    if (audioInstance) {
+      audioInstance.onended = () => {
+        console.log('🎵 선생 오디오 재생 종료');
+        if (syncIntervalRef.current) {
+          clearInterval(syncIntervalRef.current);
+          syncIntervalRef.current = null;
+        }
+        setIsTeacherReplaying(false);
+        setIsPlaying(false);
+        
+        // drawn 플래그 초기화
+        teacherRecordingStrokes.forEach(stroke => delete stroke.drawn);
+      };
     }
   };
 
@@ -1153,38 +1347,73 @@ const TeacherAnnotationViewer = ({
                   style={{ display: 'none' }}
                 />
                 
-                {/* 통합 재생 버튼 (오디오 + 스트로크) */}
-                <button
-                  onClick={handleStudentWorkReplay}
-                  style={{
-                    background: isPlaying 
-                      ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' 
-                      : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    padding: '0.75rem 1rem',
-                    cursor: 'pointer',
-                    fontSize: '0.9rem',
-                    fontWeight: '600',
-                    transition: 'all 0.2s ease',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    width: '100%',
-                    justifyContent: 'center',
-                    marginBottom: '0.5rem'
-                  }}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                    {isPlaying ? (
-                      <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
-                    ) : (
-                      <path d="M8 5v14l11-7z"/>
-                    )}
-                  </svg>
-                  {isPlaying ? '재생 중...' : '🎬 학습 재생 (오디오+필기)'}
-                </button>
+                {/* 선생 첨삭 재생 버튼 (선생 첨삭인 경우에만 표시) */}
+                {submission?.isTeacherFeedback ? (
+                  <button
+                    onClick={handleTeacherFeedbackReplay}
+                    style={{
+                      background: isTeacherReplaying 
+                        ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' 
+                        : 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      padding: '0.75rem 1rem',
+                      cursor: 'pointer',
+                      fontSize: '0.9rem',
+                      fontWeight: '600',
+                      transition: 'all 0.2s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      width: '100%',
+                      justifyContent: 'center',
+                      marginBottom: '0.5rem'
+                    }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                      {isTeacherReplaying ? (
+                        <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
+                      ) : (
+                        <path d="M8 5v14l11-7z"/>
+                      )}
+                    </svg>
+                    {isTeacherReplaying ? '재생 중...' : '🎬 선생님 첨삭 재생'}
+                  </button>
+                ) : (
+                  // 통합 재생 버튼 (오디오 + 스트로크) - 학생 제출물인 경우
+                  <button
+                    onClick={handleStudentWorkReplay}
+                    style={{
+                      background: isPlaying 
+                        ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' 
+                        : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      padding: '0.75rem 1rem',
+                      cursor: 'pointer',
+                      fontSize: '0.9rem',
+                      fontWeight: '600',
+                      transition: 'all 0.2s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      width: '100%',
+                      justifyContent: 'center',
+                      marginBottom: '0.5rem'
+                    }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                      {isPlaying ? (
+                        <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
+                      ) : (
+                        <path d="M8 5v14l11-7z"/>
+                      )}
+                    </svg>
+                    {isPlaying ? '재생 중...' : '🎬 학습 재생 (오디오+필기)'}
+                  </button>
+                )}
                 
                 {/* 오디오만 재생 버튼 */}
                 <button
