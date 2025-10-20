@@ -73,7 +73,23 @@ const sampleProblem = {
 
 export default function AdminPage({ onBackToHome }) {
   const [step, setStep] = useState(1);
-  const [bookId, setBookId] = useState(MOCK_TEXTBOOKS[0].id);
+  
+  // 업로드된 교재 목록 로드 (localStorage에서)
+  const [uploadedBooks, setUploadedBooks] = useState(() => {
+    const saved = localStorage.getItem('uploadedBooks');
+    return saved ? JSON.parse(saved) : [];
+  });
+  
+  // MOCK_TEXTBOOKS와 업로드된 교재 합치기
+  const allTextbooks = [
+    ...MOCK_TEXTBOOKS,
+    ...uploadedBooks.map(book => ({
+      id: book.id,
+      title: book.title
+    }))
+  ];
+  
+  const [bookId, setBookId] = useState(allTextbooks[0]?.id || MOCK_TEXTBOOKS[0].id);
   const [selectedPages, setSelectedPages] = useState(["0023"]);
   const [problems, setProblems] = useState(generateProblems());
   const [selectedProblemId, setSelectedProblemId] = useState("p-0020-0001");
@@ -586,11 +602,11 @@ export default function AdminPage({ onBackToHome }) {
                 fontFamily: 'NanumSquare, sans-serif',
                 maxWidth: '400px',
                 overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap'
-              }}>
-                {MOCK_TEXTBOOKS.find(b => b.id === bookId)?.title}
-              </div>
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
+            }}>
+              {allTextbooks.find(b => b.id === bookId)?.title || '교재 선택'}
+            </div>
               <div style={{ 
                 padding: '8px 16px', 
                 background: 'rgba(102, 126, 234, 0.1)', 
@@ -789,20 +805,41 @@ export default function AdminPage({ onBackToHome }) {
                교재 업로드
              </button>
              
-             {/* 숨겨진 파일 입력 */}
-             <input
-               id="file-upload"
-               type="file"
-               accept=".pdf,.doc,.docx"
-               style={{ display: 'none' }}
-               onChange={(e) => {
-                 if (e.target.files && e.target.files[0]) {
-                   const file = e.target.files[0];
-                   alert(`"${file.name}" 파일이 업로드되었습니다!`);
-                   // 여기에 실제 업로드 로직을 추가할 수 있습니다
-                 }
-               }}
-             />
+            {/* 숨겨진 파일 입력 */}
+            <input
+              id="file-upload"
+              type="file"
+              accept=".pdf,.doc,.docx"
+              style={{ display: 'none' }}
+              onChange={(e) => {
+                if (e.target.files && e.target.files[0]) {
+                  const file = e.target.files[0];
+                  
+                  // MVP 시연용: 업로드된 교재를 localStorage에 저장
+                  const uploadedBooks = JSON.parse(localStorage.getItem('uploadedBooks') || '[]');
+                  const newBook = {
+                    id: `uploaded_${Date.now()}`,
+                    title: file.name.replace(/\.(pdf|doc|docx)$/i, ''), // 확장자 제거
+                    fileName: file.name,
+                    uploadedAt: new Date().toISOString(),
+                    // MVP용 더미 URL (실제로는 첫 번째 교재 PDF를 사용)
+                    url: '/assets/pdf/2023-프리미어 초급2-내지_DEMO_compressed.pdf'
+                  };
+                  
+                  uploadedBooks.push(newBook);
+                  localStorage.setItem('uploadedBooks', JSON.stringify(uploadedBooks));
+                  
+                  // 상태 업데이트 (AdminPage 내에서도 바로 반영)
+                  setUploadedBooks([...uploadedBooks]);
+                  
+                  console.log('📚 교재 업로드됨:', newBook);
+                  alert(`"${file.name}" 파일이 \n업로드되었습니다!\n`);
+                  
+                  // 파일 입력 초기화
+                  e.target.value = '';
+                }
+              }}
+            />
             </div>
             
             <div style={{ 
@@ -811,7 +848,7 @@ export default function AdminPage({ onBackToHome }) {
               gap: '20px',
               marginBottom: '24px'
             }}>
-              {MOCK_TEXTBOOKS.map((b) => (
+              {allTextbooks.map((b) => (
                 <button
                   key={b.id}
                   onClick={() => setBookId(b.id)}
@@ -850,6 +887,20 @@ export default function AdminPage({ onBackToHome }) {
                     <div style={{ fontSize: '12px', color: '#6b7280', fontWeight: '400', fontFamily: 'NanumSquare, sans-serif' }}>
                       ID: {b.id}
                     </div>
+                    {/* 업로드된 교재 표시 */}
+                    {b.id.toString().startsWith('uploaded_') && (
+                      <div style={{
+                        padding: '4px 8px',
+                        borderRadius: '6px',
+                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                        color: 'white',
+                        fontSize: '10px',
+                        fontWeight: '700',
+                        fontFamily: 'NanumSquare, sans-serif'
+                      }}>
+                        신규
+                      </div>
+                    )}
                   </div>
                   <div style={{ 
                     fontSize: '16px', 
@@ -893,7 +944,7 @@ export default function AdminPage({ onBackToHome }) {
                   현재 선택된 교재
                 </div>
                 <div style={{ fontSize: '16px', fontWeight: '700', color: '#1f2937', fontFamily: 'NanumSquare, sans-serif' }}>
-                  {MOCK_TEXTBOOKS.find(b => b.id === bookId)?.title}
+                  {allTextbooks.find(b => b.id === bookId)?.title || '교재 선택'}
                 </div>
               </div>
               <button 
@@ -1038,15 +1089,8 @@ export default function AdminPage({ onBackToHome }) {
                         fontWeight: 'bold',
                         color: '#667eea'
                       }}>
-                        2022 개정 미래탐구 중1-1 수학 개념 진도북
+                        {allTextbooks.find(b => b.id === bookId)?.title || '교재 선택'}
                       </h2>
-                      <p style={{
-                        margin: '4px 0 0 0',
-                        fontSize: '12px',
-                        color: '#6b7280'
-                      }}>
-                        수학 개념 진도북
-                      </p>
                     </div>
 
                     <div style={{ marginBottom: '20px' }}>
@@ -2149,7 +2193,7 @@ export default function AdminPage({ onBackToHome }) {
               lineHeight: '1.6',
               fontFamily: 'NanumSquare, sans-serif'
             }}>
-              {MOCK_TEXTBOOKS.find(b => b.id === bookId)?.title} 교재의 페이지 {selectedPages.slice(0, 3).join(", ")} 외 {Math.max(selectedPages.length - 3, 0)}장에 대해<br/>
+              {allTextbooks.find(b => b.id === bookId)?.title || '선택한 교재'}의 페이지 {selectedPages.slice(0, 3).join(", ")} 외 {Math.max(selectedPages.length - 3, 0)}장에 대해<br/>
               문제편집 및 AI 자동 분류 데모가 완료되었습니다.
             </div>
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>

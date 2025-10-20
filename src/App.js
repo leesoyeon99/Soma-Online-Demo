@@ -215,7 +215,7 @@ function App() {
   }, []);
   
   // 파일 목록 - 소마 프리미어 교재들
-  const files = [
+  const baseFiles = [
     { 
       id: 1,
       title: '2023 소마 프리미어',
@@ -234,6 +234,28 @@ function App() {
       url: '/assets/pdf/mvp_2022_미래탐구_수학중3-1응용심화_셀프북_교사용.pdf',
       type: 'pdf'
     }
+  ];
+  
+  // 업로드된 교재 목록 로드 (localStorage에서)
+  const uploadedBooks = (() => {
+    try {
+      const saved = localStorage.getItem('uploadedBooks');
+      return saved ? JSON.parse(saved) : [];
+    } catch (error) {
+      console.error('업로드된 교재 로드 오류:', error);
+      return [];
+    }
+  })();
+  
+  // 기본 교재 + 업로드된 교재 합치기
+  const files = [
+    ...baseFiles,
+    ...uploadedBooks.map((book, index) => ({
+      id: baseFiles.length + index + 1,
+      title: book.title,
+      url: book.url,
+      type: 'pdf'
+    }))
   ];
 
   // 📍 AI 채점 결과 표시 좌표 맵핑 (교재별 → 페이지별 → 문제별)
