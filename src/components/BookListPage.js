@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import StudentFeedbackViewer from './StudentFeedbackViewer';
 
-const BookListPage = ({ 
-  files, 
-  onBookSelect, 
-  onBackToLogin, 
-  feedbackAlert, 
-  setFeedbackAlert, 
-  setTeacherFeedback, 
-  notifications, 
+const BookListPage = ({
+  files,
+  onBookSelect,
+  onBackToLogin,
+  feedbackAlert,
+  setFeedbackAlert,
+  setTeacherFeedback,
+  notifications,
   setNotifications,
   teacherFeedback,
   teacherFeedbacks,
@@ -20,10 +20,7 @@ const BookListPage = ({
   setCurrentPage
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [favorites, setFavorites] = useState(() => {
-    const somaFile = files.find(f => f.title === '2023 소마 프리미어');
-    return new Set(somaFile ? [somaFile.id] : []);
-  });
+  const [favorites, setFavorites] = useState(new Set());
   const [showFeedbackViewer, setShowFeedbackViewer] = useState(false);
   // const [selectedFeedback, setSelectedFeedback] = useState(null);
 
@@ -32,18 +29,12 @@ const BookListPage = ({
     file.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // 즐겨찾기 토글
   const toggleFavorite = (fileId, e) => {
     e.stopPropagation();
-    
-    // "2023 소마 프리미어"의 ID 찾기
-    const somaFile = files.find(f => f.title === '2023 소마 프리미어');
-    
     const newFavorites = new Set(favorites);
     if (newFavorites.has(fileId)) {
-      // 소마 프리미어는 제거 불가
-      if (fileId !== somaFile?.id) {
-        newFavorites.delete(fileId);
-      }
+      newFavorites.delete(fileId);
     } else {
       newFavorites.add(fileId);
     }
@@ -67,6 +58,17 @@ const BookListPage = ({
         onBackToStudentPage={() => setShowFeedbackViewer(false)}
       />
     );
+  }
+
+  const btnLogOut = () => {
+      window.sessionStorage.removeItem("noma@mem_seq");
+      window.sessionStorage.removeItem("noma@center_seq");
+      window.sessionStorage.removeItem("noma@group_code");
+      window.sessionStorage.removeItem("noma@login_id");
+      window.sessionStorage.removeItem("noma@mem_name");
+      window.sessionStorage.removeItem("noma@login_token");
+      window.sessionStorage.removeItem("noma@secure_token");
+      onBackToLogin();
   }
 
   return (
@@ -166,7 +168,7 @@ const BookListPage = ({
               onMouseEnter={(e) => e.target.style.transform = 'translateY(-1px)'}
               onMouseLeave={(e) => e.target.style.transform = 'translateY(0)'}
             >
-              ← 로그아웃
+              ← 홈으로
             </button>
             <h1 style={{
               fontFamily: "'SEBANG Gothic', sans-serif",
@@ -182,8 +184,8 @@ const BookListPage = ({
               교재 목록
             </h1>
           </div>
-          
-          
+
+
           {/* 탭 네비게이션 */}
           <div style={{
             display: 'flex',
@@ -256,6 +258,27 @@ const BookListPage = ({
               )}
             </button>
           </div>
+          {(window.sessionStorage.getItem("noma@secure_token") !== null && window.sessionStorage.getItem("noma@secure_token") !== "") &&
+          <button
+            onClick={btnLogOut}
+            style={{
+              background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '0.5rem 1rem',
+              cursor: 'pointer',
+              fontSize: '0.875rem',
+              fontFamily: "'SEBANG Gothic', sans-serif",
+              fontWeight: '500',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => e.target.style.transform = 'translateY(-1px)'}
+            onMouseLeave={(e) => e.target.style.transform = 'translateY(0)'}
+          >
+            ← 로그아웃
+          </button>
+          }
         </div>
       </div>
 
@@ -309,7 +332,7 @@ const BookListPage = ({
                   <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
                 </svg>
               </div>
-              
+
               <div style={{
                 display: 'flex',
                 gap: '0.5rem',
@@ -347,14 +370,14 @@ const BookListPage = ({
                     overflow: 'hidden'
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-4px) scale(1.02)';
-                    e.currentTarget.style.boxShadow = '0 20px 25px -5px rgba(0, 0, 0, 0.1)';
-                    e.currentTarget.style.borderColor = '#f97316';
+                    e.target.style.transform = 'translateY(-4px) scale(1.02)';
+                    e.target.style.boxShadow = '0 20px 25px -5px rgba(0, 0, 0, 0.1)';
+                    e.target.style.borderColor = '#f97316';
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0) scale(1)';
-                    e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.05)';
-                    e.currentTarget.style.borderColor = '#f1f5f9';
+                    e.target.style.transform = 'translateY(0) scale(1)';
+                    e.target.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.05)';
+                    e.target.style.borderColor = '#f1f5f9';
                   }}
                 >
                   {/* 즐겨찾기 버튼 */}

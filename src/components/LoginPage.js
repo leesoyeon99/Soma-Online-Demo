@@ -1,13 +1,59 @@
 import React, { useState } from 'react';
 
+import * as commonJs from '../component/CommonJs';
+//import GlobalStore from '../store/GlobalStore';
+import { API_RES_CODE,  } from '../component/AppConstants';
+import { Base64 } from 'js-base64';
+//import $ from 'jquery';
+
+
+
 const LoginPage = ({ onLogin }) => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('20251023');
+  const [password, setPassword] = useState('abcde12345');
+
+
+    if(window.sessionStorage.getItem("noma@secure_token") !== null && window.sessionStorage.getItem("noma@secure_token") !== "") {
+        onLogin();
+    }
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (username && password) {
-      onLogin();
+      //onLogin();
+
+        const login_id = username;
+        const login_pwd = password;
+        const site = "MS";
+        //const memberGradeCode = this.state.memberGradeCode;
+
+        let bodyData = {login_id:login_id, login_pwd:login_pwd, login_type:'E'};
+        commonJs.fetchApiCall(site, "answer1000", bodyData)
+        .then(responseJson => {
+
+            if(responseJson.result_code === API_RES_CODE.SUCCESS) {
+                const member = responseJson.member;
+                if(member.MEM_GRADE_CODE !== "600"){
+                    alert("학생 계정으로 로그인 가능 합니다.");
+                    return;
+                }
+                window.sessionStorage.setItem("noma@mem_seq", Base64.encode(member.MEM_SEQ));
+                window.sessionStorage.setItem("noma@center_seq", Base64.encode(member.CENTER_SEQ));
+                window.sessionStorage.setItem("noma@group_code", Base64.encode(member.GROUP_CODE));
+                window.sessionStorage.setItem("noma@login_id", Base64.encode(member.LOGIN_ID));
+                window.sessionStorage.setItem("noma@mem_name", Base64.encode(member.MEM_NAME));
+                window.sessionStorage.setItem("noma@login_token", Base64.encode(member.LOGIN_TOKEN));
+                window.sessionStorage.setItem("noma@secure_token", Base64.encode(responseJson.secure_token));
+
+                onLogin();
+            }
+            else
+            {
+                alert('로그인 정보가 올바르지 않습니다. 다시 확인해주세요.');
+            }
+
+        });
+
     }
   };
 

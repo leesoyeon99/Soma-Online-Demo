@@ -13,30 +13,35 @@ import TeacherSubmissionViewer from './components/TeacherSubmissionViewer';
 import TeacherFeedbackCards from './components/TeacherFeedbackCards';
 import AdminPage from './components/AdminPage';
 
+import { Base64 } from 'js-base64';
+import * as commonJs from './component/CommonJs';
+import { API_RES_CODE,  } from './component/AppConstants';
+import CommonUtils from './utils/CommonUtils';
+
 function App() {
   console.log('App 컴포넌트 렌더링 시작');
-  
+
   // 페이지 상태 관리
   const [currentPage, setCurrentPage] = useState('landing'); // 'landing', 'login', 'bookList', 'detail', 'teacherAnnotation', 'teacherFeedbackCards', 'teacherSubmission'
   // const [userType, setUserType] = useState(null); // 'admin', 'teacher', 'student' - 현재 사용하지 않음
   const [isAIChatbotOpen, setIsAIChatbotOpen] = useState(false);
-  
+
   // PDF Viewer ref (AIChatbot에서 캔버스 접근용)
   const pdfViewerRef = useRef(null);
   // const [isLoggedIn, setIsLoggedIn] = useState(false); // 현재 사용하지 않음
   const [selectedSubmission, setSelectedSubmission] = useState(null);
-  
+
   // AI 채점 관련 상태
   const [isAIGrading, setIsAIGrading] = useState(false);
   const [gradingResult, setGradingResult] = useState(null);
   const [gradingProgress, setGradingProgress] = useState(0);
-  
+
   // 기존 선생님 첨삭 데이터 로드
   React.useEffect(() => {
     const savedFeedback = localStorage.getItem('teacherFeedback');
     const savedFeedbacks = localStorage.getItem('teacherFeedbacks');
     const savedTeacherFeedbackData = localStorage.getItem('teacherFeedbackData');
-    
+
     if (savedFeedback) {
       try {
         const feedbackData = JSON.parse(savedFeedback);
@@ -45,7 +50,7 @@ function App() {
         console.error('선생님 첨삭 데이터 로드 실패:', error);
       }
     }
-    
+
     // 강사 첨삭 데이터 로드 (페이지별 필기 포함)
     if (savedTeacherFeedbackData) {
       try {
@@ -56,7 +61,7 @@ function App() {
         console.error('강사 첨삭 데이터 로드 실패:', error);
       }
     }
-    
+
     if (savedFeedbacks) {
       try {
         const feedbacksData = JSON.parse(savedFeedbacks);
@@ -204,33 +209,38 @@ function App() {
           bookUrl: '/somapremier.pdf'
         }
       ];
-      
+
       setTeacherFeedbacks(demoFeedbacks);
       localStorage.setItem('teacherFeedbacks', JSON.stringify(demoFeedbacks));
-      
+
       // 가장 최신 첨삭을 단일 첨삭으로도 설정
       setTeacherFeedback(demoFeedbacks[0]);
       localStorage.setItem('teacherFeedback', JSON.stringify(demoFeedbacks[0]));
     }
   }, []);
-  
+
   // 파일 목록 - 소마 프리미어 교재들
+<<<<<<< Updated upstream
   const baseFiles = [
     { 
+=======
+  const files = [
+    {
+>>>>>>> Stashed changes
       id: 1,
-      title: '2023 소마 프리미어',
+      title: '2023 소마 프리미어 초급2',
       url: '/assets/pdf/2023-프리미어 초급2-내지_DEMO_compressed.pdf',
       type: 'pdf'
     },
-    { 
-      id: 2, 
-      title: '2023 소마 프리미어 초급2', 
+    {
+      id: 2,
+      title: '2023 소마 프리미어',
       url: '/assets/pdf/mvp_2023_소마_프리미어.pdf',
       type: 'pdf'
     },
-    { 
-      id: 3, 
-      title: '2023 미래탐구 수학중3-1응용심화 셀프북 교사용', 
+    {
+      id: 3,
+      title: '2023 미래탐구 수학중3-1응용심화 셀프북 교사용',
       url: '/assets/pdf/mvp_2022_미래탐구_수학중3-1응용심화_셀프북_교사용.pdf',
       type: 'pdf'
     }
@@ -258,48 +268,10 @@ function App() {
     }))
   ];
 
-  // 📍 AI 채점 결과 표시 좌표 맵핑 (교재별 → 페이지별 → 문제별)
-  const GRADING_COORDINATES = {
-    '2023 소마 프리미어': {
-      3: { // 3페이지
-        '(1)': { x: 300, y: 900 },
-        '(2)': { x: 710, y: 900 },
-        '(3)': { x: 300, y: 1090 },
-        '(4)': { x: 710, y: 1090 },
-        '(5)': { x: 300, y: 1270 },
-        '(6)': { x: 710, y: 1270 }
-      },
-      4: { // 3페이지
-        'IDEA 1': { x: 300, y: 310 },
-        '유제 01': { x: 300, y: 970 },
-      },
-      5: { // 3페이지
-        '유제 02': { x: 265, y: 310 },
-        '유제 03': { x: 265, y: 935 },
-      },
-      6: { // 3페이지
-        '03': { x: 280, y: 320 },
-        '04': { x: 280, y: 1050 },
-      },
-      7: { // 3페이지
-        '05': { x: 310, y: 310 },
-      },
-      // 다른 페이지 추가 가능:
-      // 4: { '(1)': { x: 350, y: 850 }, ... },
-      // 5: { ... }
-    },
-    '2023 소마 프리미어 초급2': {
-      // 나중에 추가 가능
-    },
-    '2023 미래탐구 수학중3-1응용심화 셀프북 교사용': {
-      // 나중에 추가 가능
-    }
-  };
-
   // 상태 관리
   const [currentPdfUrl, setCurrentPdfUrl] = useState(files[0].url); // 첫 번째 파일을 기본으로
   const [activeFileIndex, setActiveFileIndex] = useState(0);
-  
+
   // 현재 선택된 파일 정보 (메모이제이션)
   const currentFile = useMemo(() => files[activeFileIndex], [files, activeFileIndex]);
   const isCurrentFilePDF = useMemo(() => currentFile && currentFile.type === 'pdf', [currentFile]);
@@ -309,12 +281,12 @@ function App() {
   const [selectedTool, setSelectedTool] = useState('hand');
   const [selectedColor, setSelectedColor] = useState('#ef4444');
   const [brushSize, setBrushSize] = useState(3);
-  
+
   // 녹음 및 스트로크 데이터 상태
   const [isRecording, setIsRecording] = useState(false);
   const [strokeData, setStrokeData] = useState([]);
   const [recordingStartTime, setRecordingStartTime] = useState(null);
-  
+
   // 재생 관련 상태
   const [isPlaying, setIsPlaying] = useState(false);
   const [isReplaying, setIsReplaying] = useState(false);
@@ -322,7 +294,7 @@ function App() {
   const [enableStrokeAnimation, setEnableStrokeAnimation] = useState(true); // 스트로크 애니메이션 활성화
   // const [audioBlob, setAudioBlob] = useState(null);
   const [audioUrl, setAudioUrl] = useState(null);
-  
+
   // 학생-선생님 소통 관련 상태
   const [studentSubmission, setStudentSubmission] = useState(null); // 학생 제출 데이터
   const [teacherFeedback, setTeacherFeedback] = useState(null); // 선생님 첨삭 데이터 (단일)
@@ -330,7 +302,7 @@ function App() {
   const [showTeacherFeedback, setShowTeacherFeedback] = useState(false); // 학생이 선생님 첨삭 보기/숨기기
   const [submissionAlert, setSubmissionAlert] = useState(false); // 선생님에게 제출 알림
   const [feedbackAlert, setFeedbackAlert] = useState(false); // 학생에게 첨삭 알림
-  
+
   // 모달창 상태
   const [isFloatingPanelOpen, setIsFloatingPanelOpen] = useState(false); // 플로팅 패널 열기/닫기
   const [notifications, setNotifications] = useState([]); // 알림 목록
@@ -365,13 +337,13 @@ function App() {
   // 교재 선택 핸들러 (교재 목록에서) - 학생 버전
   const handleBookSelect = (url, index) => {
     console.log('학생 교재 선택:', { url, index, file: files[index] }); // 디버깅용
-    
+
     setCurrentPdfUrl(url);
     setActiveFileIndex(index);
     setZoomScale(2.0);
     setCurrentPage('detail');
     setCurrentPageNum(1); // 페이지를 1로 리셋
-    
+
     // 학생 버전에서는 첨삭 모달창을 표시하지 않음
     console.log('학생 버전 - 첨삭 모달창 표시 안함');
   };
@@ -382,7 +354,7 @@ function App() {
     setActiveFileIndex(index);
     setZoomScale(2.0);
     setCurrentPageNum(1);
-    
+
     // 교재 선택 시 상세 페이지로 이동
     setCurrentPage('teacherDetail');
   };
@@ -452,7 +424,7 @@ function App() {
           // setAudioBlob(audioBlob);
           setAudioUrl(audioUrl);
           // setAudioChunks([]);
-          
+
           // 스트림 정리
           stream.getTracks().forEach(track => track.stop());
         };
@@ -462,7 +434,7 @@ function App() {
         // setAudioChunks(chunks);
         setIsRecording(true);
         setRecordingStartTime(Date.now()); // 녹음 시작 시간 기록
-        
+
         // 기존 스트로크에서 녹음 스트로크만 제거 (녹음 전 펜 그림은 유지, 지우개는 제거)
         setStrokeData(prev => {
           const nonRecordingStrokes = prev.filter(stroke => {
@@ -473,7 +445,7 @@ function App() {
           console.log('🔄 녹음 재시작: 이전 녹음 & 지우개 제거, 유지할 스트로크 수:', nonRecordingStrokes.length);
           return nonRecordingStrokes;
         });
-        
+
         setIsPlaying(false); // 녹음 시작 시 재생 중지
         setIsReplaying(false);
         setReplayProgress(0);
@@ -500,11 +472,11 @@ function App() {
       alert('제출할 필기나 녹음이 없습니다.');
       return;
     }
-    
+
     // 오디오를 Base64로 변환하여 저장
     const convertAudioToBase64 = async () => {
       if (!audioUrl) return null;
-      
+
       try {
         const response = await fetch(audioUrl);
         const blob = await response.blob();
@@ -519,13 +491,13 @@ function App() {
         return null;
       }
     };
-    
+
     // 비동기 처리
     convertAudioToBase64().then(audioBase64 => {
       const submission = {
         id: Date.now(),
-        studentId: 'student1',
-        studentName: '학생',
+        studentId: Base64.decode(window.sessionStorage.getItem("noma@login_id")),
+        studentName: Base64.decode(window.sessionStorage.getItem("noma@mem_name")),
         timestamp: new Date().toISOString(),
         strokeData: [...strokeData], // 모든 스트로크 데이터 (타임스탬프 포함)
         audioUrl: audioUrl, // Blob URL (임시)
@@ -536,7 +508,7 @@ function App() {
         bookUrl: currentPdfUrl,
         pdfFileName: currentPdfUrl // PDF 파일 경로
       };
-      
+
       console.log('📤 학생 제출 데이터:', {
         strokeCount: submission.strokeData.length,
         hasAudio: !!submission.audioBase64,
@@ -544,22 +516,22 @@ function App() {
         currentPage: submission.currentPage,
         pdfFileName: submission.pdfFileName
       });
-      
+
       // 기존 제출 목록 가져오기
       const existingSubmissions = JSON.parse(localStorage.getItem('studentSubmissions') || '[]');
-      
+
       // 새 제출 추가
       const newSubmissions = [submission, ...existingSubmissions];
-      
+
       // 로컬 스토리지에 저장 (여러 제출 관리)
       localStorage.setItem('studentSubmissions', JSON.stringify(newSubmissions));
       localStorage.setItem('studentSubmission', JSON.stringify(submission)); // 최신 제출 (하위 호환)
-      
+
       // 저장 확인 (디버깅)
       const savedCheck = localStorage.getItem('studentSubmissions');
       console.log('💾 localStorage 저장 확인:', savedCheck ? `${JSON.parse(savedCheck).length}개 저장됨` : '저장 실패!');
       console.log('저장된 전체 데이터:', JSON.parse(savedCheck || '[]'));
-      
+
       // 알림 추가
       const newNotification = {
         id: Date.now(),
@@ -569,14 +541,16 @@ function App() {
         timestamp: new Date().toISOString(),
         isRead: false
       };
-      
-      setNotifications(prev => [newNotification, ...prev]);
-      
+
+      handleAPISave(newNotification, JSON.stringify([submission]));
+
+//      setNotifications(prev => [newNotification, ...prev]);
+
       // 선생님에게 알림 표시
       setSubmissionAlert(true);
-      
+
       alert(`제출 완료!\n페이지: ${submission.currentPage}\n스트로크: ${submission.strokeData.length}개\n오디오: ${submission.audioBase64 ? '포함' : '없음'}`);
-      
+
       // 데모용: 자동으로 선생님 첨삭 생성 (3초 후)
     setTimeout(() => {
       const mockTeacherFeedback = {
@@ -602,21 +576,21 @@ function App() {
         bookTitle: submission.bookTitle,
         bookUrl: submission.bookUrl
       };
-      
+
       // 단일 첨삭 상태 업데이트 (기존 호환성)
       setTeacherFeedback(mockTeacherFeedback);
       localStorage.setItem('teacherFeedback', JSON.stringify(mockTeacherFeedback));
-      
+
       // 다중 첨삭 목록에 추가
       setTeacherFeedbacks(prev => {
         const newFeedbacks = [mockTeacherFeedback, ...prev];
         localStorage.setItem('teacherFeedbacks', JSON.stringify(newFeedbacks));
         return newFeedbacks;
       });
-      
+
       // 학생에게 첨삭 알림 표시
       setFeedbackAlert(true);
-      
+
       // 알림 추가
       const feedbackNotification = {
         id: Date.now(),
@@ -626,7 +600,7 @@ function App() {
         timestamp: new Date().toISOString(),
         isRead: false
       };
-      
+
       setNotifications(prev => [feedbackNotification, ...prev]);
     }, 3000);
     });
@@ -638,7 +612,7 @@ function App() {
       alert('첨삭할 내용이 없습니다.');
       return;
     }
-    
+
     const feedback = {
       id: Date.now(),
       teacherId: 'teacher1',
@@ -649,10 +623,10 @@ function App() {
       bookTitle: studentSubmission?.bookTitle || '교재',
       bookUrl: studentSubmission?.bookUrl || currentPdfUrl
     };
-    
+
     // 로컬 스토리지에 저장 (실제로는 서버로 전송)
     localStorage.setItem('teacherFeedback', JSON.stringify(feedback));
-    
+
     // 강사 첨삭 데이터도 별도로 저장 (페이지별 필기 포함)
     const teacherFeedbackData = {
       id: Date.now(),
@@ -665,9 +639,9 @@ function App() {
       bookUrl: studentSubmission?.bookUrl || currentPdfUrl,
       savedDrawings: strokeData // 페이지별 필기 데이터도 포함
     };
-    
+
     localStorage.setItem('teacherFeedbackData', JSON.stringify(teacherFeedbackData));
-    
+
     // 알림 추가
     const newNotification = {
       id: Date.now(),
@@ -677,14 +651,96 @@ function App() {
       timestamp: new Date().toISOString(),
       isRead: false
     };
-    
+
     setNotifications(prev => [newNotification, ...prev]);
-    
+
     // 학생에게 알림 표시
     setFeedbackAlert(true);
-    
+
     alert('학생에게 첨삭이 전송되었습니다!');
   };
+
+    // API 저장 테스트
+    const handleAPISave = async(newNotification, submission)=> {
+        const mem_seq = Base64.decode(window.sessionStorage.getItem("noma@mem_seq"));
+        const studentId = Base64.decode(window.sessionStorage.getItem("noma@login_id"));
+        const studentName = Base64.decode(window.sessionStorage.getItem("noma@mem_name"));
+
+        const studentSubmission = JSON.parse( window.localStorage.getItem("studentSubmission") );
+        const audioBase64 = studentSubmission.audioBase64;
+        const currentPage = studentSubmission.currentPage;
+//        const strokeData = studentSubmission.strokeData;
+        const strokeData = submission;
+        const recordingStartTime = studentSubmission.recordingStartTime;
+        const audioUrl = studentSubmission.audioUrl;
+        const bookTitle = studentSubmission.bookTitle;
+        const bookUrl = studentSubmission.bookUrl;
+        const id = studentSubmission.id;
+        const pdfFileName = studentSubmission.pdfFileName;
+        const time_stamp = studentSubmission.timestamp;
+
+        const book_id = files[activeFileIndex].id;
+
+
+
+console.log("submission =============== ", submission);
+
+        let bodyData = {
+            mem_seq:mem_seq,
+            studentSubmission:studentSubmission,
+            audioBase64:audioBase64,
+            currentPage:currentPage,
+            strokeData:strokeData,
+            recordingStartTime:recordingStartTime,
+            book_id:book_id,
+            audioUrl:audioUrl,
+            bookTitle:bookTitle,
+            bookUrl:bookUrl,
+            id:id,
+            pdfFileName:pdfFileName,
+            studentId:studentId,
+            studentName:studentName,
+            time_stamp:time_stamp
+        };
+        commonJs.fetchApiCall("S", "studentSubmissionSave", bodyData)
+        .then(responseJson => {
+            if (responseJson.result_code === API_RES_CODE.SUCCESS) {
+                setNotifications(prev => [newNotification, ...prev]);
+            } else {
+                CommonUtils.showServerErr(responseJson.result_code, responseJson.result_message);
+            }
+        });
+
+    }
+
+    // API 리스트 테스트
+    const handleAPIList = async()=> {
+        const mem_seq = Base64.decode(window.sessionStorage.getItem("noma@mem_seq"));
+
+        const studentSubmission = JSON.parse( window.localStorage.getItem("studentSubmission") );
+        const currentPage = studentSubmission.currentPage;
+        const book_id = files[activeFileIndex].id;
+
+        let bodyData = {
+            mem_seq:mem_seq,
+            currentPage:currentPage,
+            book_id:book_id,
+        };
+        commonJs.fetchApiCall("S", "studentSubmissionList", bodyData)
+        .then(responseJson => {
+            if (responseJson.result_code === API_RES_CODE.SUCCESS) {
+                let subList = responseJson.studentSubmissionList[0];
+                let strokeDataStr = subList.strokeData;
+                const strokeData = JSON.parse(strokeDataStr);
+                console.log("strokeData =============== ", strokeData);
+            } else {
+                CommonUtils.showServerErr(responseJson.result_code, responseJson.result_message);
+            }
+        });
+
+    }
+
+
 
   // AI 채점 함수
   const handleAIGrading = async () => {
@@ -692,128 +748,61 @@ function App() {
       alert('채점할 필기 내용이 없습니다. 먼저 문제를 풀어보세요!');
       return;
     }
-    
+
     setIsAIGrading(true);
     setGradingProgress(0);
     setGradingResult(null);
-    
-    // 채점 진행 시뮬레이션 (API 호출 중 진행률 표시)
+
+    // 채점 진행 시뮬레이션
     const progressInterval = setInterval(() => {
       setGradingProgress(prev => {
-        if (prev >= 90) { // 90%까지만 자동 증가 (완료는 API 응답 후)
-          return 90;
+        if (prev >= 100) {
+          clearInterval(progressInterval);
+          return 100;
         }
         return prev + Math.random() * 15;
       });
-    }, 300);
-    
-    try {
-      // 1. 현재 PDF 페이지 원본 이미지 캡처 (배경만)
-      const pdfCanvas = pdfViewerRef?.current?.canvasRef?.current;
-      if (!pdfCanvas) {
-        throw new Error('PDF 캔버스를 찾을 수 없습니다.');
-      }
-      
-      // 원본 이미지 (PDF만)
-      const originalImageDataUrl = pdfCanvas.toDataURL('image/jpeg', 0.9);
-      
-      // 2. 학생 답안 이미지 캡처 (PDF + 필기)
-      const markupCanvas = pdfViewerRef?.current?.markupCanvasRef?.current;
-      if (!markupCanvas) {
-        throw new Error('마크업 캔버스를 찾을 수 없습니다.');
-      }
-      
-      // 임시 캔버스 생성하여 PDF + 필기 합성
-      const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = pdfCanvas.width;
-      tempCanvas.height = pdfCanvas.height;
-      const tempContext = tempCanvas.getContext('2d');
-      
-      // PDF 배경 그리기
-      tempContext.drawImage(pdfCanvas, 0, 0);
-      // 필기 레이어 그리기
-      tempContext.drawImage(markupCanvas, 0, 0);
-      
-      // 학생 답안 이미지
-      const studentImageDataUrl = tempCanvas.toDataURL('image/jpeg', 0.9);
-      
-      // 3. 현재 교재 정보
-      const bookTitle = files[activeFileIndex]?.title || '2023 소마 프리미어';
-      const pageNumber = currentPageNum;
-      
-      console.log('📤 AI 채점 요청:', { bookTitle, pageNumber });
-      
-      // 4. API 요청
-      const response = await fetch('https://aiapi-fastapi-dev.t-ime.com/api/v1/soma-online/auto-grading', {
-      // const response = await fetch('http://localhost:8080/api/v1/soma-online/auto-grading', {
-          method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          imageData: [originalImageDataUrl, studentImageDataUrl],
-          bookTitle: bookTitle,
-          pageNumber: pageNumber
-        })
-      });
-      
-      const apiResponse = await response.json();
-      console.log('📥 AI 채점 응답:', apiResponse);
-      
-      // 5. 에러 코드 체크 (문제 없음 에러)
-      if (apiResponse.result_code === "9999") {
-        clearInterval(progressInterval);
-        setIsAIGrading(false);
-        setGradingProgress(0);
-        alert('채점할 문제가 없습니다. 다음 페이지로 넘어가세요!');
-        return;
-      }
-      
-      // HTTP 상태 코드 체크 (9999 아닌 다른 에러)
-      if (!response.ok) {
-        throw new Error(`API 요청 실패: ${response.status} - ${apiResponse.result_message || 'Unknown error'}`);
-      }
-      
-      // 6. 응답 데이터 파싱 (data.result에 있음!)
-      const resultList = apiResponse.data?.result || [];
-      console.log('📋 resultList:', resultList);
-      
-      // 정답 수 계산
-      const correctCount = resultList.filter(item => item.grade === 1).length;
-      const totalCount = resultList.length;
-      
-      console.log('✅ correctCount:', correctCount, 'totalCount:', totalCount);
-      
-      // 7. 프론트엔드 형식으로 변환
-      const gradingResult = {
-        totalScore: `${correctCount}/${totalCount}`, // "2/3" 형식
-        maxScore: totalCount,
-        correctCount: correctCount,
-        details: resultList.map(item => ({
-          question: item.problem_id,
-          score: item.grade === 1 ? '정답' : '오답',
-          maxScore: null, // 사용 안 함
-          feedback: item.feedback || (item.grade === 1 ? '정답입니다. 잘 풀었어요!' : '오답입니다.'),
-          isCorrect: item.grade === 1
-        })),
+    }, 200);
+
+    // 3초 후 채점 완료
+    setTimeout(() => {
+      clearInterval(progressInterval);
+      setGradingProgress(100);
+
+      // 가상의 채점 결과 생성
+      const mockGradingResult = {
+        totalScore: Math.floor(Math.random() * 30) + 70, // 70-100점
+        maxScore: 100,
+        details: [
+          {
+            question: "문제 1: 기본 개념 이해",
+            score: Math.floor(Math.random() * 15) + 15, // 15-30점
+            maxScore: 30,
+            feedback: "개념을 잘 이해하고 있습니다. 더 정확한 표현을 사용하면 좋겠습니다.",
+            isCorrect: true
+          },
+          {
+            question: "문제 2: 계산 과정",
+            score: Math.floor(Math.random() * 20) + 20, // 20-40점
+            maxScore: 40,
+            feedback: "계산 과정이 명확합니다. 단위를 꼭 표시해주세요.",
+            isCorrect: true
+          },
+          {
+            question: "문제 3: 응용 문제",
+            score: Math.floor(Math.random() * 15) + 15, // 15-30점
+            maxScore: 30,
+            feedback: "문제 해결 과정이 체계적입니다. 더 다양한 접근 방법을 시도해보세요.",
+            isCorrect: true
+          }
+        ],
         overallFeedback: "전반적으로 잘 풀었습니다! 특히 기본 개념 이해가 뛰어납니다. 응용 문제에서 더 다양한 해결 방법을 시도해보면 좋겠습니다.",
         timestamp: new Date().toISOString()
       };
-      
-      clearInterval(progressInterval);
-      setGradingProgress(100);
-      setGradingResult(gradingResult);
+
+      setGradingResult(mockGradingResult);
       setIsAIGrading(false);
-      
-      console.log('✅ AI 채점 완료:', gradingResult);
-      
-    } catch (error) {
-      console.error('❌ AI 채점 오류:', error);
-      clearInterval(progressInterval);
-      setIsAIGrading(false);
-      setGradingProgress(0);
-      alert(`AI 채점 중 오류가 발생했습니다:\n${error.message}`);
-    }
+    }, 3000);
   };
 
   // 통합 중지 핸들러 (음성 + 필기 재생 중지)
@@ -825,17 +814,17 @@ function App() {
       setCurrentTime(0);
       setIsPlaying(false);
     }
-    
+
     // 필기 재생 중지
     setIsReplaying(false);
     setReplayProgress(0);
-    
+
     // 캔버스 초기화
     const canvas = document.querySelector('canvas');
-    if (canvas) {
-      const context = canvas.getContext('2d');
-      context.clearRect(0, 0, canvas.width, canvas.height);
-    }
+//    if (canvas) {
+//      const context = canvas.getContext('2d');
+//      context.clearRect(0, 0, canvas.width, canvas.height);
+//    }
   };
 
   // 오디오 시간 변경 핸들러
@@ -865,17 +854,17 @@ function App() {
 
     setIsReplaying(true);
     setReplayProgress(0);
-    
+
     // 마크업 캔버스만 초기화 (PDF 배경은 유지)
     const markupCanvas = pdfViewerRef?.current?.markupCanvasRef?.current;
     if (markupCanvas) {
       const context = markupCanvas.getContext('2d');
       context.clearRect(0, 0, markupCanvas.width, markupCanvas.height);
-      
+
       // 현재 캔버스 크기 (상대 좌표 → 절대 좌표 변환용)
       const currentCanvasWidth = markupCanvas.width;
       const currentCanvasHeight = markupCanvas.height;
-      
+
       // 상대 좌표를 절대 좌표로 변환하는 헬퍼 함수
       const denormalizePoints = (points) => {
         return points.map(point => {
@@ -888,21 +877,21 @@ function App() {
           }
         });
       };
-      
+
       // 기존 그림들(녹음 전)을 먼저 그리기 - 즉시 표시 (배경)
       const allStrokes = strokeData || [];
       // 녹음 전 펨 스트로크만 필터링 (지우개는 제외 - 지우개는 녹음 재생 시에만 적용)
       const backgroundStrokes = allStrokes.filter(stroke => !stroke.isRecording && stroke.tool !== 'eraser');
-      
+
       console.log('배경 스트로크 수:', backgroundStrokes.length);
       console.log('전체 스트로크:', allStrokes.map(s => ({ id: s.id, tool: s.tool, isRecording: s.isRecording, timestamp: s.timestamp })));
-      
+
       // 펜 스트로크만 배경으로 그리기
       backgroundStrokes.forEach(stroke => {
         if (stroke.points && stroke.points.length > 1) {
           // 상대 좌표 → 절대 좌표 변환
           const absolutePoints = denormalizePoints(stroke.points);
-          
+
           // 펜 스트로크 처리
           context.save();
           context.beginPath();
@@ -911,7 +900,7 @@ function App() {
           context.lineJoin = 'round';
           context.strokeStyle = stroke.color || '#ef4444';
           context.globalAlpha = 1;
-          
+
           context.moveTo(absolutePoints[0].x, absolutePoints[0].y);
           for (let i = 1; i < absolutePoints.length; i++) {
             context.lineTo(absolutePoints[i].x, absolutePoints[i].y);
@@ -927,19 +916,20 @@ function App() {
     console.log('🎬 재생할 녹음 스트로크들:', recordingStrokes.map(s => ({
       id: s.id,
       tool: s.tool,
-      timestamp: typeof s.timestamp === 'number' ? s.timestamp.toFixed(2) + 's' : s.timestamp, 
+      timestamp: typeof s.timestamp === 'number' ? s.timestamp.toFixed(2) + 's' : s.timestamp,
       hasPoints: !!s.points,
       pointsLength: s.points?.length
     })));
-    
+
     if (recordingStrokes.length === 0) {
-      console.warn('⚠️ 녹음 스트로크가 없습니다! 전체 스트로크 확인:', 
+      console.warn('⚠️ 녹음 스트로크가 없습니다! 전체 스트로크 확인:',
         strokeData.map(s => ({
           id: s.id,
           tool: s.tool,
           isRecording: s.isRecording,
           timestamp: s.timestamp,
-          timestampType: typeof s.timestamp
+          timestampType: typeof s.timestamp,
+          student_mem_seq:Base64.decode(window.sessionStorage.getItem("noma@mem_seq")),
         }))
       );
     }
@@ -947,47 +937,47 @@ function App() {
     // 음성 재생 시작
     let audioInstance = null;
     let syncIntervalId = null;
-    
+
     if (audioUrl) {
       try {
         audioInstance = new Audio(audioUrl);
         setCurrentAudio(audioInstance);
-        
+
         audioInstance.onloadedmetadata = () => {
           setAudioDuration(audioInstance.duration);
           console.log('오디오 길이:', audioInstance.duration);
         };
-        
+
         audioInstance.ontimeupdate = () => {
           setCurrentTime(audioInstance.currentTime);
         };
-        
+
         audioInstance.onended = () => {
           console.log('오디오 재생 종료');
           setIsPlaying(false);
           setIsReplaying(false);
           setCurrentTime(0);
           setReplayProgress(100);
-          
+
           // 인터벌 정리
           if (syncIntervalId) {
             clearInterval(syncIntervalId);
           }
-          
+
           // drawn 플래그 초기화
           recordingStrokes.forEach(stroke => delete stroke.drawn);
         };
-        
+
         audioInstance.onerror = (error) => {
           console.error('오디오 재생 오류:', error);
           setIsPlaying(false);
           setIsReplaying(false);
-          
+
           if (syncIntervalId) {
             clearInterval(syncIntervalId);
           }
         };
-        
+
         setIsPlaying(true);
         await audioInstance.play();
         console.log('오디오 재생 시작');
@@ -1004,12 +994,12 @@ function App() {
       // 오디오가 있으면 오디오와 동기화, 없으면 스트로크만 재생
       const hasAudio = audioInstance !== null;
       let startTime = Date.now();
-      
+
       syncIntervalId = setInterval(() => {
         // 오디오가 있는 경우: 오디오 시간에 맞춰 재생
         // 오디오가 없는 경우: 실제 경과 시간으로 재생
         let currentPlaybackTime = 0;
-        
+
         if (hasAudio && audioInstance && !audioInstance.paused && !audioInstance.ended) {
           currentPlaybackTime = audioInstance.currentTime;
         } else if (!hasAudio) {
@@ -1020,18 +1010,18 @@ function App() {
           clearInterval(syncIntervalId);
           return;
         }
-          
+
         // 현재 재생 시간에 맞는 스트로크들을 찾아서 그리기
         recordingStrokes.forEach((stroke) => {
           if (stroke.timestamp && stroke.timestamp <= currentPlaybackTime && !stroke.drawn) {
               console.log(`스트로크 그리기: 타입=${stroke.tool}, 타임스탬프 ${stroke.timestamp.toFixed(2)}s, 재생 시간 ${currentPlaybackTime.toFixed(2)}s`);
               if (markupCanvas) {
                 const context = markupCanvas.getContext('2d');
-                
+
                 // 현재 캔버스 크기 (상대 좌표 → 절대 좌표 변환용)
                 const currentCanvasWidth = markupCanvas.width;
                 const currentCanvasHeight = markupCanvas.height;
-                
+
                 // 상대 좌표를 절대 좌표로 변환
                 const denormalizePoints = (points) => {
                   return points.map(point => {
@@ -1042,27 +1032,27 @@ function App() {
                     }
                   });
                 };
-                
+
                 // 스트로크 포인트를 절대 좌표로 변환
                 const absolutePoints = stroke.points ? denormalizePoints(stroke.points) : [];
-                
+
                 context.save();
-                
+
                 if (enableStrokeAnimation && absolutePoints.length > 5) {
                   // 애니메이션 모드: 점진적으로 그리기
                   if (!stroke.animationIndex) {
                     stroke.animationIndex = 0;
                   }
-                  
+
                   // 프레임당 그릴 포인트 수 (빠르게)
                   const pointsPerFrame = Math.max(3, Math.floor(absolutePoints.length / 10));
                   const endIndex = Math.min(stroke.animationIndex + pointsPerFrame, absolutePoints.length);
-                  
+
                   if (stroke.tool === 'eraser') {
                     // 지우개 애니메이션
                     context.globalCompositeOperation = 'destination-out';
                     const eraserSize = stroke.brushSize * 10 || 30;
-                    
+
                     for (let i = stroke.animationIndex; i < endIndex; i++) {
                       context.beginPath();
                       context.arc(absolutePoints[i].x, absolutePoints[i].y, eraserSize, 0, 2 * Math.PI);
@@ -1075,21 +1065,21 @@ function App() {
                     context.lineCap = 'round';
                     context.lineJoin = 'round';
                     context.strokeStyle = stroke.color || '#ef4444';
-                    
+
                     if (stroke.animationIndex === 0) {
                       context.moveTo(absolutePoints[0].x, absolutePoints[0].y);
                     } else {
                       context.moveTo(absolutePoints[stroke.animationIndex - 1].x, absolutePoints[stroke.animationIndex - 1].y);
                     }
-                    
+
                     for (let i = stroke.animationIndex; i < endIndex; i++) {
                       context.lineTo(absolutePoints[i].x, absolutePoints[i].y);
                     }
                     context.stroke();
                   }
-                  
+
                   stroke.animationIndex = endIndex;
-                  
+
                   // 애니메이션 완료 확인
                   if (stroke.animationIndex >= absolutePoints.length) {
                     stroke.drawn = true;
@@ -1101,7 +1091,7 @@ function App() {
                     // 지우개 스트로크 재생
                     context.globalCompositeOperation = 'destination-out';
                     const eraserSize = stroke.brushSize * 10 || 30;
-                    
+
                     if (absolutePoints.length > 0) {
                       for (let i = 0; i < absolutePoints.length; i++) {
                         context.beginPath();
@@ -1116,7 +1106,7 @@ function App() {
                     context.lineCap = 'round';
                     context.lineJoin = 'round';
                     context.strokeStyle = stroke.color || '#ef4444';
-                    
+
                     if (absolutePoints.length > 1) {
                       context.moveTo(absolutePoints[0].x, absolutePoints[0].y);
                       for (let i = 1; i < absolutePoints.length; i++) {
@@ -1125,21 +1115,21 @@ function App() {
                       context.stroke();
                     }
                   }
-                  
+
                   // 그려진 것으로 표시
                   stroke.drawn = true;
                 }
-                
+
                 context.restore();
               }
             }
           });
-          
+
           // 진행률 업데이트
           const drawnStrokes = recordingStrokes.filter(stroke => stroke.drawn).length;
           const progress = recordingStrokes.length > 0 ? (drawnStrokes / recordingStrokes.length) * 100 : 100;
           setReplayProgress(progress);
-          
+
           // 오디오 없이 스트로크만 재생하는 경우: 모든 스트로크가 그려졌으면 종료
           if (!hasAudio && drawnStrokes === recordingStrokes.length) {
             console.log('✅ 모든 스트로크 재생 완료 (오디오 없음)');
@@ -1172,7 +1162,7 @@ function App() {
       setCurrentAudio(null);
       setAudioDuration(0);
       setCurrentTime(0);
-      
+
       // 녹음 시작
       handleRecordingToggle();
     }
@@ -1181,7 +1171,7 @@ function App() {
   // 스트로크 데이터 변경 핸들러 (메모이제이션)
   const handleStrokeDataChange = useCallback((newStrokeData) => {
     console.log('📝 handleStrokeDataChange 호출됨, 스트로크 수:', newStrokeData.length, 'isRecording:', isRecording);
-    
+
     // recordingStartTime이 있으면 타임스탬프 변환 (녹음 중이든 아니든)
     if (recordingStartTime) {
       const updatedStrokeData = newStrokeData.map((stroke) => {
@@ -1203,15 +1193,15 @@ function App() {
         }
         return stroke;
       });
-      
-      console.log('✅ 타임스탬프 변환 완료. 녹음 스트로크:', 
+
+      console.log('✅ 타임스탬프 변환 완료. 녹음 스트로크:',
         updatedStrokeData.filter(s => s.isRecording).map(s => ({
           id: s.id,
           tool: s.tool,
           timestamp: typeof s.timestamp === 'number' ? s.timestamp.toFixed(3) + 's' : s.timestamp
         }))
       );
-      
+
       setStrokeData(updatedStrokeData);
     } else {
       setStrokeData(newStrokeData);
@@ -1223,7 +1213,7 @@ function App() {
     setPageCount(count);
   }, []);
 
-  
+
   // Undo/Redo 핸들러
   // 실행 취소/다시 실행 핸들러 (이미지 뷰어에서는 사용하지 않음)
 
@@ -1247,9 +1237,9 @@ function App() {
   }
 
   if (currentPage === 'bookList') {
-    return <BookListPage 
-      files={files} 
-      onBookSelect={handleBookSelect} 
+    return <BookListPage
+      files={files}
+      onBookSelect={handleBookSelect}
       onBackToLogin={handleLogout}
       feedbackAlert={feedbackAlert}
       setFeedbackAlert={setFeedbackAlert}
@@ -1272,9 +1262,9 @@ function App() {
   }
 
   if (currentPage === 'teacherBookList') {
-    return <TeacherBookListPage 
-      files={files} 
-      onBookSelect={handleTeacherBookSelect} 
+    return <TeacherBookListPage
+      files={files}
+      onBookSelect={handleTeacherBookSelect}
       onBackToLogin={handleLogout}
       onGoToSubmissions={handleGoToSubmissions}
       notifications={notifications}
@@ -1283,13 +1273,13 @@ function App() {
   }
 
   if (currentPage === 'admin') {
-    return <AdminPage onBackToHome={() => setCurrentPage('landing')} />;
+    return <AdminPage />;
   }
 
   // 선생님 첨삭 카드 목록 페이지
   if (currentPage === 'teacherFeedbackCards') {
     return (
-      <TeacherFeedbackCards 
+      <TeacherFeedbackCards
         feedbacks={teacherFeedbacks}
         onSelectFeedback={(feedback) => {
           // 선택된 첨삭을 단일 첨삭으로 설정하고 상세 페이지로 이동
@@ -1316,7 +1306,7 @@ function App() {
   // 강사용 첨삭 페이지
   if (currentPage === 'teacherAnnotation') {
     return (
-      <TeacherAnnotationViewer 
+      <TeacherAnnotationViewer
         submission={selectedSubmission}
         onBackToSubmissions={() => setCurrentPage('teacherFeedbackCards')}
         onSaveFeedback={(feedback) => {
@@ -1330,7 +1320,7 @@ function App() {
   // 강사용 제출물 첨삭 페이지
   if (currentPage === 'teacherSubmission') {
     return (
-      <TeacherSubmissionViewer 
+      <TeacherSubmissionViewer
         submission={selectedSubmission}
         onBackToSubmissions={() => setCurrentPage('teacherBookList')}
         onSaveFeedback={(feedback) => {
@@ -1427,7 +1417,7 @@ function App() {
           }}>
             {/* 왼쪽: 네비게이션 + 제목 */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <button 
+              <button
                 onClick={() => { setCurrentPage('landing'); }}
                 style={{
                   background: 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)',
@@ -1451,7 +1441,7 @@ function App() {
               >
                 ← 홈으로
               </button>
-              <button 
+              <button
                 onClick={() => { setCurrentPage('teacherBookList'); }}
                 style={{
                   background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
@@ -1475,20 +1465,20 @@ function App() {
               >
                 교재목록
               </button>
-              <h1 style={{ 
-                color: '#1e3a8a', 
-                fontSize: '1.5rem', 
+              <h1 style={{
+                color: '#1e3a8a',
+                fontSize: '1.5rem',
                 fontWeight: 'bold',
                 fontFamily: 'var(--font-title)'
               }}>
                 {files[activeFileIndex]?.title || '교재 상세'} - 강사 모드
               </h1>
             </div>
-            
+
             {/* 중앙: 툴바 */}
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
               gap: '1rem',
               background: 'rgba(59, 130, 246, 0.1)',
               padding: '0.5rem 1rem',
@@ -1497,9 +1487,9 @@ function App() {
             }}>
               {/* PDF 페이지 네비게이션 (PDF 파일일 때만 표시) */}
               {isCurrentFilePDF && (
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
                   gap: '0.5rem',
                   marginBottom: '0.5rem',
                   padding: '0.5rem',
@@ -1524,9 +1514,9 @@ function App() {
                       <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
                     </svg>
                   </button>
-                  
-                  <span style={{ 
-                    fontSize: '0.875rem', 
+
+                  <span style={{
+                    fontSize: '0.875rem',
                     color: '#1e3a8a',
                     fontFamily: 'var(--font-ui)',
                     minWidth: '60px',
@@ -1534,7 +1524,7 @@ function App() {
                   }}>
                     {currentPageNum} / {pageCount}
                   </span>
-                  
+
                   <button
                     onClick={handleNextPage}
                     disabled={currentPageNum >= pageCount}
@@ -1774,7 +1764,7 @@ function App() {
               }}>
                 👥 학생 제출물
               </div>
-              
+
               <button
                 onClick={() => {
                   // 학생 제출 데이터 로드
@@ -2086,7 +2076,7 @@ function App() {
               {files[activeFileIndex]?.title || '교재 상세'}
             </h1>
           </div>
-          
+
           {/* 중앙: 툴바 */}
           <div className="toolbar" style={{
             display: 'flex',
@@ -2102,9 +2092,9 @@ function App() {
           }}>
             {/* PDF 페이지 네비게이션 (PDF 파일일 때만 표시) */}
             {isCurrentFilePDF && (
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
                 gap: '0.5rem',
                 marginRight: '1rem',
                 padding: '0.5rem',
@@ -2129,9 +2119,9 @@ function App() {
                     <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
                   </svg>
                 </button>
-                
-                <span style={{ 
-                  fontSize: '0.875rem', 
+
+                <span style={{
+                  fontSize: '0.875rem',
                   color: '#ea580c',
                   fontFamily: 'var(--font-ui)',
                   minWidth: '60px',
@@ -2139,7 +2129,7 @@ function App() {
                 }}>
                   {currentPageNum} / {pageCount}
                 </span>
-                
+
                 <button
                   onClick={handleNextPage}
                   disabled={currentPageNum >= pageCount}
@@ -2199,7 +2189,7 @@ function App() {
                 </button>
               ))}
             </div>
-            
+
             {/* 색상 선택 */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap', flexShrink: 0 }}>
               <span style={{ fontSize: '0.8rem', color: '#64748b', fontFamily: 'var(--font-ui)' }}>색상:</span>
@@ -2216,7 +2206,7 @@ function App() {
                 }}
               />
             </div>
-            
+
             {/* 브러시 크기 */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap', flexShrink: 0 }}>
               <span style={{ fontSize: '0.8rem', color: '#64748b', fontFamily: 'var(--font-ui)' }}>크기:</span>
@@ -2239,7 +2229,7 @@ function App() {
                 <option value={12}>12px</option>
               </select>
             </div>
-            
+
             {/* AI 채점 버튼 */}
             <button
               onClick={handleAIGrading}
@@ -2248,7 +2238,7 @@ function App() {
                 padding: '0.5rem 1rem',
                 borderRadius: '8px',
                 border: '2px solid #10b981',
-                background: isAIGrading 
+                background: isAIGrading
                   ? 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)'
                   : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                 color: 'white',
@@ -2289,8 +2279,77 @@ function App() {
                 </>
               )}
             </button>
+
+
+            {/*<button
+              onClick={handleAPISave}
+              style={{
+                padding: '0.5rem 1rem',
+                borderRadius: '8px',
+                border: '2px solid #10b981',
+                background: isAIGrading
+                  ? 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)'
+                  : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                color: 'white',
+                cursor: isAIGrading ? 'not-allowed' : 'pointer',
+                fontSize: '0.875rem',
+                fontWeight: '600',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                opacity: isAIGrading ? 0.7 : 1,
+                whiteSpace: 'nowrap',
+                flexShrink: 0
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.transform = 'translateY(-1px)';
+                e.target.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.4)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.boxShadow = 'none';
+              }}
+              title={"API저장"}
+            >
+            API저장 테스트
+            </button>
+
+            <button
+              onClick={handleAPIList}
+              style={{
+                padding: '0.5rem 1rem',
+                borderRadius: '8px',
+                border: '2px solid #10b981',
+                background: isAIGrading
+                  ? 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)'
+                  : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                color: 'white',
+                cursor: isAIGrading ? 'not-allowed' : 'pointer',
+                fontSize: '0.875rem',
+                fontWeight: '600',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                opacity: isAIGrading ? 0.7 : 1,
+                whiteSpace: 'nowrap',
+                flexShrink: 0
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.transform = 'translateY(-1px)';
+                e.target.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.4)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.boxShadow = 'none';
+              }}
+              title={"API리스트"}
+            >
+            API저장 리스트
+            </button>*/}
           </div>
-          
+
         </div>
       </div>
 
@@ -2325,7 +2384,7 @@ function App() {
               onPageCountChange={handlePageCountChange}
             />
           ) : (
-            <ImageViewer 
+            <ImageViewer
               imageUrl={currentPdfUrl}
               zoomScale={zoomScale}
               selectedTool={selectedTool}
@@ -2343,7 +2402,7 @@ function App() {
           )}
         </main>
       </div>
-      
+
       {/* AI 채점 결과 모달 */}
       {gradingResult && (
         <div style={{
@@ -2401,7 +2460,7 @@ function App() {
             >
               ×
             </button>
-            
+
             {/* 채점 결과 헤더 */}
             <div style={{
               textAlign: 'center',
@@ -2429,16 +2488,16 @@ function App() {
                 color: '#10b981',
                 marginBottom: '0.5rem'
               }}>
-                {gradingResult.totalScore}
+                {gradingResult.totalScore}점
               </div>
               <div style={{
                 fontSize: '1rem',
                 color: '#6b7280'
               }}>
-                총 {gradingResult.maxScore}문제
+                총 {gradingResult.maxScore}점 만점
               </div>
             </div>
-            
+
             {/* 상세 채점 결과 */}
             <div style={{
               marginBottom: '2rem'
@@ -2481,7 +2540,7 @@ function App() {
                         fontWeight: 'bold',
                         color: detail.isCorrect ? '#10b981' : '#ef4444'
                       }}>
-                        {detail.score}
+                        {detail.score}/{detail.maxScore}점
                       </div>
                     </div>
                     <div style={{
@@ -2495,7 +2554,7 @@ function App() {
                 ))}
               </div>
             </div>
-            
+
             {/* 전체 피드백 */}
             <div style={{
               background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
@@ -2521,7 +2580,7 @@ function App() {
                 {gradingResult.overallFeedback}
               </p>
             </div>
-            
+
             {/* 버튼들 */}
             <div style={{
               display: 'flex',
@@ -2533,49 +2592,16 @@ function App() {
             }}>
               <button
                 onClick={() => {
-                  // 현재 교재와 페이지 정보
-                  const bookTitle = files[activeFileIndex]?.title || '2023 소마 프리미어';
-                  const pageNum = currentPageNum;
-                  
-                  console.log('📍 채점 결과 표시 시도:', { bookTitle, pageNum });
-                  
-                  // 좌표 맵핑에서 현재 교재/페이지 찾기
-                  const pageCoordinates = GRADING_COORDINATES[bookTitle]?.[pageNum];
-                  
-                  if (!pageCoordinates) {
-                    alert(`⚠️ "${bookTitle}" 교재의 ${pageNum}페이지에 대한 좌표 정보가 없습니다.\n\n개발자에게 좌표를 추가 요청해주세요!`);
-                    console.warn(`좌표 정보 없음:`, { bookTitle, pageNum, availableBooks: Object.keys(GRADING_COORDINATES) });
-                    return;
-                  }
-                  
                   // 채점 결과를 기반으로 O, X 표시 생성
-                  const marks = gradingResult.details.map((detail) => {
-                    const coords = pageCoordinates[detail.question];
-                    
-                    if (!coords) {
-                      console.warn(`좌표 없음: ${bookTitle} 페이지 ${pageNum} 문제 ${detail.question}`);
-                      return null; // 좌표 없으면 표시 안 함
-                    }
-                    
-                    console.log(`✅ 표시 위치: ${detail.question} → (${coords.x}, ${coords.y})`);
-                    
-                    return {
-                      type: detail.isCorrect ? 'correct' : 'incorrect',
-                      x: coords.x,
-                      y: coords.y,
-                      question: detail.question,
-                      score: detail.score,
-                      isCorrect: detail.isCorrect
-                    };
-                  }).filter(Boolean); // null 제거
-                  
-                  if (marks.length === 0) {
-                    alert('표시할 수 있는 문제가 없습니다. 좌표 설정을 확인해주세요.');
-                    return;
-                  }
-                  
-                  console.log('🎯 최종 표시할 마크:', marks);
-                  
+                  const marks = gradingResult.details.map((detail, index) => ({
+                    type: detail.isCorrect ? 'correct' : 'incorrect',
+                    x: 200 + (index * 50), // 문제별로 좌우로 배치
+                    y: 150 + (index * 100), // 문제별로 위아래로 배치
+                    question: detail.question,
+                    score: detail.score,
+                    maxScore: detail.maxScore
+                  }));
+
                   const event = new CustomEvent('addGradingMarks', {
                     detail: { marks }
                   });
@@ -2612,7 +2638,7 @@ function App() {
                 </svg>
                 PDF에 표시하기
               </button>
-              
+
               <button
                 onClick={() => setGradingResult(null)}
                 style={{
@@ -2643,7 +2669,7 @@ function App() {
           </div>
         </div>
       )}
-      
+
       {/* 플로팅 컨트롤 패널 */}
       <div style={{
         position: 'fixed',
@@ -2737,7 +2763,7 @@ function App() {
               </svg>
               녹음 & 재생
             </div>
-            
+
             {/* 녹음 버튼 */}
             <button
               onClick={handleRecordingToggle}
@@ -2827,7 +2853,7 @@ function App() {
                       재생
                     </span>
                   </button>
-                  
+
                   <button
                     onClick={handleCombinedStop}
                     disabled={!isPlaying && !isReplaying}
@@ -2884,7 +2910,7 @@ function App() {
                     <span>{formatTime(currentTime)}</span>
                     <span>{formatTime(audioDuration)}</span>
                   </div>
-                  
+
                   <div style={{
                     width: '100%',
                     height: '6px',
@@ -2932,7 +2958,7 @@ function App() {
             {/* 통합 재생 버튼 (필기 + 음성) */}
             {(audioUrl || strokeData.length > 0) && !isRecording && (
               <>
-                <button
+                {/*<button
                   onClick={handleCombinedReplay}
                   disabled={isReplaying || isPlaying}
                   style={{
@@ -2968,8 +2994,8 @@ function App() {
                   <span style={{ fontSize: '0.875rem', fontFamily: 'var(--font-ui)' }}>
                     {(isReplaying || isPlaying) ? '재생 중...' : '학습 재생'}
                   </span>
-                </button>
-                
+                </button>*/}
+
                 {/* 애니메이션 토글 버튼 */}
                 <button
                   onClick={() => setEnableStrokeAnimation(!enableStrokeAnimation)}

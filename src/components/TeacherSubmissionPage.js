@@ -13,19 +13,19 @@ const TeacherSubmissionPage = ({ onBackToBookList, onViewSubmission }) => {
     // localStorage에서 실제 제출 데이터 가져오기
     const loadSubmissions = () => {
       const savedSubmissions = localStorage.getItem('studentSubmissions');
-      console.log('🔍 localStorage 확인:', savedSubmissions ? '데이터 있음' : '데이터 없음');
+//      console.log('🔍 localStorage 확인:', savedSubmissions ? '데이터 있음' : '데이터 없음');
       
       if (savedSubmissions) {
         try {
           const parsedSubmissions = JSON.parse(savedSubmissions);
           console.log('📚 로드된 학생 제출물:', parsedSubmissions.length, '개');
-          console.log('제출 데이터 상세:', parsedSubmissions);
+//          console.log('제출 데이터 상세:', parsedSubmissions);
           
-          if (parsedSubmissions.length === 0) {
-            console.warn('⚠️ studentSubmissions는 있지만 빈 배열입니다!');
-            loadSampleSubmissions();
-            return;
-          }
+//          if (parsedSubmissions.length === 0) {
+//            console.warn('⚠️ studentSubmissions는 있지만 빈 배열입니다!');
+//            loadSampleSubmissions();
+//            return;
+//          }
           
           // 제출 데이터를 TeacherSubmissionPage 형식으로 변환
           const formattedSubmissions = parsedSubmissions.map(sub => {
@@ -50,8 +50,8 @@ const TeacherSubmissionPage = ({ onBackToBookList, onViewSubmission }) => {
       }
       
       // 저장된 데이터가 없으면 샘플 데이터 표시
-      console.log('ℹ️ 저장된 제출물 없음 - 샘플 데이터 표시');
-      loadSampleSubmissions();
+//      console.log('ℹ️ 저장된 제출물 없음 - 샘플 데이터 표시');
+//      loadSampleSubmissions();
     };
     
     const loadSampleSubmissions = () => {
@@ -689,6 +689,7 @@ const TeacherSubmissionPage = ({ onBackToBookList, onViewSubmission }) => {
   const handleViewSubmission = (submission) => {
     // setSelectedSubmission(submission);
     if (onViewSubmission) {
+        window.localStorage.setItem("studentSubmissionSelect", JSON.stringify(submission));
       onViewSubmission(submission);
     }
   };

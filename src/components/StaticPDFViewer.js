@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
+import { Base64 } from 'js-base64';
 
 // PDF.js worker 설정 - CDN 사용 (API 버전과 일치)
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@5.4.149/build/pdf.worker.min.mjs';
@@ -830,7 +831,8 @@ const StaticPDFViewer = forwardRef(({
         canvasWidth: canvasWidth, // 원본 캔버스 크기도 저장 (디버깅용)
         canvasHeight: canvasHeight,
         timestamp: strokeStartTime, // 스트로크 시작 시간 (밀리초)
-        isRecording: isRecording
+        isRecording: isRecording,
+        student_mem_seq:Base64.decode(window.sessionStorage.getItem("noma@mem_seq")),
       };
       
       console.log('✏️ 스트로크 저장됨:', {

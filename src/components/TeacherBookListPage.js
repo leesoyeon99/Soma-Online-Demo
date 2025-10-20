@@ -1,20 +1,21 @@
 import React, { useState } from 'react';
 import TeacherSubmissionPage from './TeacherSubmissionPage';
 
+import * as commonJs from '../component/CommonJs';
+//import GlobalStore from '../store/GlobalStore';
+import { API_RES_CODE,  } from '../component/AppConstants';
+import { Base64 } from 'js-base64';
+import CommonUtils from '../utils/CommonUtils';
+
 const TeacherBookListPage = ({ files, onBookSelect, onBackToLogin, onGoToSubmissions, notifications, setNotifications }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [favorites, setFavorites] = useState(new Set([0]));
+  const [favorites, setFavorites] = useState(new Set());
   const [activeTab, setActiveTab] = useState('books'); // 'books' 또는 'submissions'
 
   const handleFavoriteToggle = (index) => {
-    const somaIndex = files.findIndex(f => f.title === '2023 소마 프리미어');
-    
     const newFavorites = new Set(favorites);
     if (newFavorites.has(index)) {
-      // 소마 프리미어는 제거 불가
-      if (index !== somaIndex) {
-        newFavorites.delete(index);
-      }
+      newFavorites.delete(index);
     } else {
       newFavorites.add(index);
     }
@@ -36,6 +37,50 @@ const TeacherBookListPage = ({ files, onBookSelect, onBackToLogin, onGoToSubmiss
     // 그 다음은 제목순
     return a.title.localeCompare(b.title);
   });
+
+  const btnLogOut = () => {
+        window.sessionStorage.removeItem("noma@mem_seq");
+        window.sessionStorage.removeItem("noma@center_seq");
+        window.sessionStorage.removeItem("noma@group_code");
+        window.sessionStorage.removeItem("noma@login_id");
+        window.sessionStorage.removeItem("noma@mem_name");
+        window.sessionStorage.removeItem("noma@login_token");
+        window.sessionStorage.removeItem("noma@secure_token");
+        onBackToLogin();
+    }
+
+
+    const studentSubmissionList = async() => {
+//        studentSubmissions
+        const mem_seq = Base64.decode(window.sessionStorage.getItem("noma@mem_seq"));
+
+//        const studentSubmission = JSON.parse( window.localStorage.getItem("studentSubmission") );
+//        const currentPage = studentSubmission.currentPage;
+//        const book_id = files[activeFileIndex].id;
+
+        let bodyData = {
+            mem_seq:mem_seq,
+//            currentPage:currentPage,
+//            book_id:book_id,
+        };
+        commonJs.fetchApiCall("S", "studentSubmissionList", bodyData)
+        .then(responseJson => {
+            if (responseJson.result_code === API_RES_CODE.SUCCESS) {
+                let subList = responseJson.studentSubmissionList;
+                let newSubList = [];
+                for(var i=0; i<subList.length; i++){
+                    newSubList.push(JSON.parse(subList[i].strokeData));
+                }
+
+                window.localStorage.setItem("studentSubmissions", ...newSubList);
+                setActiveTab('submissions');
+            } else {
+                CommonUtils.showServerErr(responseJson.result_code, responseJson.result_message);
+            }
+        });
+
+
+    }
 
   return (
     <div style={{
@@ -85,7 +130,7 @@ const TeacherBookListPage = ({ files, onBookSelect, onBackToLogin, onGoToSubmiss
                 e.target.style.boxShadow = 'none';
               }}
             >
-              ← 로그인으로
+              ← 홈으로
             </button>
             
             
@@ -132,7 +177,8 @@ const TeacherBookListPage = ({ files, onBookSelect, onBackToLogin, onGoToSubmiss
                 교재
               </button>
               <button
-                onClick={() => setActiveTab('submissions')}
+                //onClick={() => setActiveTab('submissions')}
+                onClick={() => studentSubmissionList()}
                 style={{
                   background: activeTab === 'submissions' ? 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)' : 'transparent',
                   color: activeTab === 'submissions' ? 'white' : '#64748b',
@@ -169,6 +215,34 @@ const TeacherBookListPage = ({ files, onBookSelect, onBackToLogin, onGoToSubmiss
                 )}
               </button>
             </div>
+
+            {(window.sessionStorage.getItem("noma@secure_token") !== null && window.sessionStorage.getItem("noma@secure_token") !== "")  &&
+            <button
+              //onClick={onBackToLogin}
+              onClick={btnLogOut}
+              style={{
+                background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '0.5rem 1rem',
+                cursor: 'pointer',
+                fontSize: '0.9rem',
+                fontWeight: '600',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.transform = 'translateY(-1px)';
+                e.target.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.4)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.boxShadow = 'none';
+              }}
+            >
+              ← 로그아웃
+            </button>
+            }
             
           </div>
         </div>
@@ -288,18 +362,17 @@ const TeacherBookListPage = ({ files, onBookSelect, onBackToLogin, onGoToSubmiss
                       border: '2px solid rgba(59, 130, 246, 0.2)',
                       boxShadow: '0 8px 32px rgba(30, 58, 138, 0.2)',
                       position: 'relative',
-                      overflow: 'hidden',
-                      willChange: 'transform, box-shadow'
+                      overflow: 'hidden'
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-4px)';
-                      e.currentTarget.style.boxShadow = '0 12px 40px rgba(30, 58, 138, 0.3)';
-                      e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.4)';
+                      e.target.style.transform = 'translateY(-4px)';
+                      e.target.style.boxShadow = '0 12px 40px rgba(30, 58, 138, 0.3)';
+                      e.target.style.borderColor = 'rgba(59, 130, 246, 0.4)';
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = '0 8px 32px rgba(30, 58, 138, 0.2)';
-                      e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.2)';
+                      e.target.style.transform = 'translateY(0)';
+                      e.target.style.boxShadow = '0 8px 32px rgba(30, 58, 138, 0.2)';
+                      e.target.style.borderColor = 'rgba(59, 130, 246, 0.2)';
                     }}
                   >
                     {/* 즐겨찾기 버튼 */}

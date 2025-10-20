@@ -1,9 +1,19 @@
 import React, { useState } from 'react';
 
+
+import * as commonJs from '../component/CommonJs';
+//import GlobalStore from '../store/GlobalStore';
+import { API_RES_CODE,  } from '../component/AppConstants';
+import { Base64 } from 'js-base64';
+
 const TeacherLoginPage = ({ onLogin }) => {
+    if(window.sessionStorage.getItem("noma@secure_token") !== null && window.sessionStorage.getItem("noma@secure_token") !== "") {
+        onLogin();
+    }
+
   const [formData, setFormData] = useState({
-    id: '',
-    password: ''
+    id: 'ams001',
+    password: 'abcde12345'
   });
 
   const handleInputChange = (e) => {
@@ -17,7 +27,39 @@ const TeacherLoginPage = ({ onLogin }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (formData.id && formData.password) {
-      onLogin();
+      //onLogin();
+      const login_id = formData.id;
+      const login_pwd = formData.password;
+      const site = "MS";
+      //const memberGradeCode = this.state.memberGradeCode;
+
+      let bodyData = {login_id:login_id, login_pwd:login_pwd, login_type:'E'};
+      commonJs.fetchApiCall(site, "answer1000", bodyData)
+      .then(responseJson => {
+
+          if(responseJson.result_code === API_RES_CODE.SUCCESS) {
+              const member = responseJson.member;
+
+              if(member.MEM_GRADE_CODE === "600" || member.MEM_GRADE_CODE === "700" || member.MEM_GRADE_CODE === "9900" ){
+                  alert("강사 계정으로 로그인 가능 합니다.");
+                  return;
+              }
+              window.sessionStorage.setItem("noma@mem_seq", Base64.encode(member.MEM_SEQ));
+              window.sessionStorage.setItem("noma@center_seq", Base64.encode(member.CENTER_SEQ));
+              window.sessionStorage.setItem("noma@group_code", Base64.encode(member.GROUP_CODE));
+              window.sessionStorage.setItem("noma@login_id", Base64.encode(member.LOGIN_ID));
+              window.sessionStorage.setItem("noma@mem_name", Base64.encode(member.MEM_NAME));
+              window.sessionStorage.setItem("noma@login_token", Base64.encode(member.LOGIN_TOKEN));
+              window.sessionStorage.setItem("noma@secure_token", Base64.encode(responseJson.secure_token));
+
+              onLogin();
+          }
+          else
+          {
+              alert('로그인 정보가 올바르지 않습니다. 다시 확인해주세요.');
+          }
+
+      });
     } else {
       alert('아이디와 비밀번호를 입력해주세요.');
     }
@@ -189,6 +231,34 @@ const TeacherLoginPage = ({ onLogin }) => {
           >
             강사 로그인
           </button>
+
+
+          <button
+              onClick={onLogin}
+              style={{
+                background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '12px',
+                padding: '0.875rem 1.5rem',
+                fontSize: '1rem',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                fontFamily: 'var(--font-ui)',
+                boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.transform = 'translateY(-2px)';
+                e.target.style.boxShadow = '0 8px 20px rgba(59, 130, 246, 0.4)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.3)';
+              }}
+            >
+              로그인 취소
+            </button>
         </form>
 
         {/* 데모 안내 */}

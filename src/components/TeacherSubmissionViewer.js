@@ -1,6 +1,12 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import StaticPDFViewer from './StaticPDFViewer';
 
+import * as commonJs from '../component/CommonJs';
+//import GlobalStore from '../store/GlobalStore';
+import { API_RES_CODE,  } from '../component/AppConstants';
+import { Base64 } from 'js-base64';
+import CommonUtils from '../utils/CommonUtils';
+
 const TeacherSubmissionViewer = ({ 
   submission, 
   onBackToSubmissions, 
@@ -132,11 +138,11 @@ const TeacherSubmissionViewer = ({
   // 첨삭 저장
   const handleSaveFeedback = () => {
     if (teacherAnnotations.length === 0) {
-      alert('첨삭할 내용이 없습니다.');
-      return;
+      //alert('첨삭할 내용이 없습니다.');
+      //return;
     }
     
-    const feedback = {
+    /*const feedback = {
       id: Date.now(),
       teacherId: 'teacher1',
       teacherName: '선생님',
@@ -151,7 +157,42 @@ const TeacherSubmissionViewer = ({
       onSaveFeedback(feedback);
     }
     
-    alert('첨삭이 저장되었습니다!');
+    alert('첨삭이 저장되었습니다!');*/
+
+    const mem_seq = Base64.decode(window.sessionStorage.getItem("noma@mem_seq"));
+    const teacherId = Base64.decode(window.sessionStorage.getItem("noma@login_id"));
+    const teacherName = Base64.decode(window.sessionStorage.getItem("noma@mem_name"));
+    //const book_id = files[activeFileIndex].id;
+
+    const studentSubmissionSelect = window.localStorage.getItem("studentSubmissionSelect");
+    //const book_id = studentSubmissionSelect.book_id;
+//    console.log("studentSubmissionSelect ======================== ", studentSubmissionSelect);
+//    console.log("studentSubmissionSelect ========================>>>>> ", studentSubmissionSelect);
+
+
+//return;
+    let bodyData = {
+          id: Date.now(),
+          mem_seq: mem_seq,
+          teacherId: teacherId,
+          teacherName: teacherName,
+          time_stamp: new Date().toISOString(),
+          feedbackStrokeData: teacherAnnotations,
+          studentSubmissionId: submission.id,
+          bookTitle: submission.bookTitle,
+          bookUrl: submission.bookUrl
+    };
+    commonJs.fetchApiCall("S", "teacherSubmissionSave", bodyData)
+    .then(responseJson => {
+        if (responseJson.result_code === API_RES_CODE.SUCCESS) {
+            alert('첨삭이 저장되었습니다!');
+        } else {
+            CommonUtils.showServerErr(responseJson.result_code, responseJson.result_message);
+        }
+    });
+
+
+
   };
 
   // 줌 기능
