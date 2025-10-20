@@ -370,14 +370,14 @@ const BookListPage = ({
                     overflow: 'hidden'
                   }}
                   onMouseEnter={(e) => {
-                    e.target.style.transform = 'translateY(-4px) scale(1.02)';
-                    e.target.style.boxShadow = '0 20px 25px -5px rgba(0, 0, 0, 0.1)';
-                    e.target.style.borderColor = '#f97316';
+                    e.currentTarget.style.transform = 'translateY(-4px) scale(1.02)';
+                    e.currentTarget.style.boxShadow = '0 20px 25px -5px rgba(0, 0, 0, 0.1)';
+                    e.currentTarget.style.borderColor = '#f97316';
                   }}
                   onMouseLeave={(e) => {
-                    e.target.style.transform = 'translateY(0) scale(1)';
-                    e.target.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.05)';
-                    e.target.style.borderColor = '#f1f5f9';
+                    e.currentTarget.style.transform = 'translateY(0) scale(1)';
+                    e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.05)';
+                    e.currentTarget.style.borderColor = '#f1f5f9';
                   }}
                 >
                   {/* 즐겨찾기 버튼 */}

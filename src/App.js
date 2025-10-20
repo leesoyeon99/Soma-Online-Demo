@@ -220,21 +220,16 @@ function App() {
   }, []);
 
   // 파일 목록 - 소마 프리미어 교재들
-<<<<<<< Updated upstream
   const baseFiles = [
-    { 
-=======
-  const files = [
     {
->>>>>>> Stashed changes
       id: 1,
-      title: '2023 소마 프리미어 초급2',
+      title: '2023 소마 프리미어',
       url: '/assets/pdf/2023-프리미어 초급2-내지_DEMO_compressed.pdf',
       type: 'pdf'
     },
     {
       id: 2,
-      title: '2023 소마 프리미어',
+      title: '2023 소마 프리미어 전체',
       url: '/assets/pdf/mvp_2023_소마_프리미어.pdf',
       type: 'pdf'
     },
@@ -267,6 +262,44 @@ function App() {
       type: 'pdf'
     }))
   ];
+
+    // 📍 AI 채점 결과 표시 좌표 맵핑 (교재별 → 페이지별 → 문제별)
+    const GRADING_COORDINATES = {
+      '2023 소마 프리미어': {
+        3: { // 3페이지
+          '(1)': { x: 300, y: 900 },
+          '(2)': { x: 710, y: 900 },
+          '(3)': { x: 300, y: 1090 },
+          '(4)': { x: 710, y: 1090 },
+          '(5)': { x: 300, y: 1270 },
+          '(6)': { x: 710, y: 1270 }
+        },
+        4: { // 3페이지
+          'IDEA 1': { x: 300, y: 310 },
+          '유제 01': { x: 300, y: 970 },
+        },
+        5: { // 3페이지
+          '유제 02': { x: 265, y: 310 },
+          '유제 03': { x: 265, y: 935 },
+        },
+        6: { // 3페이지
+          '03': { x: 280, y: 320 },
+          '04': { x: 280, y: 1050 },
+        },
+        7: { // 3페이지
+          '05': { x: 310, y: 310 },
+        },
+        // 다른 페이지 추가 가능:
+        // 4: { '(1)': { x: 350, y: 850 }, ... },
+        // 5: { ... }
+      },
+      '2023 소마 프리미어 초급2': {
+        // 나중에 추가 가능
+      },
+      '2023 미래탐구 수학중3-1응용심화 셀프북 교사용': {
+        // 나중에 추가 가능
+      }
+    };
 
   // 상태 관리
   const [currentPdfUrl, setCurrentPdfUrl] = useState(files[0].url); // 첫 번째 파일을 기본으로
@@ -748,61 +781,128 @@ console.log("submission =============== ", submission);
       alert('채점할 필기 내용이 없습니다. 먼저 문제를 풀어보세요!');
       return;
     }
-
+    
     setIsAIGrading(true);
     setGradingProgress(0);
     setGradingResult(null);
-
-    // 채점 진행 시뮬레이션
+    
+    // 채점 진행 시뮬레이션 (API 호출 중 진행률 표시)
     const progressInterval = setInterval(() => {
       setGradingProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(progressInterval);
-          return 100;
+        if (prev >= 90) { // 90%까지만 자동 증가 (완료는 API 응답 후)
+          return 90;
         }
         return prev + Math.random() * 15;
       });
-    }, 200);
-
-    // 3초 후 채점 완료
-    setTimeout(() => {
-      clearInterval(progressInterval);
-      setGradingProgress(100);
-
-      // 가상의 채점 결과 생성
-      const mockGradingResult = {
-        totalScore: Math.floor(Math.random() * 30) + 70, // 70-100점
-        maxScore: 100,
-        details: [
-          {
-            question: "문제 1: 기본 개념 이해",
-            score: Math.floor(Math.random() * 15) + 15, // 15-30점
-            maxScore: 30,
-            feedback: "개념을 잘 이해하고 있습니다. 더 정확한 표현을 사용하면 좋겠습니다.",
-            isCorrect: true
-          },
-          {
-            question: "문제 2: 계산 과정",
-            score: Math.floor(Math.random() * 20) + 20, // 20-40점
-            maxScore: 40,
-            feedback: "계산 과정이 명확합니다. 단위를 꼭 표시해주세요.",
-            isCorrect: true
-          },
-          {
-            question: "문제 3: 응용 문제",
-            score: Math.floor(Math.random() * 15) + 15, // 15-30점
-            maxScore: 30,
-            feedback: "문제 해결 과정이 체계적입니다. 더 다양한 접근 방법을 시도해보세요.",
-            isCorrect: true
-          }
-        ],
+    }, 300);
+    
+    try {
+      // 1. 현재 PDF 페이지 원본 이미지 캡처 (배경만)
+      const pdfCanvas = pdfViewerRef?.current?.canvasRef?.current;
+      if (!pdfCanvas) {
+        throw new Error('PDF 캔버스를 찾을 수 없습니다.');
+      }
+      
+      // 원본 이미지 (PDF만)
+      const originalImageDataUrl = pdfCanvas.toDataURL('image/jpeg', 0.9);
+      
+      // 2. 학생 답안 이미지 캡처 (PDF + 필기)
+      const markupCanvas = pdfViewerRef?.current?.markupCanvasRef?.current;
+      if (!markupCanvas) {
+        throw new Error('마크업 캔버스를 찾을 수 없습니다.');
+      }
+      
+      // 임시 캔버스 생성하여 PDF + 필기 합성
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = pdfCanvas.width;
+      tempCanvas.height = pdfCanvas.height;
+      const tempContext = tempCanvas.getContext('2d');
+      
+      // PDF 배경 그리기
+      tempContext.drawImage(pdfCanvas, 0, 0);
+      // 필기 레이어 그리기
+      tempContext.drawImage(markupCanvas, 0, 0);
+      
+      // 학생 답안 이미지
+      const studentImageDataUrl = tempCanvas.toDataURL('image/jpeg', 0.9);
+      
+      // 3. 현재 교재 정보
+      const bookTitle = files[activeFileIndex]?.title || '2023 소마 프리미어';
+      const pageNumber = currentPageNum;
+      
+      console.log('📤 AI 채점 요청:', { bookTitle, pageNumber });
+      
+      // 4. API 요청
+      const response = await fetch('https://aiapi-fastapi-dev.t-ime.com/api/v1/soma-online/auto-grading', {
+      // const response = await fetch('http://localhost:8080/api/v1/soma-online/auto-grading', {
+          method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          imageData: [originalImageDataUrl, studentImageDataUrl],
+          bookTitle: bookTitle,
+          pageNumber: pageNumber
+        })
+      });
+      
+      const apiResponse = await response.json();
+      console.log('📥 AI 채점 응답:', apiResponse);
+      
+      // 5. 에러 코드 체크 (문제 없음 에러)
+      if (apiResponse.result_code === "9999") {
+        clearInterval(progressInterval);
+        setIsAIGrading(false);
+        setGradingProgress(0);
+        alert('채점할 문제가 없습니다. 다음 페이지로 넘어가세요!');
+        return;
+      }
+      
+      // HTTP 상태 코드 체크 (9999 아닌 다른 에러)
+      if (!response.ok) {
+        throw new Error(`API 요청 실패: ${response.status} - ${apiResponse.result_message || 'Unknown error'}`);
+      }
+      
+      // 6. 응답 데이터 파싱 (data.result에 있음!)
+      const resultList = apiResponse.data?.result || [];
+      console.log('📋 resultList:', resultList);
+      
+      // 정답 수 계산
+      const correctCount = resultList.filter(item => item.grade === 1).length;
+      const totalCount = resultList.length;
+      
+      console.log('✅ correctCount:', correctCount, 'totalCount:', totalCount);
+      
+      // 7. 프론트엔드 형식으로 변환
+      const gradingResult = {
+        totalScore: `${correctCount}/${totalCount}`, // "2/3" 형식
+        maxScore: totalCount,
+        correctCount: correctCount,
+        details: resultList.map(item => ({
+          question: item.problem_id,
+          score: item.grade === 1 ? '정답' : '오답',
+          maxScore: null, // 사용 안 함
+          feedback: item.feedback || (item.grade === 1 ? '정답입니다. 잘 풀었어요!' : '오답입니다.'),
+          isCorrect: item.grade === 1
+        })),
         overallFeedback: "전반적으로 잘 풀었습니다! 특히 기본 개념 이해가 뛰어납니다. 응용 문제에서 더 다양한 해결 방법을 시도해보면 좋겠습니다.",
         timestamp: new Date().toISOString()
       };
-
-      setGradingResult(mockGradingResult);
+      
+      clearInterval(progressInterval);
+      setGradingProgress(100);
+      setGradingResult(gradingResult);
       setIsAIGrading(false);
-    }, 3000);
+      
+      console.log('✅ AI 채점 완료:', gradingResult);
+      
+    } catch (error) {
+      console.error('❌ AI 채점 오류:', error);
+      clearInterval(progressInterval);
+      setIsAIGrading(false);
+      setGradingProgress(0);
+      alert(`AI 채점 중 오류가 발생했습니다:\n${error.message}`);
+    }
   };
 
   // 통합 중지 핸들러 (음성 + 필기 재생 중지)
@@ -1273,7 +1373,7 @@ console.log("submission =============== ", submission);
   }
 
   if (currentPage === 'admin') {
-    return <AdminPage />;
+    return <AdminPage onBackToHome={() => setCurrentPage('landing')} />;
   }
 
   // 선생님 첨삭 카드 목록 페이지
@@ -2488,14 +2588,16 @@ console.log("submission =============== ", submission);
                 color: '#10b981',
                 marginBottom: '0.5rem'
               }}>
-                {gradingResult.totalScore}점
-              </div>
+                {gradingResult.totalScore}
+                {/* {gradingResult.totalScore}점 */}
+                </div>
               <div style={{
                 fontSize: '1rem',
                 color: '#6b7280'
               }}>
-                총 {gradingResult.maxScore}점 만점
-              </div>
+                총 {gradingResult.maxScore}문제
+                {/* 총 {gradingResult.maxScore}점 만점 */}
+                </div>
             </div>
 
             {/* 상세 채점 결과 */}
@@ -2540,8 +2642,9 @@ console.log("submission =============== ", submission);
                         fontWeight: 'bold',
                         color: detail.isCorrect ? '#10b981' : '#ef4444'
                       }}>
-                        {detail.score}/{detail.maxScore}점
-                      </div>
+                        {detail.score}
+                        {/* {detail.score}/{detail.maxScore}점 */}
+                        </div>
                     </div>
                     <div style={{
                       fontSize: '0.875rem',
@@ -2592,16 +2695,49 @@ console.log("submission =============== ", submission);
             }}>
               <button
                 onClick={() => {
+                  // 현재 교재와 페이지 정보
+                  const bookTitle = files[activeFileIndex]?.title || '2023 소마 프리미어';
+                  const pageNum = currentPageNum;
+                  
+                  console.log('📍 채점 결과 표시 시도:', { bookTitle, pageNum });
+                  
+                  // 좌표 맵핑에서 현재 교재/페이지 찾기
+                  const pageCoordinates = GRADING_COORDINATES[bookTitle]?.[pageNum];
+                  
+                  if (!pageCoordinates) {
+                    alert(`⚠️ "${bookTitle}" 교재의 ${pageNum}페이지에 대한 좌표 정보가 없습니다.\n\n개발자에게 좌표를 추가 요청해주세요!`);
+                    console.warn(`좌표 정보 없음:`, { bookTitle, pageNum, availableBooks: Object.keys(GRADING_COORDINATES) });
+                    return;
+                  }
+                  
                   // 채점 결과를 기반으로 O, X 표시 생성
-                  const marks = gradingResult.details.map((detail, index) => ({
-                    type: detail.isCorrect ? 'correct' : 'incorrect',
-                    x: 200 + (index * 50), // 문제별로 좌우로 배치
-                    y: 150 + (index * 100), // 문제별로 위아래로 배치
-                    question: detail.question,
-                    score: detail.score,
-                    maxScore: detail.maxScore
-                  }));
-
+                  const marks = gradingResult.details.map((detail) => {
+                    const coords = pageCoordinates[detail.question];
+                    
+                    if (!coords) {
+                      console.warn(`좌표 없음: ${bookTitle} 페이지 ${pageNum} 문제 ${detail.question}`);
+                      return null; // 좌표 없으면 표시 안 함
+                    }
+                    
+                    console.log(`✅ 표시 위치: ${detail.question} → (${coords.x}, ${coords.y})`);
+                    
+                    return {
+                      type: detail.isCorrect ? 'correct' : 'incorrect',
+                      x: coords.x,
+                      y: coords.y,
+                      question: detail.question,
+                      score: detail.score,
+                      isCorrect: detail.isCorrect
+                    };
+                  }).filter(Boolean); // null 제거
+                  
+                  if (marks.length === 0) {
+                    alert('표시할 수 있는 문제가 없습니다. 좌표 설정을 확인해주세요.');
+                    return;
+                  }
+                  
+                  console.log('🎯 최종 표시할 마크:', marks);
+                  
                   const event = new CustomEvent('addGradingMarks', {
                     detail: { marks }
                   });
