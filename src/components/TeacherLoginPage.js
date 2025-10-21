@@ -6,7 +6,7 @@ import * as commonJs from '../component/CommonJs';
 import { API_RES_CODE,  } from '../component/AppConstants';
 import { Base64 } from 'js-base64';
 
-const TeacherLoginPage = ({ onLogin }) => {
+const TeacherLoginPage = ({ onLogin, onBackToLogin }) => {
     if(window.sessionStorage.getItem("noma@secure_token") !== null && window.sessionStorage.getItem("noma@secure_token") !== "") {
         onLogin();
     }
@@ -234,7 +234,7 @@ const TeacherLoginPage = ({ onLogin }) => {
 
 
           <button
-              onClick={onLogin}
+              onClick={onBackToLogin}
               style={{
                 background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
                 color: 'white',
@@ -261,7 +261,7 @@ const TeacherLoginPage = ({ onLogin }) => {
             </button>
         </form>
 
-        {/* 데모 안내 */}
+        {/* 데모 안내
         <div style={{
           marginTop: '2rem',
           padding: '1rem',
@@ -278,7 +278,7 @@ const TeacherLoginPage = ({ onLogin }) => {
           }}>
             💡 데모용 로그인: 아무 ID/비밀번호나 입력하세요
           </p>
-        </div>
+        </div>*/}
       </div>
     </div>
   );

@@ -1358,7 +1358,10 @@ console.log("submission =============== ", submission);
   }
 
   if (currentPage === 'teacherLogin') {
-    return <TeacherLoginPage onLogin={handleTeacherLogin} />;
+    return <TeacherLoginPage
+        onLogin={handleTeacherLogin}
+        onBackToLogin={handleLogout}
+    />;
   }
 
   if (currentPage === 'teacherBookList') {
