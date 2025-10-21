@@ -19,6 +19,9 @@ export const apiUrl2 = isRealServer ? "https://otapp.t-ime.com/" : "http://devot
 
 //export const pdfPassword = "timebook!@#45";          // 비번이 걸려 있는 pdf렌더링 할때 자동으로 파일 오픈
 
+export const aiApiUrl = "https://aiapi-fastapi-dev.t-ime.com/"; // aiapi-fastapi-dev 서버. AI API
+// export const aigradingApiUrl = isRealServer ? "https://aiapi-fastapi-dev.t-ime.com/" : "https://aiapi-fastapi-dev.t-ime.com/"; // aiapi-fastapi-dev 서버. AI 채점 API
+
 export function fetchApiCall(site, api, bodyData)  {
 	//let bodyData = {class_id:class_id};
 	if(site === "S") {

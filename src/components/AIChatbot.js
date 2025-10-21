@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { aiApiUrl } from '../component/CommonJs';
 
 // API 설정 - 환경변수로 분리 가능
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://aiapi-fastapi-dev.t-ime.com';
+// const API_BASE_URL = aiApiUrl;
 // const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000';
 
 const AIChatbot = ({ 
@@ -271,7 +272,7 @@ const AIChatbot = ({
         historyCount: recentHistory.length
       });
 
-      const response = await fetch(`${API_BASE_URL}/api/v1/soma-online/ai-chat`, {
+      const response = await fetch(`${aiApiUrl}/api/v1/soma-online/ai-chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -389,7 +390,7 @@ const AIChatbot = ({
         ...(pageImage && { imageData: pageImage })
       };
 
-      const response = await fetch(`${API_BASE_URL}/api/v1/soma-online/ai-chat`, {
+      const response = await fetch(`${aiApiUrl}/api/v1/soma-online/ai-chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

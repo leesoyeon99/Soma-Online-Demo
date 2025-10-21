@@ -1682,7 +1682,7 @@ export default function AdminPage({ onBackToHome }) {
             )}
             
             {/* 선택된 페이지 요약 */}
-            <div style={{ 
+            {/* <div style={{ 
               padding: '20px',
               background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)',
               borderRadius: '12px',
@@ -1766,7 +1766,7 @@ export default function AdminPage({ onBackToHome }) {
                   선택된 페이지가 없습니다
                 </div>
               )}
-            </div>
+            </div> */}
             
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'space-between' }}>
               <button 

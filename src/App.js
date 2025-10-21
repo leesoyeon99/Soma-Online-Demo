@@ -17,6 +17,7 @@ import { Base64 } from 'js-base64';
 import * as commonJs from './component/CommonJs';
 import { API_RES_CODE,  } from './component/AppConstants';
 import CommonUtils from './utils/CommonUtils';
+import { aiApiUrl } from './component/CommonJs';
 
 function App() {
   console.log('App 컴포넌트 렌더링 시작');
@@ -833,7 +834,7 @@ console.log("submission =============== ", submission);
       console.log('📤 AI 채점 요청:', { bookTitle, pageNumber });
       
       // 4. API 요청
-      const response = await fetch('https://aiapi-fastapi-dev.t-ime.com/api/v1/soma-online/auto-grading', {
+      const response = await fetch(`${aiApiUrl}/api/v1/soma-online/auto-grading`, {
       // const response = await fetch('http://localhost:8080/api/v1/soma-online/auto-grading', {
           method: 'POST',
         headers: {
