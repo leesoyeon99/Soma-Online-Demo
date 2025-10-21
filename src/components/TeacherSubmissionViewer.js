@@ -40,14 +40,6 @@ const TeacherSubmissionViewer = ({
   const [enableStrokeAnimation] = useState(true); // 스트로크 애니메이션 활성화
   const [teacherAudioDuration, setTeacherAudioDuration] = useState(0); // 선생 오디오 길이
   
-  // 샘플 첨삭 텍스트 (PDF 위에 표시될 내용)
-  const sampleFeedbackTexts = [
-    { text: "좋아요! 계산이 정확해요", x: 200, y: 300, color: '#ef4444' },
-    { text: "단위를 써주세요", x: 350, y: 450, color: '#3b82f6' },
-    { text: "여기서 실수했어요", x: 180, y: 600, color: '#f59e0b' },
-    { text: "과정이 명확해요 👍", x: 400, y: 200, color: '#10b981' }
-  ];
-  
   // 오디오 재생 상태
   const [isPlaying, setIsPlaying] = useState(false);
   const [isReplaying, setIsReplaying] = useState(false);
@@ -361,7 +353,7 @@ const TeacherSubmissionViewer = ({
     });
     
     // 백엔드 API 호출
-    commonJs.fetchApiCall("S", "teacherFeedbackSend", feedback)
+    commonJs.fetchApiCall("S", "teacherSubmissionSave", feedback)
       .then(responseJson => {
         if (responseJson.result_code === API_RES_CODE.SUCCESS) {
           alert('학생에게 첨삭이 전송되었습니다!');
@@ -1265,7 +1257,7 @@ const TeacherSubmissionViewer = ({
             studentStrokeData={null}
             onPageCountChange={handlePageCountChange}
             onPageChange={handlePageChange}
-            feedbackTexts={sampleFeedbackTexts}
+            feedbackTexts={[]}
           />
           
           {/* 줌 컨트롤 */}
@@ -1575,7 +1567,7 @@ const TeacherSubmissionViewer = ({
               e.currentTarget.style.transform = 'translateY(0)';
               e.currentTarget.style.boxShadow = 'none';
             }}
-            title={isTeacherReplaying ? '재생 중지' : '선생 첨삭 재생'}
+            title={isTeacherReplaying ? '재생 중지' : '재생'}
           >
             <svg 
               width="20" 
@@ -1596,7 +1588,7 @@ const TeacherSubmissionViewer = ({
                 <polygon points="5 3 19 12 5 21 5 3" />
               )}
             </svg>
-            {isTeacherReplaying ? '재생 중지' : '선생 첨삭 재생'}
+            {isTeacherReplaying ? '재생 중지' : '재생'}
           </button>
         </div>
       </div>
