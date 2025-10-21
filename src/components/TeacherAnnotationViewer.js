@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import StaticPDFViewer from './StaticPDFViewer';
 
 // CSS 애니메이션 추가
 const feedbackAnimationStyle = `
@@ -22,9 +23,8 @@ const TeacherAnnotationViewer = ({
   const canvasRef = useRef(null);
   const markupCanvasRef = useRef(null);
   const audioRef = useRef(null);
-  // const imageRef = useRef(null);
+  const pdfViewerRef = useRef(null);
   
-  const [imageLoaded, setImageLoaded] = useState(false);
   const [zoomScale, setZoomScale] = useState(1.0);
   
   // 첨삭 도구 상태
@@ -32,23 +32,10 @@ const TeacherAnnotationViewer = ({
   const [selectedColor, setSelectedColor] = useState('#ef4444');
   const [brushSize, setBrushSize] = useState(3);
   
-  // 그리기 상태
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [lastPos, setLastPos] = useState({ x: 0, y: 0 });
-  const [currentPath, setCurrentPath] = useState([]);
   
   // 첨삭 데이터
   const [teacherAnnotations, setTeacherAnnotations] = useState([]);
-  const [showStudentWork, setShowStudentWork] = useState(true);
-  const [showTeacherAnnotations, setShowTeacherAnnotations] = useState(true);
   
-  // 샘플 첨삭 텍스트 (PDF/이미지 위에 표시될 내용)
-  const sampleFeedbackTexts = [
-    { text: "계산 과정이 정확해요! 👍", x: 180, y: 320, color: '#10b981', id: 1 },
-    { text: "단위를 써주세요", x: 250, y: 280, color: '#ef4444', id: 2 },
-    { text: "이 부분을 다시 확인해보세요", x: 120, y: 420, color: '#f59e0b', id: 3 },
-    { text: "좋은 접근입니다!", x: 200, y: 500, color: '#3b82f6', id: 4 }
-  ];
   
   // 오디오 재생 상태
   const [isPlaying, setIsPlaying] = useState(false);
@@ -96,420 +83,39 @@ const TeacherAnnotationViewer = ({
     }
   }, [submission]);
 
-  // 가상의 학생 필기 이미지 생성
-  const createStudentWorkImage = useCallback(() => {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
+  // PDF 파일 경로 추출 (useMemo로 최적화)
+  const pdfFilePath = useMemo(() => {
+    // pdfFileName 또는 bookUrl에서 전체 경로 가져오기
+    const pdfPath = submission?.pdfFileName || submission?.bookUrl;
     
-    // 캔버스 크기 설정 (A4 비율)
-    canvas.width = 800;
-    canvas.height = 1000;
+    console.log('🔍 PDF 경로 계산 중:', {
+      'submission?.pdfFileName': submission?.pdfFileName,
+      'submission?.bookUrl': submission?.bookUrl,
+      'pdfPath': pdfPath
+    });
     
-    // 배경 (흰색)
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    // 교재 제목
-    ctx.fillStyle = '#1e3a8a';
-    ctx.font = 'bold 24px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText(submission?.bookTitle || '소마 프리미어 교재', canvas.width / 2, 50);
-    
-    // 학생 이름
-    ctx.fillStyle = '#64748b';
-    ctx.font = '16px Arial';
-    ctx.textAlign = 'left';
-    ctx.fillText(`학생: ${submission?.studentName || '김학생'}`, 50, 100);
-    
-    // 문제 영역
-    ctx.fillStyle = '#374151';
-    ctx.font = '18px Arial';
-    ctx.fillText('문제 1. 다음 수식을 계산하시오.', 50, 150);
-    ctx.fillText('2x + 3y = 12', 50, 180);
-    ctx.fillText('x - y = 1', 50, 210);
-    
-    // 학생 필기 시뮬레이션 (더 현실적으로 - 흔들린 선, 지워진 흔적 등)
-    ctx.strokeStyle = '#6b7280';
-    ctx.lineWidth = 2;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    
-    // 학생이 그린 선들 (흔들린 느낌)
-    ctx.beginPath();
-    ctx.moveTo(100, 250);
-    ctx.lineTo(120, 248);
-    ctx.lineTo(140, 252);
-    ctx.lineTo(160, 249);
-    ctx.lineTo(180, 251);
-    ctx.lineTo(200, 250);
-    ctx.stroke();
-    
-    // 지워진 흔적 (연한 회색)
-    ctx.strokeStyle = '#d1d5db';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(100, 280);
-    ctx.lineTo(200, 280);
-    ctx.stroke();
-    
-    // 다시 쓴 선 (더 진한 회색)
-    ctx.strokeStyle = '#6b7280';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(100, 280);
-    ctx.lineTo(250, 280);
-    ctx.stroke();
-    
-    // 학생이 쓴 답 (흔들린 글씨)
-    ctx.fillStyle = '#6b7280';
-    ctx.font = '14px Arial';
-    ctx.fillText('x = 3', 100, 320);
-    ctx.fillText('y = 2', 100, 340);
-    
-    // 추가 문제
-    ctx.fillStyle = '#374151';
-    ctx.font = '18px Arial';
-    ctx.fillText('문제 2. 그래프를 그리시오.', 50, 400);
-    
-    // 학생이 그린 그래프 (더 현실적으로 - 흔들린 선, 불완전한 축)
-    ctx.strokeStyle = '#6b7280';
-    ctx.lineWidth = 2;
-    
-    // x축 (흔들린 선)
-    ctx.beginPath();
-    ctx.moveTo(100, 500);
-    ctx.lineTo(120, 498);
-    ctx.lineTo(140, 502);
-    ctx.lineTo(160, 499);
-    ctx.lineTo(180, 501);
-    ctx.lineTo(200, 500);
-    ctx.lineTo(220, 502);
-    ctx.lineTo(240, 499);
-    ctx.lineTo(260, 501);
-    ctx.lineTo(280, 500);
-    ctx.lineTo(300, 502);
-    ctx.stroke();
-    
-    // y축 (흔들린 선)
-    ctx.beginPath();
-    ctx.moveTo(200, 400);
-    ctx.lineTo(198, 420);
-    ctx.lineTo(202, 440);
-    ctx.lineTo(199, 460);
-    ctx.lineTo(201, 480);
-    ctx.lineTo(200, 500);
-    ctx.lineTo(202, 520);
-    ctx.lineTo(199, 540);
-    ctx.lineTo(201, 560);
-    ctx.lineTo(200, 580);
-    ctx.lineTo(202, 600);
-    ctx.stroke();
-    
-    // 불완전한 좌표축 라벨 (흔들린 글씨)
-    ctx.fillStyle = '#6b7280';
-    ctx.font = '10px Arial';
-    ctx.fillText('x', 305, 505);
-    ctx.fillText('y', 205, 395);
-    
-    // 학생이 그린 함수 그래프 (간단하고 흔들린)
-    ctx.strokeStyle = '#ef4444';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(150, 450);
-    ctx.lineTo(170, 440);
-    ctx.lineTo(190, 430);
-    ctx.lineTo(210, 420);
-    ctx.lineTo(230, 430);
-    ctx.lineTo(250, 440);
-    ctx.stroke();
-    
-    return canvas.toDataURL();
-  }, [submission]);
-
-  // 이미지 로드
-  useEffect(() => {
-    if (submission) {
-      setImageLoaded(false);
-      const imageDataUrl = createStudentWorkImage();
-      const img = new Image();
-      img.onload = () => {
-        setImageLoaded(true);
-        renderImage(img);
-      };
-      img.src = imageDataUrl;
-    }
-  }, [submission, createStudentWorkImage]);
-
-  // 이미지 렌더링
-  const renderImage = useCallback((img) => {
-    const canvas = canvasRef.current;
-    const markupCanvas = markupCanvasRef.current;
-    
-    if (canvas && markupCanvas && img) {
-      const scale = zoomScale || 1.0;
-      const width = img.width * scale;
-      const height = img.height * scale;
-      
-      // 메인 캔버스 설정
-      canvas.width = width;
-      canvas.height = height;
-      
-      // 마크업 캔버스 설정
-      markupCanvas.width = width;
-      markupCanvas.height = height;
-      
-      // 이미지 그리기
-      const context = canvas.getContext('2d');
-      context.imageSmoothingEnabled = true;
-      context.imageSmoothingQuality = 'high';
-      context.drawImage(img, 0, 0, width, height);
-      
-      // 첨삭 다시 그리기
-      redrawAnnotations();
-    }
-  }, [zoomScale]);
-
-  // 줌 변경 시 이미지 다시 렌더링
-  useEffect(() => {
-    if (imageLoaded && submission) {
-      const imageDataUrl = createStudentWorkImage();
-      const img = new Image();
-      img.onload = () => {
-        renderImage(img);
-      };
-      img.src = imageDataUrl;
-    }
-  }, [zoomScale, imageLoaded, submission, createStudentWorkImage, renderImage]);
-
-  // 마우스/터치 위치 계산
-  const getEventPos = useCallback((e) => {
-    const canvas = markupCanvasRef.current;
-    if (!canvas) return { x: 0, y: 0 };
-    
-    const rect = canvas.getBoundingClientRect();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    
-    const x = Math.max(0, Math.min(canvas.width, clientX - rect.left));
-    const y = Math.max(0, Math.min(canvas.height, clientY - rect.top));
-    
-    return { x, y };
-  }, []);
-
-  // 그리기 시작
-  const startDrawing = useCallback((e) => {
-    if (['pen', 'highlighter', 'eraser'].includes(selectedTool)) {
-      e.preventDefault();
-      setIsDrawing(true);
-      const pos = getEventPos(e);
-      setLastPos(pos);
-      setCurrentPath([pos]);
-    }
-  }, [selectedTool, getEventPos]);
-
-  // 그리기 진행
-  const draw = useCallback((e) => {
-    if (isDrawing && ['pen', 'highlighter'].includes(selectedTool)) {
-      e.preventDefault();
-      const pos = getEventPos(e);
-      const canvas = markupCanvasRef.current;
-      
-      if (canvas) {
-        const context = canvas.getContext('2d');
-        
-        context.save();
-        context.lineWidth = brushSize;
-        context.lineCap = 'round';
-        context.lineJoin = 'round';
-        
-        if (selectedTool === 'highlighter') {
-          context.globalAlpha = 0.3;
-          context.globalCompositeOperation = 'multiply';
-        } else {
-          context.globalAlpha = 1;
-          context.globalCompositeOperation = 'source-over';
-        }
-        
-        context.strokeStyle = selectedColor;
-        
-        context.beginPath();
-        context.moveTo(lastPos.x, lastPos.y);
-        context.lineTo(pos.x, pos.y);
-        context.stroke();
-        
-        setCurrentPath(prev => [...prev, pos]);
-        setLastPos(pos);
-        
-        context.restore();
-      }
-    } else if (isDrawing && selectedTool === 'eraser') {
-      e.preventDefault();
-      const pos = getEventPos(e);
-      const canvas = markupCanvasRef.current;
-      
-      if (canvas) {
-        const context = canvas.getContext('2d');
-        const eraseSize = brushSize * 2;
-        
-        context.save();
-        context.globalCompositeOperation = 'destination-out';
-        context.beginPath();
-        context.arc(pos.x, pos.y, eraseSize/2, 0, 2 * Math.PI);
-        context.fill();
-        context.restore();
-      }
-    }
-  }, [isDrawing, selectedTool, getEventPos, lastPos, brushSize, selectedColor]);
-
-  // 그리기 종료
-  const stopDrawing = useCallback(() => {
-    if (isDrawing && currentPath.length > 1) {
-      const newAnnotation = {
-        type: 'stroke',
-        tool: selectedTool,
-        color: selectedColor,
-        brushSize: brushSize,
-        points: currentPath,
-        timestamp: new Date().toISOString()
-      };
-      
-      setTeacherAnnotations(prev => [...prev, newAnnotation]);
+    if (!pdfPath) {
+      console.warn('⚠️ PDF 경로를 찾을 수 없습니다. 기본값 사용');
+      return '/assets/pdf/mvp_2023_소마_프리미어.pdf';
     }
     
-    setIsDrawing(false);
-    setCurrentPath([]);
-  }, [isDrawing, currentPath, selectedTool, selectedColor, brushSize]);
-
-  // 첨삭 다시 그리기
-  const redrawAnnotations = useCallback(() => {
-    const canvas = markupCanvasRef.current;
-    if (!canvas) return;
+    console.log('📄 원본 PDF 경로:', pdfPath);
     
-    const context = canvas.getContext('2d');
-    context.clearRect(0, 0, canvas.width, canvas.height);
-    
-    // 학생 필기 그리기 (손글씨 느낌으로)
-    if (showStudentWork && submission?.strokeData && Array.isArray(submission.strokeData)) {
-      context.save();
-      
-      submission.strokeData.forEach(stroke => {
-        if (stroke && stroke.points && Array.isArray(stroke.points) && stroke.points.length > 1) {
-          // 도구별로 다른 스타일 적용
-          if (stroke.tool === 'pen') {
-            // 펜 필기 - 원래 색상 사용하되 약간 투명하게
-            context.globalAlpha = 0.8;
-            context.strokeStyle = stroke.color || '#1f2937';
-            context.lineWidth = stroke.brushSize || 2;
-            context.lineCap = 'round';
-            context.lineJoin = 'round';
-            
-            // 손글씨 느낌을 위한 약간의 불규칙성 추가
-            context.shadowColor = 'rgba(0, 0, 0, 0.1)';
-            context.shadowBlur = 1;
-            context.shadowOffsetX = 0.5;
-            context.shadowOffsetY = 0.5;
-            
-          } else if (stroke.tool === 'highlighter') {
-            // 하이라이터 - 원래 색상 사용하되 투명하게
-            context.globalAlpha = 0.4;
-            context.strokeStyle = stroke.color || '#fbbf24';
-            context.lineWidth = (stroke.brushSize || 4) + 2; // 하이라이터는 더 두껍게
-            context.lineCap = 'round';
-            context.lineJoin = 'round';
-            context.globalCompositeOperation = 'multiply';
-            
-          } else if (stroke.type === 'text') {
-            // 텍스트 - 손글씨 폰트 느낌으로
-            context.globalAlpha = 0.9;
-            context.fillStyle = stroke.color || '#1f2937';
-            context.font = `${stroke.fontSize || 14}px "Comic Sans MS", "맑은 고딕", cursive`;
-            context.textBaseline = 'top';
-            
-            // 텍스트 그림자 효과
-            context.shadowColor = 'rgba(0, 0, 0, 0.1)';
-            context.shadowBlur = 1;
-            context.shadowOffsetX = 0.5;
-            context.shadowOffsetY = 0.5;
-            
-            context.fillText(stroke.content, stroke.x, stroke.y);
-            return; // 텍스트는 stroke가 아니므로 return
-            
-          } else if (stroke.type === 'shape') {
-            // 도형 - 원래 색상 사용
-            context.globalAlpha = 0.8;
-            context.strokeStyle = stroke.color || '#1f2937';
-            context.lineWidth = stroke.brushSize || 2;
-            context.lineCap = 'round';
-            context.lineJoin = 'round';
-            
-            // 도형 그리기
-            if (stroke.shapeType === 'circle') {
-              const centerX = stroke.startX + (stroke.endX - stroke.startX) / 2;
-              const centerY = stroke.startY + (stroke.endY - stroke.startY) / 2;
-              const radius = Math.sqrt(Math.pow(stroke.endX - stroke.startX, 2) + Math.pow(stroke.endY - stroke.startY, 2)) / 2;
-              
-              context.beginPath();
-              context.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-              context.stroke();
-              return;
-              
-            } else if (stroke.shapeType === 'rectangle') {
-              context.beginPath();
-              context.rect(stroke.startX, stroke.startY, stroke.endX - stroke.startX, stroke.endY - stroke.startY);
-              context.stroke();
-              return;
-            }
-          }
-          
-          // 일반 stroke 그리기 (펜, 하이라이터)
-          if (stroke.type === 'stroke') {
-            context.beginPath();
-            context.moveTo(stroke.points[0].x, stroke.points[0].y);
-            for (let i = 1; i < stroke.points.length; i++) {
-              context.lineTo(stroke.points[i].x, stroke.points[i].y);
-            }
-            context.stroke();
-          }
-        }
-      });
-      
-      context.restore();
+    // 이미 전체 경로면 그대로 반환
+    if (pdfPath.startsWith('/assets/pdf/') || pdfPath.startsWith('/')) {
+      console.log('✅ 전체 경로 반환:', pdfPath);
+      return pdfPath;
     }
     
-    // 강사 첨삭 그리기 (원래 색상으로)
-    if (showTeacherAnnotations) {
-      teacherAnnotations.forEach(annotation => {
-        if (annotation.type === 'stroke' && annotation.points.length > 1) {
-          context.save();
-          context.strokeStyle = annotation.color;
-          context.lineWidth = annotation.brushSize;
-          context.lineCap = 'round';
-          context.lineJoin = 'round';
-          
-          if (annotation.tool === 'highlighter') {
-            context.globalAlpha = 0.3;
-            context.globalCompositeOperation = 'multiply';
-          } else {
-            context.globalAlpha = 1;
-            context.globalCompositeOperation = 'source-over';
-          }
-          
-          context.beginPath();
-          context.moveTo(annotation.points[0].x, annotation.points[0].y);
-          for (let i = 1; i < annotation.points.length; i++) {
-            context.lineTo(annotation.points[i].x, annotation.points[i].y);
-          }
-          context.stroke();
-          context.restore();
-        }
-      });
-    }
-  }, [submission?.strokeData, teacherAnnotations, showStudentWork, showTeacherAnnotations]);
+    // 파일명만 있으면 경로 추가
+    const fullPath = `/assets/pdf/${pdfPath}`;
+    console.log('➕ 경로 추가 후 반환:', fullPath);
+    return fullPath;
+  }, [submission?.pdfFileName, submission?.bookUrl]);
 
-  // 첨삭 다시 그리기 (의존성 변경 시)
-  useEffect(() => {
-    redrawAnnotations();
-  }, [redrawAnnotations]);
+
+
+
 
   // 오디오 재생 핸들러
   // 학생 제출물 통합 재생 (오디오 + 스트로크 동기화)
@@ -569,7 +175,7 @@ const TeacherAnnotationViewer = ({
   const handleTeacherFeedbackReplay = async () => {
     console.log('🎬 선생 첨삭 재생 시작');
     
-    const markupCanvas = markupCanvasRef.current;
+    const markupCanvas = pdfViewerRef?.current?.markupCanvasRef?.current;
     
     if (!markupCanvas) {
       console.error('❌ 마크업 캔버스를 찾을 수 없습니다');
@@ -1093,156 +699,41 @@ const TeacherAnnotationViewer = ({
                 </select>
               </div>
 
-              {/* 레이어 토글 */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <button
-                  onClick={() => setShowStudentWork(!showStudentWork)}
-                  style={{
-                    padding: '0.5rem',
-                    borderRadius: '8px',
-                    border: showStudentWork ? '2px solid #3b82f6' : '2px solid rgba(59, 130, 246, 0.3)',
-                    background: showStudentWork ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255, 255, 255, 0.8)',
-                    color: showStudentWork ? '#1e3a8a' : '#64748b',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    fontSize: '0.875rem'
-                  }}
-                >
-                  학생 필기
-                </button>
-                <button
-                  onClick={() => setShowTeacherAnnotations(!showTeacherAnnotations)}
-                  style={{
-                    padding: '0.5rem',
-                    borderRadius: '8px',
-                    border: showTeacherAnnotations ? '2px solid #3b82f6' : '2px solid rgba(59, 130, 246, 0.3)',
-                    background: showTeacherAnnotations ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255, 255, 255, 0.8)',
-                    color: showTeacherAnnotations ? '#1e3a8a' : '#64748b',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    fontSize: '0.875rem'
-                  }}
-                >
-                  첨삭 내용
-                </button>
-              </div>
             </div>
           </div>
 
-          {/* 이미지 뷰어 */}
+          {/* PDF 뷰어 */}
           <div style={{
             flex: 1,
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
             background: 'rgba(255, 255, 255, 0.95)',
             borderRadius: '12px',
+            padding: '1rem',
             boxShadow: '0 4px 12px rgba(30, 58, 138, 0.2)',
             border: '1px solid rgba(59, 130, 246, 0.2)',
             position: 'relative',
-            overflow: 'auto'
+            overflow: 'hidden'
           }}>
-            {!imageLoaded && (
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                height: '400px',
-                flexDirection: 'column',
-                gap: '1rem'
-              }}>
-                <div style={{
-                  width: '40px',
-                  height: '40px',
-                  border: '4px solid #e2e8f0',
-                  borderTop: '4px solid #3b82f6',
-                  borderRadius: '50%',
-                  animation: 'spin 1s linear infinite'
-                }}></div>
-                <span style={{ color: '#6b7280', fontSize: '1rem' }}>학생 필기 로딩 중...</span>
-              </div>
-            )}
-            
-            {imageLoaded && (
-              <div style={{ position: 'relative' }}>
-                <canvas
-                  ref={canvasRef}
-                  style={{
-                    border: '2px solid #e2e8f0',
-                    borderRadius: '8px',
-                    boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
-                    backgroundColor: 'white',
-                    display: 'block',
-                    position: 'relative',
-                    zIndex: 1
-                  }}
-                />
-                <canvas
-                  ref={markupCanvasRef}
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    cursor: selectedTool === 'pen' ? 'crosshair' : selectedTool === 'highlighter' ? 'crosshair' : 'grab',
-                    borderRadius: '8px',
-                    zIndex: 2,
-                    backgroundColor: 'transparent',
-                    pointerEvents: 'auto'
-                  }}
-                  onMouseDown={startDrawing}
-                  onMouseMove={draw}
-                  onMouseUp={stopDrawing}
-                  onMouseLeave={stopDrawing}
-                  onTouchStart={startDrawing}
-                  onTouchMove={draw}
-                  onTouchEnd={stopDrawing}
-                />
-                
-                {/* 선생님 첨삭 텍스트 오버레이 */}
-                {showTeacherAnnotations && sampleFeedbackTexts.map((feedback) => (
-                  <div
-                    key={feedback.id}
-                    style={{
-                      position: 'absolute',
-                      left: `${(feedback.x / 800) * 100}%`, // 800은 캔버스 기본 너비
-                      top: `${(feedback.y / 1000) * 100}%`, // 1000은 캔버스 기본 높이
-                      transform: `translate(-50%, -50%) rotate(${Math.sin(feedback.id * 0.5) * 2}deg)`, // 손글씨 느낌의 회전
-                      zIndex: 3,
-                      pointerEvents: 'none',
-                      fontFamily: '"Comic Sans MS", cursive, "Malgun Gothic", sans-serif',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      color: feedback.color,
-                      background: 'rgba(255, 255, 255, 0.95)',
-                      padding: '6px 10px',
-                      borderRadius: '8px',
-                      border: `2px solid ${feedback.color}`,
-                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
-                      whiteSpace: 'nowrap',
-                      animation: 'fadeInScale 0.5s ease-out',
-                      animationDelay: `${feedback.id * 0.2}s`,
-                      animationFillMode: 'both'
-                    }}
-                  >
-                    {feedback.text}
-                    {/* 말풍선 꼬리 */}
-                    <div
-                      style={{
-                        position: 'absolute',
-                        bottom: '-8px',
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        width: 0,
-                        height: 0,
-                        borderLeft: '8px solid transparent',
-                        borderRight: '8px solid transparent',
-                        borderTop: `8px solid ${feedback.color}`
-                      }}
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
+            <StaticPDFViewer
+              ref={pdfViewerRef}
+              pdfFileName={pdfFilePath}
+              pageNum={submission?.currentPage || 1}
+              zoomScale={zoomScale}
+              selectedTool={selectedTool}
+              selectedColor={selectedColor}
+              brushSize={brushSize}
+              isReplaying={isPlaying || isTeacherReplaying}
+              isRecording={false}
+              recordingStartTime={null}
+              onStrokeDataChange={(newStrokeData) => {
+                console.log('📝 선생 onStrokeDataChange 호출됨, 스트로크 수:', newStrokeData.length);
+                setTeacherAnnotations(newStrokeData);
+              }}
+              isTeacherMode={true}
+              studentStrokeData={submission?.strokeData}
+              onPageCountChange={() => {}}
+              onPageChange={() => {}}
+              feedbackTexts={[]}
+            />
           </div>
         </div>
 
@@ -1495,9 +986,66 @@ const TeacherAnnotationViewer = ({
               <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: '#64748b' }}>
                 <strong>학생 필기:</strong> {submission.strokeData?.length || 0}개
               </p>
-              <p style={{ margin: '0', fontSize: '0.9rem', color: '#64748b' }}>
+              <p style={{ margin: '0 0 1rem 0', fontSize: '0.9rem', color: '#64748b' }}>
                 <strong>녹음:</strong> {submission.audioUrl ? '있음' : '없음'}
               </p>
+              
+              {/* 첨삭 재생 버튼 */}
+              <button
+                onClick={submission?.isTeacherFeedback ? handleTeacherFeedbackReplay : handleStudentWorkReplay}
+                disabled={!submission?.audioBase64 && !submission?.audioUrl && (!submission?.strokeData || submission.strokeData.length === 0)}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem 1rem',
+                  borderRadius: '8px',
+                  border: isTeacherReplaying ? '2px solid #fbbf24' : '2px solid #8b5cf6',
+                  background: isTeacherReplaying ? 'rgba(251, 191, 36, 0.1)' : 'rgba(139, 92, 246, 0.2)',
+                  color: isTeacherReplaying ? '#f59e0b' : '#7c3aed',
+                  cursor: (!submission?.audioBase64 && !submission?.audioUrl && (!submission?.strokeData || submission.strokeData.length === 0)) ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.2s ease',
+                  fontSize: '1rem',
+                  fontWeight: '600',
+                  opacity: (!submission?.audioBase64 && !submission?.audioUrl && (!submission?.strokeData || submission.strokeData.length === 0)) ? 0.5 : 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem'
+                }}
+                onMouseEnter={(e) => {
+                  if (!e.currentTarget.disabled) {
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                    e.currentTarget.style.boxShadow = isTeacherReplaying 
+                      ? '0 4px 12px rgba(251, 191, 36, 0.4)' 
+                      : '0 4px 12px rgba(139, 92, 246, 0.4)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+                title={isTeacherReplaying ? '첨삭 재생 중지' : '첨삭 재생'}
+              >
+                <svg 
+                  width="20" 
+                  height="20" 
+                  viewBox="0 0 24 24" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  strokeWidth="2"
+                >
+                  {isTeacherReplaying ? (
+                    // 일시정지 아이콘
+                    <>
+                      <rect x="6" y="4" width="4" height="16" />
+                      <rect x="14" y="4" width="4" height="16" />
+                    </>
+                  ) : (
+                    // 재생 아이콘
+                    <polygon points="5 3 19 12 5 21 5 3" />
+                  )}
+                </svg>
+                {isTeacherReplaying ? '첨삭 재생 중지' : '첨삭 재생'}
+              </button>
             </div>
           </div>
         </div>
