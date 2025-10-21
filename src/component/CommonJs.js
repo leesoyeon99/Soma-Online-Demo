@@ -10,14 +10,14 @@ if(location.includes("//noma") === true){        // 운영 서버
     isRealServer = true;
 }
 
-export const apiUrl =  isRealServer ? "https://mpdf.t-ime.com/" : "http://211.219.7.51:8080/";   // //http://211.219.7.51:8080/"; //"http://localhost:60006/";  //            -- 개발 : "https://dodapnote.t-ime.com/"
+export const apiUrl =  isRealServer ? "https://noma.t-ime.com/" : "http://211.219.7.51:8080/";  //"https://devnoma.t-ime.com/";   // //"http://211.219.7.51:8080/"; //"http://localhost:60006/";  //            -- 개발 : "https://dodapnote.t-ime.com/"
 export const apiUrl1 = isRealServer ? "https://ariapp.t-ime.com/" : "https://devariapp.t-ime.com/";  //"http://localhost:60006/"; //
 export const apiUrl2 = isRealServer ? "https://otapp.t-ime.com/" : "http://devotapp.t-ime.com/";
-export const aiApiUrl = isRealServer ? "http://218.239.223.143:8889/" : "http://218.239.223.143:8889/";//"http://147.46.219.245:35013/"; //surromind AI서버
-export const mswitchImgUrl = isRealServer ? "https://mswitch.mswitch.co.kr/ari" :  "http://mswitchdev.t-ime.com/ari";
-export const editorUrl = isRealServer ? "https://adm.mswitch.co.kr" : "http://admmswitchdev.t-ime.com";
+//export const aiApiUrl = isRealServer ? "http://218.239.223.143:8889/" : "http://218.239.223.143:8889/";//"http://147.46.219.245:35013/"; //surromind AI서버
+//export const mswitchImgUrl = isRealServer ? "https://mswitch.mswitch.co.kr/ari" :  "http://mswitchdev.t-ime.com/ari";
+//export const editorUrl = isRealServer ? "https://adm.mswitch.co.kr" : "http://admmswitchdev.t-ime.com";
 
-export const pdfPassword = "timebook!@#45";          // 비번이 걸려 있는 pdf렌더링 할때 자동으로 파일 오픈
+//export const pdfPassword = "timebook!@#45";          // 비번이 걸려 있는 pdf렌더링 할때 자동으로 파일 오픈
 
 export function fetchApiCall(site, api, bodyData)  {
 	//let bodyData = {class_id:class_id};

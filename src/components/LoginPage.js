@@ -203,9 +203,39 @@ const LoginPage = ({ onLogin }) => {
           >
             로그인
           </button>
+
+            <div style={{height:'30px'}} />
+          <button
+              onClick={onLogin}
+              style={{
+                width: '100%',
+                padding: '1rem',
+                background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '12px',
+                fontSize: '1.1rem',
+                fontFamily: "'SEBANG Gothic', sans-serif",
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                boxShadow: '0 4px 6px -1px rgba(249, 115, 22, 0.3)'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.transform = 'translateY(-2px)';
+                e.target.style.boxShadow = '0 8px 15px -3px rgba(249, 115, 22, 0.4)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.boxShadow = '0 4px 6px -1px rgba(249, 115, 22, 0.3)';
+              }}
+            >
+              로그인 취소
+            </button>
+
         </form>
 
-        {/* 데모 안내 */}
+        {/* 데모 안내
         <div style={{
           marginTop: '2rem',
           padding: '1rem',
@@ -221,7 +251,7 @@ const LoginPage = ({ onLogin }) => {
           }}>
             💡 데모용 로그인: 아무 아이디/비밀번호 입력 후 로그인 버튼 클릭
           </p>
-        </div>
+        </div>*/}
       </div>
     </div>
   );

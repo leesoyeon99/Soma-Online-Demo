@@ -66,15 +66,19 @@ const TeacherBookListPage = ({ files, onBookSelect, onBackToLogin, onGoToSubmiss
         commonJs.fetchApiCall("S", "studentSubmissionList", bodyData)
         .then(responseJson => {
             if (responseJson.result_code === API_RES_CODE.SUCCESS) {
-                let subList = responseJson.studentSubmissionList;
-                let newSubList = [];
-                let newSubList1 = [];
-                for(var i=0; i<subList.length; i++){
-                    newSubList.push(JSON.parse(subList[i].strokeData));
-                }
-                newSubList1.push(newSubList);
+                window.localStorage.setItem("studentSubmissions", '');
 
-                window.localStorage.setItem("studentSubmissions", ...newSubList);
+                let subList = responseJson.studentSubmissionList;
+                if(subList.length > 0){
+                    let newSubList = [];
+                    let newSubList1 = [];
+                    for(var i=0; i<subList.length; i++){
+                        newSubList.push(JSON.parse(subList[i].strokeData));
+                    }
+                    newSubList1.push(newSubList);
+
+                    window.localStorage.setItem("studentSubmissions", ...newSubList);
+                }
                 setActiveTab('submissions');
             } else {
                 CommonUtils.showServerErr(responseJson.result_code, responseJson.result_message);
@@ -242,7 +246,7 @@ const TeacherBookListPage = ({ files, onBookSelect, onBackToLogin, onGoToSubmiss
                 e.target.style.boxShadow = 'none';
               }}
             >
-              ← 로그아웃
+              ← 로그아웃({Base64.decode(window.sessionStorage.getItem("noma@mem_name"))})
             </button>
             }
             

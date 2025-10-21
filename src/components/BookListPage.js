@@ -86,13 +86,16 @@ const BookListPage = ({
         commonJs.fetchApiCall("S", "teacherSubmissionList", bodyData)
         .then(responseJson => {
             if (responseJson.result_code === API_RES_CODE.SUCCESS) {
+                window.localStorage.setItem("teacherFeedbacks", '');
+
                 let subList = responseJson.teacherSubmissionList;
                 let newSubList = [];
-                for(var i=0; i<subList.length; i++){
-                    subList[i].feedbackStrokeData = JSON.parse(subList[i].feedbackStrokeData);
+                if(subList.length > 0){
+                    for(var i=0; i<subList.length; i++){
+                        subList[i].feedbackStrokeData = JSON.parse(subList[i].feedbackStrokeData);
+                    }
+                    window.localStorage.setItem("teacherFeedbacks", JSON.stringify(subList));
                 }
-
-                window.localStorage.setItem("teacherFeedbacks", JSON.stringify(subList));
                 setCurrentPage('teacherFeedbackCards');
             } else {
                 CommonUtils.showServerErr(responseJson.result_code, responseJson.result_message);
@@ -218,6 +221,9 @@ const BookListPage = ({
 
 
           {/* 탭 네비게이션 */}
+
+          {
+          (window.sessionStorage.getItem("noma@secure_token") !== null && window.sessionStorage.getItem("noma@secure_token") !== "") ?
           <div style={{
             display: 'flex',
             alignItems: 'center',
@@ -289,6 +295,27 @@ const BookListPage = ({
               )}
             </button>
           </div>
+          :
+          <button
+              onClick={onBackToLogin()}
+              style={{
+                background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '0.5rem 1rem',
+                cursor: 'pointer',
+                fontSize: '0.875rem',
+                fontFamily: "'SEBANG Gothic', sans-serif",
+                fontWeight: '500',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => e.target.style.transform = 'translateY(-1px)'}
+              onMouseLeave={(e) => e.target.style.transform = 'translateY(0)'}
+            >
+              ← 로그인
+            </button>
+          }
           {(window.sessionStorage.getItem("noma@secure_token") !== null && window.sessionStorage.getItem("noma@secure_token") !== "") &&
           <button
             onClick={btnLogOut}
@@ -307,7 +334,7 @@ const BookListPage = ({
             onMouseEnter={(e) => e.target.style.transform = 'translateY(-1px)'}
             onMouseLeave={(e) => e.target.style.transform = 'translateY(0)'}
           >
-            ← 로그아웃
+            ← 로그아웃({Base64.decode(window.sessionStorage.getItem("noma@mem_name"))})
           </button>
           }
         </div>
