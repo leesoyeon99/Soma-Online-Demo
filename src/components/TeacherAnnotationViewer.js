@@ -174,7 +174,7 @@ const TeacherAnnotationViewer = ({
   // 선생 첨삭 재생 (오디오 + 스트로크 동기화)
   const handleTeacherFeedbackReplay = async () => {
     console.log('🎬 선생 첨삭 재생 시작');
-    
+
     const markupCanvas = pdfViewerRef?.current?.markupCanvasRef?.current;
     
     if (!markupCanvas) {
@@ -204,15 +204,17 @@ const TeacherAnnotationViewer = ({
     // 캔버스 초기화
     const context = markupCanvas.getContext('2d');
     context.clearRect(0, 0, markupCanvas.width, markupCanvas.height);
-    
+
+    console.log(".strokeData ================= ", submission)
     // 선생 녹음 스트로크 필터링
-    const teacherRecordingStrokes = (submission?.strokeData || []).filter(
-      stroke => stroke.isRecording && typeof stroke.timestamp === 'number' && 
-                stroke.timestamp !== null && stroke.timestamp !== undefined
-    );
+//    const teacherRecordingStrokes = (submission?.strokeData || []).filter(
+//      stroke => stroke.isRecording && typeof stroke.time_stamp === 'number' &&
+//                stroke.time_stamp !== null && stroke.time_stamp !== undefined
+//    );
+    const teacherRecordingStrokes = JSON.parse(submission.strokeData);
     
     console.log('👨‍🏫 선생 녹음 스트로크:', teacherRecordingStrokes.length, '개');
-    
+
     if (teacherRecordingStrokes.length === 0) {
       console.warn('⚠️ 선생 녹음 스트로크가 없습니다!');
       setIsTeacherReplaying(false);
@@ -803,7 +805,7 @@ const TeacherAnnotationViewer = ({
                 <strong>페이지:</strong> {submission.currentPage || '정보 없음'}
               </p>
               <p style={{ margin: '0 0 0.5rem 0' }}>
-                <strong>스트로크:</strong> {submission.strokeData?.length || 0}개
+                <strong>스트로크:</strong> {JSON.parse(submission.strokeData)?.length || 0}개
               </p>
               <p style={{ margin: '0' }}>
                 <strong>오디오:</strong> {(submission.audioBase64 || submission.audioUrl) ? '있음 ✅' : '없음 ❌'}
@@ -981,10 +983,10 @@ const TeacherAnnotationViewer = ({
               border: '1px solid rgba(139, 92, 246, 0.2)'
             }}>
               <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: '#64748b' }}>
-                <strong>첨삭 횟수:</strong> {teacherAnnotations.length}개
+                <strong>첨삭 횟수:</strong> {JSON.parse(teacherAnnotations).length}개
               </p>
               <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: '#64748b' }}>
-                <strong>학생 필기:</strong> {submission.strokeData?.length || 0}개
+                <strong>학생 필기:</strong> {JSON.parse(submission.strokeData)?.length || 0}개
               </p>
               <p style={{ margin: '0 0 1rem 0', fontSize: '0.9rem', color: '#64748b' }}>
                 <strong>녹음:</strong> {submission.audioUrl ? '있음' : '없음'}
