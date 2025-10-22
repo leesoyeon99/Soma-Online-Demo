@@ -1,14 +1,14 @@
-import React, { useRef, useEffect, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
+import React, { useRef, useEffect, useState, useCallback, forwardRef, useImperativeHandle, memo } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
 import { Base64 } from 'js-base64';
 
 // PDF.js worker 설정 - CDN 사용 (API 버전과 일치)
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@5.4.149/build/pdf.worker.min.mjs';
 
-const StaticPDFViewer = forwardRef(({ 
+const StaticPDFViewerComponent = forwardRef(({
   pdfFileName = 'somapremier.pdf',
-  pageNum = 1, 
-  zoomScale = 1.0, 
+  pageNum = 1,
+  zoomScale = 1.0,
   selectedTool = 'pen',
   selectedColor = '#ef4444',
   brushSize = 3,
@@ -28,7 +28,7 @@ const StaticPDFViewer = forwardRef(({
   const markupCanvasRef = useRef(null);
   const containerRef = useRef(null);
   const canvasKeyRef = useRef(0);
-  
+
   const [pdfDoc, setPdfDoc] = useState(null);
   const [pageRendering, setPageRendering] = useState(false);
   const [savedDrawings, setSavedDrawings] = useState({}); // 페이지별 필기 데이터 저장
@@ -38,6 +38,7 @@ const StaticPDFViewer = forwardRef(({
   const [isRendering, setIsRendering] = useState(false);
   const renderTaskRef = useRef(null);
   const scrollPositionRef = useRef({ x: 0, y: 0 }); // 스크롤 위치 저장
+  const isReplayingRef = useRef(false); // 재생 상태를 ref로 관리 (재렌더링 방지)
   
   // PDF 페이지 제한 제거 - 전체 페이지 표시
   // const MAX_PAGES = 5; // 최대 5페이지만 표시
@@ -55,12 +56,17 @@ const StaticPDFViewer = forwardRef(({
   const [lastPos, setLastPos] = useState({ x: 0, y: 0 });
   const [currentPath, setCurrentPath] = useState([]);
   const [strokeStartTime, setStrokeStartTime] = useState(null); // 스트로크 시작 시간
-  
+
   // 지우개 커서 상태
   const [eraserCursor, setEraserCursor] = useState({ x: 0, y: 0, show: false });
-  
+
   // 동영상 모달 상태
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
+
+  // isReplaying 동기화 (재렌더링 방지용 ref)
+  useEffect(() => {
+    isReplayingRef.current = isReplaying;
+  }, [isReplaying]);
 
   // ref를 통해 캔버스에 접근할 수 있도록 함 (AIChatbot용)
   useImperativeHandle(ref, () => ({
@@ -135,14 +141,14 @@ const StaticPDFViewer = forwardRef(({
     }
   }, [pdfFileName, onPageCountChange, isTeacherMode]);
 
-  // 스트로크 그리기 (상대 좌표 → 절대 좌표 변환)
-  const drawStroke = (context, drawing) => {
+  // 스트로크 그리기 (상대 좌표 → 절대 좌표 변환) - useCallback으로 메모이제이션
+  const drawStroke = useCallback((context, drawing) => {
     if (drawing.points.length < 2) return;
-    
+
     const canvas = context.canvas;
     const currentCanvasWidth = canvas.width;
     const currentCanvasHeight = canvas.height;
-    
+
     // 상대 좌표(0~1)를 현재 캔버스 크기에 맞게 절대 좌표로 변환
     // points[i].x가 1보다 크면 이미 절대 좌표 (하위 호환성)
     const denormalizedPoints = drawing.points.map(point => {
@@ -157,15 +163,15 @@ const StaticPDFViewer = forwardRef(({
         return point;
       }
     });
-    
+
     context.save();
-    
+
     if (drawing.tool === 'eraser') {
       // 지우개 스트로크는 destination-out 모드로 그리기
       context.globalCompositeOperation = 'destination-out';
       context.lineCap = 'round';
       context.lineJoin = 'round';
-      
+
       // 각 점마다 원형으로 지우기
       const eraserSize = drawing.brushSize * 10 || 30;
       for (let i = 0; i < denormalizedPoints.length; i++) {
@@ -179,7 +185,7 @@ const StaticPDFViewer = forwardRef(({
       context.strokeStyle = drawing.color || '#ef4444';
       context.lineCap = 'round';
       context.lineJoin = 'round';
-      
+
       context.beginPath();
       context.moveTo(denormalizedPoints[0].x, denormalizedPoints[0].y);
       for (let i = 1; i < denormalizedPoints.length; i++) {
@@ -187,47 +193,47 @@ const StaticPDFViewer = forwardRef(({
       }
       context.stroke();
     }
-    
-    context.restore();
-  };
 
-  // 마크업 다시 그리기 (성능 최적화)
+    context.restore();
+  }, []); // 의존성 없음 - 모든 데이터를 파라미터로 받음
+
+  // 마크업 다시 그리기 (성능 최적화) - useCallback으로 메모이제이션
   const redrawMarkups = useCallback(() => {
     const markupCanvas = markupCanvasRef.current;
     if (!markupCanvas) return;
-    
+
     const context = markupCanvas.getContext('2d');
-    
+
     // 캔버스 크기가 변경되지 않았을 때만 clearRect 사용
     if (markupCanvas.width > 0 && markupCanvas.height > 0) {
       context.clearRect(0, 0, markupCanvas.width, markupCanvas.height);
     }
-    
+
     // 학생 스트로크 데이터 그리기
     if (isStudentMode && studentStrokeData) {
       studentStrokeData.forEach(drawing => {
         drawStroke(context, drawing);
       });
     }
-    
+
     // 선생님 피드백 데이터 그리기
     if (isTeacherMode && teacherFeedbackData && showTeacherFeedback) {
       teacherFeedbackData.forEach(drawing => {
         drawStroke(context, drawing);
       });
     }
-    
+
     // 현재 페이지의 필기 데이터 그리기
     const pageDrawings = savedDrawings[pageNum] || [];
     pageDrawings.forEach(drawing => {
       drawStroke(context, drawing);
     });
-    
+
     // 첨삭 텍스트 그리기 (손글씨 스타일)
     if (feedbackTexts && feedbackTexts.length > 0 && isTeacherMode) {
       feedbackTexts.forEach((feedback, index) => {
         context.save();
-        
+
         // 손글씨 스타일 폰트 설정
         context.font = '18px "Comic Sans MS", cursive, "Malgun Gothic", sans-serif';
         context.fillStyle = feedback.color || '#ef4444';
@@ -235,32 +241,33 @@ const StaticPDFViewer = forwardRef(({
         context.lineWidth = 1;
         context.textAlign = 'start';
         context.textBaseline = 'middle';
-        
+
         // 텍스트에 약간의 회전 효과 (손글씨처럼)
         const rotation = (Math.sin(index * 0.5) * 0.05); // -0.05 ~ 0.05 라디안
         context.translate(feedback.x * zoomScale, feedback.y * zoomScale);
         context.rotate(rotation);
-        
+
         // 텍스트 배경 (말풍선 효과)
         const textWidth = context.measureText(feedback.text).width;
         const padding = 8;
         const bgHeight = 25;
-        
+
         // 말풍선 배경 그리기 (호환성을 위해 직사각형 사용)
         context.fillStyle = 'rgba(255, 255, 255, 0.9)';
         context.strokeStyle = feedback.color || '#ef4444';
         context.lineWidth = 2;
         context.fillRect(-padding, -bgHeight/2, textWidth + padding*2, bgHeight);
         context.strokeRect(-padding, -bgHeight/2, textWidth + padding*2, bgHeight);
-        
+
         // 텍스트 그리기
         context.fillStyle = feedback.color || '#ef4444';
         context.fillText(feedback.text, 0, 0);
-        
+
         context.restore();
       });
     }
-  }, [savedDrawings, pageNum, isTeacherMode, studentStrokeData, isStudentMode, teacherFeedbackData, showTeacherFeedback, feedbackTexts, zoomScale]);
+  }, [pageNum, isTeacherMode, studentStrokeData, isStudentMode, teacherFeedbackData, showTeacherFeedback, feedbackTexts, zoomScale, drawStroke]);
+  // savedDrawings는 의존성에서 제외하고 내부에서 직접 참조
 
   // 전체 삭제 이벤트 리스너
   useEffect(() => {
@@ -346,227 +353,189 @@ const StaticPDFViewer = forwardRef(({
     return () => window.removeEventListener('addGradingMarks', handleAddGradingMarks);
   }, []);
 
-  // 캔버스 재생성 (강제 초기화)
-  const recreateCanvas = useCallback(() => {
-    const canvas = canvasRef.current;
-    const markupCanvas = markupCanvasRef.current;
-    
-    if (canvas) {
-      // 캔버스 완전 초기화
-      const context = canvas.getContext('2d');
-      context.clearRect(0, 0, canvas.width, canvas.height);
-      canvas.width = 0;
-      canvas.height = 0;
-      
-      // 캔버스 키 변경으로 강제 재렌더링
-      canvasKeyRef.current += 1;
-    }
-    
-    if (markupCanvas) {
-      const markupContext = markupCanvas.getContext('2d');
-      markupContext.clearRect(0, 0, markupCanvas.width, markupCanvas.height);
-      markupCanvas.width = 0;
-      markupCanvas.height = 0;
-    }
-  }, []);
 
-  // 안전한 렌더링 작업 취소
+  // 안전한 렌더링 작업 취소 (개선 버전)
   const cancelCurrentRenderTask = useCallback(async () => {
     const currentTask = renderTaskRef.current;
-    if (currentTask) {
-      try {
-        currentTask.cancel();
-        console.log('현재 렌더링 작업 취소됨');
-      } catch (error) {
-        console.log('렌더링 작업 취소 중 오류:', error);
-      }
-      renderTaskRef.current = null;
+    if (!currentTask) {
+      return; // 취소할 작업이 없으면 즉시 반환
     }
-    
-    // 상태 초기화
-    setIsRendering(false);
-    setRenderTask(null);
-    
-    // 캔버스 재생성
-    recreateCanvas();
-    
-    // 취소 완료까지 대기
-    await new Promise(resolve => setTimeout(resolve, 100));
-  }, [recreateCanvas]);
 
-  // 페이지 렌더링 (단순하고 안전한 버전)
-  const renderPage = useCallback(async (page, canvas, scale) => {
-    console.log('🔄 페이지 렌더링 시작:', { pageNum: page.pageNumber, scale });
-    
-    // 현재 작업 취소
-    const currentTask = renderTaskRef.current;
-    if (currentTask) {
-      try {
-        currentTask.cancel();
-        console.log('✅ 이전 렌더링 작업 취소됨');
-      } catch (error) {
+    try {
+      await currentTask.cancel();
+      console.log('✅ 렌더링 작업 취소 완료');
+    } catch (error) {
+      if (error.name !== 'RenderingCancelledException') {
         console.log('렌더링 작업 취소 중 오류:', error);
       }
+    } finally {
       renderTaskRef.current = null;
+      setIsRendering(false);
+      setRenderTask(null);
     }
-    
-    // 잠시 대기
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
+
+    // 취소 완료까지 대기
+    await new Promise(resolve => setTimeout(resolve, 50));
+  }, []);
+
+  // 페이지 렌더링 (완전히 개선된 버전 - 동시 렌더링 방지)
+  const renderPage = useCallback(async (page, canvas, scale) => {
+    // 재생 중이면 렌더링 차단
+    if (isReplayingRef.current) {
+      console.log('⏸️ 재생 중이므로 PDF 렌더링 차단');
+      return null;
+    }
+
+    console.log('🔄 페이지 렌더링 시작:', { pageNum: page.pageNumber, scale });
+
+    // 이전 작업이 있으면 완전히 취소될 때까지 대기
+    if (renderTaskRef.current) {
+      console.log('⏳ 이전 렌더링 작업 취소 대기 중...');
+      await cancelCurrentRenderTask();
+    }
+
     try {
       // 캔버스 초기화
-      const context = canvas.getContext('2d');
-      context.clearRect(0, 0, canvas.width, canvas.height);
-      
-      const viewport = page.getViewport({ scale });
+      const context = canvas.getContext('2d', { alpha: false }); // alpha 채널 비활성화로 성능 향상
+
+      // 뷰포트 설정 (회전 체크)
+      const viewport = page.getViewport({ scale, rotation: 0 }); // 항상 회전 없이 표시
+
+      // 캔버스 크기 설정 전 초기화
       canvas.height = viewport.height;
       canvas.width = viewport.width;
-      
-      console.log('📐 캔버스 크기 설정:', { width: canvas.width, height: canvas.height });
-      
+
+      // 캔버스 초기화
+      context.clearRect(0, 0, canvas.width, canvas.height);
+
+      console.log('📐 캔버스 크기 설정:', {
+        width: canvas.width,
+        height: canvas.height,
+        rotation: viewport.rotation
+      });
+
       const renderContext = {
         canvasContext: context,
-        viewport: viewport
+        viewport: viewport,
+        intent: 'display' // 화면 표시용으로 명시
       };
-      
+
       // 새로운 렌더링 작업
-      console.log('PDF 렌더링 작업 시작');
       const task = page.render(renderContext);
       renderTaskRef.current = task;
       setRenderTask(task);
       setIsRendering(true);
-      
+
       await task.promise;
-      
+
       console.log('✅ 페이지 렌더링 완료');
       renderTaskRef.current = null;
       setRenderTask(null);
       setIsRendering(false);
-      
+
       return task;
     } catch (error) {
       if (error.name === 'RenderingCancelledException') {
-        console.log('렌더링이 취소되었습니다');
-        renderTaskRef.current = null;
-        setRenderTask(null);
-        setIsRendering(false);
+        console.log('⏹️ 렌더링이 취소됨');
         return null;
       }
       console.error('❌ 페이지 렌더링 오류:', error);
-      renderTaskRef.current = null;
-      setRenderTask(null);
-      setIsRendering(false);
       throw error;
+    } finally {
+      renderTaskRef.current = null;
+      setIsRendering(false);
+      setRenderTask(null);
     }
-  }, []);
+  }, [cancelCurrentRenderTask]);
 
-  // 페이지 변경 시 렌더링 (단순화된 안전한 렌더링)
+  // 페이지 변경 시 렌더링 (완전히 최적화된 버전)
   useEffect(() => {
-    const validPageNum = typeof pageNum === 'number' ? pageNum : parseInt(pageNum, 10);
-    console.log('페이지 변경 감지:', { 
-      pdfDoc: !!pdfDoc, 
-      pageNum, 
-      validPageNum,
-      isValidNumber: !isNaN(validPageNum),
-      totalPages 
-    });
-    
-    if (pdfDoc && !isNaN(validPageNum) && validPageNum > 0 && validPageNum <= totalPages) {
-      // 재생 중이면 페이지 렌더링 건너뜀 (재생 로직이 마크업만 제어)
-      if (isReplaying) {
-        console.log('⏸️ 재생 중이므로 페이지 렌더링 건너뜀');
-        setPageRendering(false);
-        return;
-      }
-      
-      console.log('🚀 페이지 렌더링 시작, 페이지:', validPageNum);
-      setPageRendering(true);
-      
-      // 현재 페이지의 필기 데이터 로드
-      const pageDrawings = savedDrawings[validPageNum] || [];
-      setCurrentPageDrawings(pageDrawings);
-      
-      // 렌더링 작업을 순차적으로 처리
-      const renderCurrentPage = async () => {
-        try {
-          console.log('📖 PDF 페이지 가져오기:', validPageNum);
-          const page = await pdfDoc.getPage(validPageNum);
-          const canvas = canvasRef.current;
-          const markupCanvas = markupCanvasRef.current;
-          
-          console.log('🎯 캔버스 상태:', { 
-            canvas: !!canvas, 
-            markupCanvas: !!markupCanvas,
-            canvasSize: canvas ? { width: canvas.width, height: canvas.height } : null
-          });
-          
-          if (canvas && markupCanvas) {
-            const scale = zoomScale || 1.0;
-            console.log('렌더링 설정:', { scale });
-            
-            // PDF 렌더링
-            await renderPage(page, canvas, scale);
-            
-            // 마크업 캔버스 크기 조정
-            markupCanvas.height = canvas.height;
-            markupCanvas.width = canvas.width;
-            console.log('📐 마크업 캔버스 크기 조정 완료');
-            
-            // 마크업 다시 그리기 (지연 실행으로 성능 최적화)
-            // 재생 중일 때는 마크업 렌더링을 건너뜀 (재생 로직이 직접 그림)
-            if (!isReplaying) {
-              setTimeout(() => {
-                console.log('마크업 다시 그리기, 페이지:', validPageNum);
-                
-                // 현재 페이지의 필기 데이터 그리기
-                const markupCanvas = markupCanvasRef.current;
-                if (markupCanvas) {
-                  const context = markupCanvas.getContext('2d');
-                  const pageDrawings = savedDrawings[validPageNum] || [];
-                  pageDrawings.forEach(drawing => {
-                    drawStroke(context, drawing);
-                  });
-                }
-                
-                // 스크롤 위치 복원 (리렌더링 후 위치 유지)
-                const container = containerRef.current;
-                if (container && scrollPositionRef.current) {
-                  container.scrollLeft = scrollPositionRef.current.x;
-                  container.scrollTop = scrollPositionRef.current.y;
-                }
-              }, 100);
-            } else {
-              console.log('⏸️ 재생 중이므로 마크업 자동 렌더링 건너뜀');
-            }
-          } else {
-            console.warn('캔버스가 준비되지 않음');
-          }
-        } catch (error) {
-          console.error('❌ 페이지 렌더링 오류:', error);
-        } finally {
-          console.log('✅ 페이지 렌더링 완료');
-          setPageRendering(false);
-        }
-      };
-      
-      // 렌더링 시작
-      renderCurrentPage();
-    } else if (!isNaN(validPageNum) && validPageNum > totalPages) {
-      // 페이지 범위를 벗어나면 첫 페이지로 이동
-      console.warn(`⚠️ 페이지 ${validPageNum}은 전체 페이지 수(${totalPages}페이지)를 벗어납니다. 1페이지로 이동합니다.`);
-      if (onPageChange) {
-        onPageChange(1);
-      }
-    } else {
-      console.warn('⚠️ PDF 렌더링 불가:', {
-        pdfDoc: !!pdfDoc,
-        pageNum,
-        validPageNum,
-        isValidNumber: !isNaN(validPageNum),
-        totalPages
-      });
+    // 재생 중이면 페이지 렌더링 완전 차단
+    if (isReplayingRef.current) {
+      console.log('⏸️ 재생 중이므로 페이지 렌더링 완전 차단');
+      return;
     }
-  }, [pdfDoc, pageNum, zoomScale, totalPages, onPageChange, renderPage]);
+
+    const validPageNum = typeof pageNum === 'number' ? pageNum : parseInt(pageNum, 10);
+
+    if (!pdfDoc || isNaN(validPageNum) || validPageNum <= 0 || validPageNum > totalPages) {
+      if (!isNaN(validPageNum) && validPageNum > totalPages && totalPages > 0) {
+        console.warn(`⚠️ 페이지 ${validPageNum}은 전체 페이지 수(${totalPages}페이지)를 벗어남`);
+        if (onPageChange) {
+          onPageChange(1);
+        }
+      }
+      return;
+    }
+
+    console.log('🚀 페이지 렌더링 시작, 페이지:', validPageNum);
+    setPageRendering(true);
+
+    // 현재 페이지의 필기 데이터 로드
+    const pageDrawings = savedDrawings[validPageNum] || [];
+    setCurrentPageDrawings(pageDrawings);
+
+    // 렌더링 작업을 순차적으로 처리
+    const renderCurrentPage = async () => {
+      try {
+        const page = await pdfDoc.getPage(validPageNum);
+        const canvas = canvasRef.current;
+        const markupCanvas = markupCanvasRef.current;
+
+        if (!canvas || !markupCanvas) {
+          console.warn('⚠️ 캔버스가 준비되지 않음');
+          return;
+        }
+
+        const scale = zoomScale || 1.0;
+
+        // PDF 렌더링 (재생 중이면 null 반환)
+        const result = await renderPage(page, canvas, scale);
+
+        if (!result) {
+          // 렌더링이 취소되었거나 재생 중
+          return;
+        }
+
+        // 마크업 캔버스 크기 조정 (PDF 캔버스와 완전히 동기화)
+        if (markupCanvas.width !== canvas.width || markupCanvas.height !== canvas.height) {
+          markupCanvas.width = canvas.width;
+          markupCanvas.height = canvas.height;
+          console.log('📐 마크업 캔버스 크기 동기화:', { width: canvas.width, height: canvas.height });
+        }
+
+        // 마크업 다시 그리기 (재생 중이 아닐 때만)
+        if (!isReplayingRef.current) {
+          requestAnimationFrame(() => {
+            const context = markupCanvas.getContext('2d');
+            context.clearRect(0, 0, markupCanvas.width, markupCanvas.height);
+
+            const pageDrawings = savedDrawings[validPageNum] || [];
+            pageDrawings.forEach(drawing => {
+              drawStroke(context, drawing);
+            });
+
+            // 스크롤 위치 복원
+            const container = containerRef.current;
+            if (container && scrollPositionRef.current) {
+              container.scrollLeft = scrollPositionRef.current.x;
+              container.scrollTop = scrollPositionRef.current.y;
+            }
+          });
+        }
+      } catch (error) {
+        if (error?.name !== 'RenderingCancelledException') {
+          console.error('❌ 페이지 렌더링 오류:', error);
+        }
+      } finally {
+        setPageRendering(false);
+      }
+    };
+
+    renderCurrentPage();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pdfDoc, pageNum, zoomScale, totalPages, onPageChange, renderPage, drawStroke]);
+  // savedDrawings는 의존성에서 제외 (렌더링 내부에서 최신값 참조)
 
   // 컴포넌트 언마운트 시 렌더링 작업 정리
   useEffect(() => {
@@ -695,18 +664,93 @@ const StaticPDFViewer = forwardRef(({
     };
   }, []);
 
+  // 실제 그리기 함수 (draw에서 drawOnCanvas로 분리) - 먼저 선언
+  const drawOnCanvas = useCallback((e) => {
+    if (!isDrawing || selectedTool === 'hand') return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    // 스크롤 위치 저장 (리렌더링 방지)
+    const container = containerRef.current;
+    if (container) {
+      scrollPositionRef.current = {
+        x: container.scrollLeft,
+        y: container.scrollTop
+      };
+    }
+
+    const pos = getEventPos(e);
+
+    // 실시간 그리기 (안정적인 렌더링)
+    const canvas = markupCanvasRef.current;
+    if (!canvas) return;
+
+    const context = canvas.getContext('2d');
+
+    if (selectedTool === 'eraser') {
+      // 픽셀 기반 지우개 - 실제 지우개처럼 동작
+      context.save();
+      context.globalCompositeOperation = 'destination-out'; // 지우기 모드
+      context.beginPath();
+      context.arc(pos.x, pos.y, brushSize * 10, 0, 2 * Math.PI); // 원형 지우개
+      context.fill();
+      context.restore();
+
+      // 지우개 경로도 저장 (나중에 다시 그릴 때 사용)
+      setCurrentPath(prev => [...prev, pos]);
+
+      // 지우개 사용 중이면 여기서 종료 (펜 그리기 방지)
+      return;
+    }
+
+    if (selectedTool === 'pen' || selectedTool === 'highlighter') {
+      // currentPath의 마지막 점을 함수형 업데이트로 가져오기
+      setCurrentPath(prev => {
+        context.save();
+        context.beginPath();
+        context.lineWidth = brushSize;
+        context.strokeStyle = selectedColor;
+        context.lineCap = 'round';
+        context.lineJoin = 'round';
+
+        if (selectedTool === 'highlighter') {
+          context.globalAlpha = 0.3; // 하이라이터는 반투명
+        } else {
+          context.globalAlpha = 1;
+        }
+        context.globalCompositeOperation = 'source-over';
+
+        if (prev.length > 0) {
+          const lastPoint = prev[prev.length - 1];
+          context.moveTo(lastPoint.x, lastPoint.y);
+          context.lineTo(pos.x, pos.y);
+          context.stroke();
+        }
+
+        context.restore();
+        return [...prev, pos];
+      });
+
+      return; // 여기서 리턴
+    }
+
+    // 다른 도구는 경로만 저장
+    setCurrentPath(prev => [...prev, pos]);
+  }, [isDrawing, selectedTool, getEventPos, brushSize, selectedColor]);
+
   // 그리기 시작
   const startDrawing = useCallback((e) => {
     if (selectedTool === 'hand') return;
-    
+
     e.preventDefault();
     e.stopPropagation();
-    
+
     const pos = getEventPos(e);
     setIsDrawing(true);
     setLastPos(pos);
     setCurrentPath([pos]);
-    
+
     // 녹음 중이라면 현재 시간 기록 (스트로크 시작 시간)
     if (isRecording) {
       const startTime = Date.now();
@@ -718,89 +762,19 @@ const StaticPDFViewer = forwardRef(({
   // 마우스 이동 감지 (지우개 커서용)
   const handleMouseMove = useCallback((e) => {
     const pos = getEventPos(e);
-    
+
     // 지우개 모드일 때 커서 위치 업데이트
     if (selectedTool === 'eraser') {
       setEraserCursor({ x: pos.x, y: pos.y, show: true });
     } else {
       setEraserCursor(prev => ({ ...prev, show: false }));
     }
-    
+
     // 그리기 중이면 draw 로직 실행
     if (isDrawing) {
       drawOnCanvas(e);
     }
-  }, [selectedTool, isDrawing, getEventPos]);
-
-  // 실제 그리기 함수 (draw에서 drawOnCanvas로 분리)
-  const drawOnCanvas = useCallback((e) => {
-    if (!isDrawing || selectedTool === 'hand') return;
-    
-    e.preventDefault();
-    e.stopPropagation();
-    
-    // 스크롤 위치 저장 (리렌더링 방지) 
-    const container = containerRef.current;
-    if (container) {
-      scrollPositionRef.current = {
-        x: container.scrollLeft,
-        y: container.scrollTop
-      };
-    }
-    
-    const pos = getEventPos(e);
-
-    // 실시간 그리기 (안정적인 렌더링)
-    const canvas = markupCanvasRef.current;
-    if (canvas) {
-      const context = canvas.getContext('2d');
-      
-      if (selectedTool === 'eraser') {
-        // 픽셀 기반 지우개 - 실제 지우개처럼 동작
-        context.save();
-        context.globalCompositeOperation = 'destination-out'; // 지우기 모드
-        context.beginPath();
-        context.arc(pos.x, pos.y, brushSize * 10, 0, 2 * Math.PI); // 원형 지우개
-        context.fill();
-        context.restore();
-        
-        // 지우개 경로도 저장 (나중에 다시 그릴 때 사용)
-        setCurrentPath(prev => [...prev, pos]);
-        
-        // 지우개 사용 중이면 여기서 종료 (펜 그리기 방지)
-        return;
-      } else if (selectedTool === 'pen') {
-        // currentPath의 마지막 점을 함수형 업데이트로 가져오기
-        setCurrentPath(prev => {
-          const context = canvas.getContext('2d');
-          context.save();
-          context.beginPath();
-          context.lineWidth = brushSize;
-          context.strokeStyle = selectedColor;
-          context.lineCap = 'round';
-          context.lineJoin = 'round';
-          context.globalAlpha = 1;
-          context.globalCompositeOperation = 'source-over';
-          
-          if (prev.length > 0) {
-            const lastPoint = prev[prev.length - 1];
-            context.moveTo(lastPoint.x, lastPoint.y);
-            context.lineTo(pos.x, pos.y);
-            context.stroke();
-          }
-          
-          context.restore();
-          return [...prev, pos];
-        });
-        
-        return; // 여기서 리턴
-
-      }
-    }
-    // 경로에 현재 위치 추가 (setLastPos는 제거)
-    setCurrentPath(prev => [...prev, pos]);
-  }, [isDrawing, selectedTool, getEventPos, brushSize, selectedColor]); // currentPath 제거!
-
+  }, [selectedTool, isDrawing, getEventPos]); // drawOnCanvas 제거!
 
   // 그리기 종료 (성능 최적화)
   const stopDrawing = useCallback((e) => {
@@ -1068,10 +1042,10 @@ const StaticPDFViewer = forwardRef(({
                 position: 'absolute',
                 top: 0,
                 left: 0,
-                cursor: selectedTool === 'hand' ? 'grab' : 'crosshair',
+                cursor: selectedTool === 'hand' ? 'grab' : selectedTool === 'eraser' ? 'crosshair' : 'crosshair',
                 borderRadius: '8px',
-                pointerEvents: 'auto',
-                touchAction: selectedTool === 'hand' ? 'none' : 'auto', // 펜/지우개 모드에서 스크롤 방지
+                pointerEvents: 'auto', // 항상 이벤트 받기 (내부에서 hand 체크)
+                touchAction: selectedTool === 'hand' ? 'auto' : 'none', // 펜/지우개 모드에서 스크롤 방지
                 // 번쩍거림 방지를 위한 최적화
                 willChange: 'auto',
                 backfaceVisibility: 'hidden',
@@ -1382,5 +1356,8 @@ const StaticPDFViewer = forwardRef(({
     </div>
   );
 });
+
+// React.memo 제거 - 상태 관리를 위해 정상 재렌더링 필요
+const StaticPDFViewer = StaticPDFViewerComponent;
 
 export default StaticPDFViewer;

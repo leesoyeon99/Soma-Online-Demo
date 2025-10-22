@@ -530,8 +530,10 @@ function App() {
     convertAudioToBase64().then(audioBase64 => {
       const submission = {
         id: Date.now(),
+        // idx: Base64.decode(window.sessionStorage.getItem("noma@mem_seq")), // 학생 idx 추가
         studentId: Base64.decode(window.sessionStorage.getItem("noma@login_id")),
         studentName: Base64.decode(window.sessionStorage.getItem("noma@mem_name")),
+        // mem_seq: Base64.decode(window.sessionStorage.getItem("noma@mem_seq")), // mem_seq 추가
         timestamp: new Date().toISOString(),
         strokeData: [...strokeData], // 모든 스트로크 데이터 (타임스탬프 포함)
         audioUrl: audioUrl, // Blob URL (임시)

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo, memo } from 'react';
 import StaticPDFViewer from './StaticPDFViewer';
 
 // CSS 애니메이션 추가
@@ -15,10 +15,10 @@ const feedbackAnimationStyle = `
   }
 `;
 
-const TeacherAnnotationViewer = ({ 
-  submission, 
-  onBackToSubmissions, 
-  onSaveFeedback 
+const TeacherAnnotationViewerComponent = ({
+  submission,
+  onBackToSubmissions,
+  onSaveFeedback
 }) => {
   const canvasRef = useRef(null);
   const markupCanvasRef = useRef(null);
@@ -41,11 +41,20 @@ const TeacherAnnotationViewer = ({
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  
+
   // 선생 첨삭 재생 상태
   const [isTeacherReplaying, setIsTeacherReplaying] = useState(false);
   const syncIntervalRef = useRef(null);
   const [enableStrokeAnimation] = useState(true);
+
+  // 콜백 함수들을 컴포넌트 상단에 정의 (Hook 규칙 준수)
+  const handleStrokeDataChange = useCallback((newStrokeData) => {
+    console.log('📝 선생 onStrokeDataChange 호출됨, 스트로크 수:', newStrokeData.length);
+    setTeacherAnnotations(newStrokeData);
+  }, []);
+
+  const handlePageCountChange = useCallback(() => {}, []);
+  const handlePageChange = useCallback(() => {}, []);
 
   // CSS 애니메이션 스타일 추가
   useEffect(() => {
@@ -63,55 +72,43 @@ const TeacherAnnotationViewer = ({
     };
   }, []);
 
-  // 제출물 데이터 디버깅
+  // 제출물 데이터 로드 (최적화 - submission.studentId로만 체크)
   useEffect(() => {
-    console.log('🎓 TeacherAnnotationViewer 렌더링:', {
-      hasSubmission: !!submission,
+    if (!submission) return;
+
+    console.log('🎓 TeacherAnnotationViewer 마운트:', {
+      submissionId: submission.studentId,
       isTeacherFeedback: submission?.isTeacherFeedback,
-      teacherName: submission?.teacherName,
-      hasAudioBase64: !!submission?.audioBase64,
-      hasAudioUrl: !!submission?.audioUrl,
-      strokeCount: submission?.strokeData?.length,
-      recordingStartTime: submission?.recordingStartTime
+      hasStrokeData: !!submission?.strokeData,
+      currentPage: submission?.currentPage, // 페이지 번호 확인
+      fullSubmission: submission // 전체 객체 확인
     });
-    console.log('📦 전체 submission 객체:', submission);
-    
+
     // 선생 첨삭 데이터가 있으면 복원
     if (submission?.isTeacherFeedback && submission?.strokeData) {
       setTeacherAnnotations(submission.strokeData);
       console.log('✅ 선생 첨삭 스트로크 복원:', submission.strokeData.length, '개');
     }
-  }, [submission]);
+  }, [submission?.studentId]); // submission.studentId로만 체크하여 불필요한 재렌더링 방지
 
-  // PDF 파일 경로 추출 (useMemo로 최적화)
+  // PDF 파일 경로 추출 (useMemo로 최적화 - 의존성 최소화)
   const pdfFilePath = useMemo(() => {
     // pdfFileName 또는 bookUrl에서 전체 경로 가져오기
     const pdfPath = submission?.pdfFileName || submission?.bookUrl;
-    
-    console.log('🔍 PDF 경로 계산 중:', {
-      'submission?.pdfFileName': submission?.pdfFileName,
-      'submission?.bookUrl': submission?.bookUrl,
-      'pdfPath': pdfPath
-    });
-    
+
     if (!pdfPath) {
       console.warn('⚠️ PDF 경로를 찾을 수 없습니다. 기본값 사용');
       return '/assets/pdf/mvp_2023_소마_프리미어.pdf';
     }
-    
-    console.log('📄 원본 PDF 경로:', pdfPath);
-    
+
     // 이미 전체 경로면 그대로 반환
     if (pdfPath.startsWith('/assets/pdf/') || pdfPath.startsWith('/')) {
-      console.log('✅ 전체 경로 반환:', pdfPath);
       return pdfPath;
     }
-    
+
     // 파일명만 있으면 경로 추가
-    const fullPath = `/assets/pdf/${pdfPath}`;
-    console.log('➕ 경로 추가 후 반환:', fullPath);
-    return fullPath;
-  }, [submission?.pdfFileName, submission?.bookUrl]);
+    return `/assets/pdf/${pdfPath}`;
+  }, [submission?.pdfFileName, submission?.bookUrl]); // 필요한 필드만 의존성으로
 
 
 
@@ -171,17 +168,17 @@ const TeacherAnnotationViewer = ({
     }
   };
 
-  // 선생 첨삭 재생 (오디오 + 스트로크 동기화)
-  const handleTeacherFeedbackReplay = async () => {
+  // 선생 첨삭 재생 (오디오 + 스트로크 동기화) - 최적화
+  const handleTeacherFeedbackReplay = useCallback(async () => {
     console.log('🎬 선생 첨삭 재생 시작');
 
     const markupCanvas = pdfViewerRef?.current?.markupCanvasRef?.current;
-    
+
     if (!markupCanvas) {
       console.error('❌ 마크업 캔버스를 찾을 수 없습니다');
       return;
     }
-    
+
     // 재생 중이면 중지
     if (isTeacherReplaying) {
       console.log('⏸️ 재생 중지');
@@ -195,22 +192,21 @@ const TeacherAnnotationViewer = ({
       }
       setIsTeacherReplaying(false);
       setIsPlaying(false);
+
+      // 재생 종료 시 마크업은 그대로 유지 (clearRect 하지 않음)
+      console.log('✅ 재생 종료 - 마크업 유지');
       return;
     }
-    
+
     // 재생 시작
     setIsTeacherReplaying(true);
-    
+
     // 캔버스 초기화
     const context = markupCanvas.getContext('2d');
     context.clearRect(0, 0, markupCanvas.width, markupCanvas.height);
 
-    console.log(".strokeData ================= ", submission)
+    console.log(".strokeData ================= ", submission);
     // 선생 녹음 스트로크 필터링
-//    const teacherRecordingStrokes = (submission?.strokeData || []).filter(
-//      stroke => stroke.isRecording && typeof stroke.time_stamp === 'number' &&
-//                stroke.time_stamp !== null && stroke.time_stamp !== undefined
-//    );
     const teacherRecordingStrokes = JSON.parse(submission.strokeData);
     
     console.log('👨‍🏫 선생 녹음 스트로크:', teacherRecordingStrokes.length, '개');
@@ -335,12 +331,15 @@ const TeacherAnnotationViewer = ({
         }
         setIsTeacherReplaying(false);
         setIsPlaying(false);
-        
+
+        // 재생 종료 후 마크업은 그대로 유지 (clearRect 하지 않음)
+        console.log('✅ 재생 완료 - 마크업 캔버스 유지');
+
         // drawn 플래그 초기화
         teacherRecordingStrokes.forEach(stroke => delete stroke.drawn);
       };
     }
-  };
+  }, [isTeacherReplaying, submission]);
 
   const handleAudioPlay = () => {
     const audio = audioRef.current;
@@ -393,34 +392,37 @@ const TeacherAnnotationViewer = ({
       alert('첨삭할 내용이 없습니다.');
       return;
     }
-    
+
     const feedback = {
       id: Date.now(),
       teacherId: 'teacher1',
       teacherName: '선생님',
       timestamp: new Date().toISOString(),
       feedbackStrokeData: teacherAnnotations,
-      studentSubmissionId: submission.id,
+      studentSubmissionId: submission.studentId,
       bookTitle: submission.bookTitle,
-      bookUrl: submission.bookUrl
+      bookUrl: submission.bookUrl,
+      currentPage: submission.currentPage || 1, // ✅ 페이지 번호 추가
+      pdfFileName: submission.pdfFileName // ✅ PDF 파일명도 추가
     };
-    
+
     if (onSaveFeedback) {
       onSaveFeedback(feedback);
     }
-    
+
     alert('첨삭이 저장되었습니다!');
   };
 
-  // 줌 기능
-  const handleZoomIn = () => {
+  // 줌 기능 (useCallback으로 메모이제이션)
+  const handleZoomIn = useCallback(() => {
     setZoomScale(prev => Math.min(prev + 0.2, 3.0));
-  };
+  }, []);
 
-  const handleZoomOut = () => {
+  const handleZoomOut = useCallback(() => {
     setZoomScale(prev => Math.max(prev - 0.2, 0.5));
-  };
+  }, []);
 
+  // early return은 모든 Hook 호출 이후에 배치
   if (!submission) {
     return (
       <div style={{
@@ -723,17 +725,14 @@ const TeacherAnnotationViewer = ({
               selectedTool={selectedTool}
               selectedColor={selectedColor}
               brushSize={brushSize}
-              isReplaying={isPlaying || isTeacherReplaying}
+              isReplaying={isTeacherReplaying} // 재생 상태 전달 (PDF 재렌더링 차단)
               isRecording={false}
               recordingStartTime={null}
-              onStrokeDataChange={(newStrokeData) => {
-                console.log('📝 선생 onStrokeDataChange 호출됨, 스트로크 수:', newStrokeData.length);
-                setTeacherAnnotations(newStrokeData);
-              }}
+              onStrokeDataChange={handleStrokeDataChange}
               isTeacherMode={true}
               studentStrokeData={submission?.strokeData}
-              onPageCountChange={() => {}}
-              onPageChange={() => {}}
+              onPageCountChange={handlePageCountChange}
+              onPageChange={handlePageChange}
               feedbackTexts={[]}
             />
           </div>
@@ -1063,5 +1062,11 @@ const TeacherAnnotationViewer = ({
     </div>
   );
 };
+
+// React.memo로 감싸서 submission.studentId가 변경될 때만 재렌더링
+const TeacherAnnotationViewer = memo(TeacherAnnotationViewerComponent, (prevProps, nextProps) => {
+  // submission.studentId가 같으면 재렌더링 방지
+  return prevProps.submission?.studentId === nextProps.submission?.studentId;
+});
 
 export default TeacherAnnotationViewer;

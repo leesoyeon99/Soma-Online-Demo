@@ -56,9 +56,13 @@ const TeacherSubmissionViewer = ({
       pdfFileName: submission?.pdfFileName,
       hasAudioBase64: !!submission?.audioBase64,
       hasAudioUrl: !!submission?.audioUrl,
-      strokeCount: submission?.strokeData?.length
+      strokeCount: submission?.strokeData?.length,
+      // idx: submission?.idx,
+      studentId: submission?.studentId,
+      mem_seq: submission?.mem_seq
     });
     console.log('📦 전체 submission 객체:', submission);
+    console.log('🔍 submission 객체의 모든 키:', submission ? Object.keys(submission) : 'submission이 없음');
   }, [submission]);
 
   // localStorage에서 선생 피드백 불러오기 (컴포넌트 마운트 시)
@@ -291,7 +295,7 @@ const TeacherSubmissionViewer = ({
             feedbackStrokeData: teacherAnnotations,
             teacherAudioBase64: audioBase64,
             recordingStartTime: recordingStartTime,
-            studentSubmissionId: submission.id,
+            studentSubmissionId: submission.stduentId,
             currentPage: submission.currentPage,
             bookTitle: submission.bookTitle,
             bookUrl: submission.bookUrl,
@@ -318,55 +322,108 @@ const TeacherSubmissionViewer = ({
     }
   };
 
-  // 학생에게 첨삭 전송
+  // 학생에게 첨삭 전송 (학생 제출 구조와 동일)
   const handleSendToStudent = () => {
     if (!teacherAudioBase64 && teacherAnnotations.length === 0) {
       alert('전송할 첨삭 내용이 없습니다.');
       return;
     }
-    
-    const mem_seq = Base64.decode(window.sessionStorage.getItem("noma@mem_seq"));
-    const teacherId = Base64.decode(window.sessionStorage.getItem("noma@login_id"));
-    const teacherName = Base64.decode(window.sessionStorage.getItem("noma@mem_name"));
-    
-    const feedback = {
-      id: Date.now(),
-      studentSubmission_idx:submission.id,
-      mem_seq: mem_seq,
-      teacherId: teacherId,
-      teacherName: teacherName,
-      time_stamp: new Date().toISOString(),
-      feedbackStrokeData: JSON.stringify(teacherAnnotations),  // 타임스탬프 포함된 스트로크
-      teacherAudioUrl: teacherAudioUrl,
-      teacherAudioBase64: teacherAudioBase64,  // ✅ 오디오 추가
-      recordingStartTime: recordingStartTime,  // ✅ 타임스탬프 동기화
-      studentSubmissionId: submission.studentId,
-      currentPage: submission.currentPage,
-      bookTitle: submission.bookTitle,
-      bookUrl: submission.bookUrl,
-      pdfFileName: submission.pdfFileName
+
+    // 오디오를 Base64로 변환하여 저장 (학생 구조와 동일)
+    const convertAudioToBase64 = async () => {
+      if (!teacherAudioUrl) return teacherAudioBase64;
+
+      try {
+        const response = await fetch(teacherAudioUrl);
+        const blob = await response.blob();
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      } catch (error) {
+        console.error('오디오 변환 오류:', error);
+        return teacherAudioBase64;
+      }
     };
-    
-    console.log('📤 강사 첨삭 전송 데이터:', {
-      strokeCount: feedback.feedbackStrokeData.length,
-      hasAudio: !!feedback.teacherAudioBase64,
-      recordingStartTime: feedback.recordingStartTime
-    });
-    
-    // 백엔드 API 호출
-    commonJs.fetchApiCall("S", "teacherSubmissionSave", feedback)
-      .then(responseJson => {
-        if (responseJson.result_code === API_RES_CODE.SUCCESS) {
-          alert('학생에게 첨삭이 전송되었습니다!');
-          // 전송 후 초기화
-          setTeacherAnnotations([]);
-          setTeacherAudioUrl(null);
-          setTeacherAudioBase64(null);
-          setRecordingStartTime(null);
-        } else {
-          CommonUtils.showServerErr(responseJson.result_code, responseJson.result_message);
-        }
+
+    // 비동기 처리 (학생 구조와 동일)
+    convertAudioToBase64().then(audioBase64 => {
+      const mem_seq = Base64.decode(window.sessionStorage.getItem("noma@mem_seq"));
+      const teacherId = Base64.decode(window.sessionStorage.getItem("noma@login_id"));
+      const teacherName = Base64.decode(window.sessionStorage.getItem("noma@mem_name"));
+      
+      const feedback = {
+        id: Date.now(),
+        // student_idx: submission.idx,
+        mem_seq: mem_seq,
+        studentSubmissionId: submission.studentId || submission.studentName,  // 연동되는 학생 정보
+        // studentName: submission.studentName || '학생',              // 연동되는 학생 정보  
+        teacherId: teacherId,                                        // 선생님 정보 추가
+        teacherName: teacherName,                                    // 선생님 정보 추가
+        time_stamp: new Date().toISOString(),
+        feedbackStrokeData: [...teacherAnnotations],                         // 선생님 스트로크만 (학생 구조와 동일한 필드명)
+        teacherAudioUrl: teacherAudioUrl,                                   // Blob URL (임시)
+        teacherAudioBase64: audioBase64,                                    // Base64 인코딩된 오디오 (영구 저장)
+        recordingStartTime: recordingStartTime,                      // 녹음 시작 시간 (타임스탬프 계산용)
+        currentPage: submission.currentPage,                         // 제출 시 현재 PDF 페이지 번호
+        bookTitle: submission.bookTitle,
+        bookUrl: submission.bookUrl,
+        pdfFileName: submission.pdfFileName
+      };
+
+      console.log('📤 강사 첨삭 전송 데이터 (DB 구조에 맞춤):', {
+        strokeCount: feedback.feedbackStrokeData?.length || 0,
+        hasAudio: !!feedback.teacherAudioBase64,
+        recordingStartTime: feedback.recordingStartTime,
+        studentSubmissionId: feedback.studentSubmissionId,
+        teacherInfo: { id: feedback.teacherId, name: feedback.teacherName },
+        전체데이터: feedback
       });
+      
+      console.log('🔍 각 필드 상세 검증:', {
+        'feedback.id 타입': typeof feedback.id,
+        'feedback.student_idx 타입': typeof feedback.student_idx,
+        'feedback.mem_seq': feedback.mem_seq,
+        'feedback.studentSubmissionId': feedback.studentSubmissionId,
+        'feedback.teacherId': feedback.teacherId,
+        'feedback.teacherName': feedback.teacherName,
+        'feedback.feedbackStrokeData 길이': feedback.feedbackStrokeData?.length || 0,
+        'feedback.teacherAudioBase64 길이': feedback.teacherAudioBase64?.length || 0,
+        'teacherAnnotations 길이': teacherAnnotations?.length || 0,
+        'API 호출할 URL': 'teacherSubmissionSave'
+      });
+
+      // 백엔드 API 호출
+      commonJs.fetchApiCall("S", "teacherSubmissionSave", feedback)
+        .then(responseJson => {
+          console.log('🔍 API 응답 전체:', responseJson);
+
+          if (responseJson.result_code === API_RES_CODE.SUCCESS) {
+            alert('학생에게 첨삭이 전송되었습니다!');
+            // 전송 후 초기화
+            setTeacherAnnotations([]);
+            if (teacherAudioUrl) {
+              URL.revokeObjectURL(teacherAudioUrl);
+              setTeacherAudioUrl(null);
+            }
+            setTeacherAudioBase64(null);
+            setRecordingStartTime(null);
+          } else {
+            console.error('❌ API 호출 실패:', {
+              result_code: responseJson.result_code,
+              result_message: responseJson.result_message,
+              전체응답: responseJson
+            });
+            CommonUtils.showServerErr(responseJson.result_code, responseJson.result_message);
+          }
+        })
+        .catch(error => {
+          console.error('❌ API 호출 중 네트워크 에러:', error);
+          alert(`네트워크 오류가 발생했습니다: ${error.message}`);
+        });
+    });
   };
 
   // 선생 첨삭 재생 (학생 스트로크 + 선생 첨삭 스트로크)
@@ -652,18 +709,42 @@ const TeacherSubmissionViewer = ({
   };
 
   // 첨삭 저장 (기존 로직 유지)
-  /*const handleSaveFeedback = () => {
+  const handleSaveFeedback = () => {
     if (teacherAnnotations.length === 0) {
       //alert('첨삭할 내용이 없습니다.');
       //return;
     }
+    
+    /*const feedback = {
+      id: Date.now(),
+      teacherId: 'teacher1',
+      teacherName: '선생님',
+      timestamp: new Date().toISOString(),
+      feedbackStrokeData: teacherAnnotations,
+      studentSubmissionId: submission.id,
+      bookTitle: submission.bookTitle,
+      bookUrl: submission.bookUrl
+    };
+    
+    if (onSaveFeedback) {
+      onSaveFeedback(feedback);
+    }
+    
+    alert('첨삭이 저장되었습니다!');*/
 
     const mem_seq = Base64.decode(window.sessionStorage.getItem("noma@mem_seq"));
     const teacherId = Base64.decode(window.sessionStorage.getItem("noma@login_id"));
     const teacherName = Base64.decode(window.sessionStorage.getItem("noma@mem_name"));
-    const studentSubmissionSelect = window.localStorage.getItem("studentSubmissionSelect");
+    //const book_id = files[activeFileIndex].id;
 
-    let bodyData1 = {
+    const studentSubmissionSelect = window.localStorage.getItem("studentSubmissionSelect");
+    //const book_id = studentSubmissionSelect.book_id;
+//    console.log("studentSubmissionSelect ======================== ", studentSubmissionSelect);
+//    console.log("studentSubmissionSelect ========================>>>>> ", studentSubmissionSelect);
+
+
+//return;
+    let bodyData = {
           id: Date.now(),
           mem_seq: mem_seq,
           teacherId: teacherId,
@@ -674,7 +755,6 @@ const TeacherSubmissionViewer = ({
           bookTitle: submission.bookTitle,
           bookUrl: submission.bookUrl
     };
-
     commonJs.fetchApiCall("S", "teacherSubmissionSave", bodyData)
     .then(responseJson => {
         if (responseJson.result_code === API_RES_CODE.SUCCESS) {
@@ -686,7 +766,7 @@ const TeacherSubmissionViewer = ({
 
 
 
-  };*/
+  };
 
   // 줌 기능
   const handleZoomIn = () => {

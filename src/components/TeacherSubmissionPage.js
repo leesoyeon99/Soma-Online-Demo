@@ -834,7 +834,7 @@ const TeacherSubmissionPage = ({ onBackToBookList, onViewSubmission }) => {
             
             return (
               <div
-                key={submission.id}
+                key={submission.studentId}
                 style={{
                   background: 'rgba(255, 255, 255, 0.95)',
                   backdropFilter: 'blur(10px)',
