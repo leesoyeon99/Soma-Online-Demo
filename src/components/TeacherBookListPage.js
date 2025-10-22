@@ -9,8 +9,10 @@ import CommonUtils from '../utils/CommonUtils';
 
 const TeacherBookListPage = ({ files, onBookSelect, onBackToLogin, onGoToSubmissions, notifications, setNotifications }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [users, setUsers] = useState('');
   const [favorites, setFavorites] = useState(new Set());
   const [activeTab, setActiveTab] = useState('books'); // 'books' 또는 'submissions'
+   const [submissions, setSubmissions] = useState([]);
 
   const handleFavoriteToggle = (index) => {
     const newFavorites = new Set(favorites);
@@ -68,18 +70,51 @@ const TeacherBookListPage = ({ files, onBookSelect, onBackToLogin, onGoToSubmiss
             if (responseJson.result_code === API_RES_CODE.SUCCESS) {
                 window.localStorage.setItem("studentSubmissions", '');
 
-                let subList = responseJson.studentSubmissionList;
+               let subList = responseJson.studentSubmissionList;
                 if(subList.length > 0){
                     let newSubList = [];
-                    let newSubList1 = [];
                     for(var i=0; i<subList.length; i++){
                         newSubList.push(JSON.parse(subList[i].strokeData));
                     }
-                    newSubList1.push(newSubList);
-
-                    window.localStorage.setItem("studentSubmissions", ...newSubList);
+                    window.localStorage.setItem("studentSubmissions", JSON.stringify(newSubList));
                 }
                 setActiveTab('submissions');
+
+
+
+                /*let subList = responseJson.studentSubmissionList;
+            if(subList.length > 0){
+
+             for(var i=0; i<subList.length; i++){
+                let submission = {
+                        id: Date.now(),
+                        studentId: subList[i].studentId,
+                        studentName: subList[i].studentName,
+                        timestamp: subList[i].time_stamp,
+                        strokeData: [JSON.parse(subList[i].strokeData)], // 모든 스트로크 데이터 (타임스탬프 포함)
+                        audioUrl: subList[i].audioUrl, // Blob URL (임시)
+                        audioBase64: subList[i].audioBase64, // Base64 인코딩된 오디오 (영구 저장)
+                        recordingStartTime: subList[i].recordingStartTime, // 녹음 시작 시간 (타임스탬프 계산용)
+                        currentPage: subList[i].currentPageNum, // 제출 시 현재 PDF 페이지 번호 (수정!)
+                        bookTitle: subList[i].bookTitle,
+                        bookUrl: subList[i].bookUrl,
+                        pdfFileName: subList[i].pdfFileName // PDF 파일 경로
+                      };
+
+                      // 기존 제출 목록 가져오기
+                      let existingSubmissions = JSON.parse(localStorage.getItem('studentSubmissions') || '[]');
+
+                      // 새 제출 추가
+                      let newSubmissions = [submission, ...existingSubmissions];
+
+                      // 로컬 스토리지에 저장 (여러 제출 관리)
+                      localStorage.setItem('studentSubmissions', JSON.stringify(newSubmissions));
+
+             }
+            }
+            setActiveTab('submissions');*/
+
+
             } else {
                 CommonUtils.showServerErr(responseJson.result_code, responseJson.result_message);
             }

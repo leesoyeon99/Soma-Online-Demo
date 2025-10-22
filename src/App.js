@@ -41,7 +41,7 @@ function App() {
   React.useEffect(() => {
     const savedFeedback = localStorage.getItem('teacherFeedback');
     const savedFeedbacks = localStorage.getItem('teacherFeedbacks');
-    const savedTeacherFeedbackData = localStorage.getItem('teacherFeedbackData');
+    const savedTeacherFeedbackData = localStorage.getItem('teacherFeedbacks');
 
     if (savedFeedback) {
       try {
@@ -577,7 +577,7 @@ function App() {
       };
 
       handleAPISave(newNotification, JSON.stringify([submission]));
-
+/*
 //      setNotifications(prev => [newNotification, ...prev]);
 
       // 선생님에게 알림 표시
@@ -636,7 +636,7 @@ function App() {
       };
 
       setNotifications(prev => [feedbackNotification, ...prev]);
-    }, 3000);
+    }, 3000);*/
     });
   };
 
@@ -739,7 +739,8 @@ console.log("submission =============== ", submission);
         commonJs.fetchApiCall("S", "studentSubmissionSave", bodyData)
         .then(responseJson => {
             if (responseJson.result_code === API_RES_CODE.SUCCESS) {
-                setNotifications(prev => [newNotification, ...prev]);
+                //setNotifications(prev => [newNotification, ...prev]);
+                alert(newNotification.message);
             } else {
                 CommonUtils.showServerErr(responseJson.result_code, responseJson.result_message);
             }

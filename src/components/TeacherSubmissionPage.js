@@ -28,7 +28,9 @@ const TeacherSubmissionPage = ({ onBackToBookList, onViewSubmission }) => {
 //          }
           
           // 제출 데이터를 TeacherSubmissionPage 형식으로 변환
-          const formattedSubmissions = parsedSubmissions.map(sub => {
+          const formattedSubmissions = parsedSubmissions.map(sub1 => {
+          let sub = JSON.parse(sub1);
+          sub = sub[0];
             const formatted = {
               ...sub,
               submittedAt: sub.timestamp || sub.submittedAt,
