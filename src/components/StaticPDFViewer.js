@@ -1071,7 +1071,7 @@ const StaticPDFViewer = forwardRef(({
                 cursor: selectedTool === 'hand' ? 'grab' : 'crosshair',
                 borderRadius: '8px',
                 pointerEvents: 'auto',
-                touchAction: selectedTool === 'hand' ? 'none' : 'auto', // 펜/지우개 모드에서 스크롤 방지
+                touchAction: selectedTool === 'hand' ? 'auto' : 'none', // 펜/지우개 모드에서 스크롤 방지
                 // 번쩍거림 방지를 위한 최적화
                 willChange: 'auto',
                 backfaceVisibility: 'hidden',
