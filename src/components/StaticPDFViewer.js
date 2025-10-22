@@ -1071,6 +1071,7 @@ const StaticPDFViewer = forwardRef(({
                 cursor: selectedTool === 'hand' ? 'grab' : 'crosshair',
                 borderRadius: '8px',
                 pointerEvents: 'auto',
+                touchAction: selectedTool === 'hand' ? 'none' : 'auto', // 펜/지우개 모드에서 스크롤 방지
                 // 번쩍거림 방지를 위한 최적화
                 willChange: 'auto',
                 backfaceVisibility: 'hidden',
@@ -1107,7 +1108,8 @@ const StaticPDFViewer = forwardRef(({
             )}
             
             {/* 동영상 버튼 - 2페이지에만 표시 */}
-            {pageNum === 2 && (
+            {/* {pageNum === 2 && ( */}
+            {pageNum === 2 && pdfFileName === '/assets/pdf/2023-프리미어 초급2-내지_DEMO_compressed.pdf' && (
               <button
                 onClick={() => setIsVideoModalOpen(true)}
                 style={{
@@ -1148,7 +1150,8 @@ const StaticPDFViewer = forwardRef(({
             )}
 
             {/* 음성 버튼 - 2페이지에만 표시 */}
-            {pageNum === 2 && (
+            {/* {pageNum === 2 && ( */}
+            {pageNum === 2 && pdfFileName === '/assets/pdf/2023-프리미어 초급2-내지_DEMO_compressed.pdf' && (
               <>
                 {/* 숨겨진 오디오 엘리먼트 */}
                 <audio

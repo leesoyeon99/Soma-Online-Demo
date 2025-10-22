@@ -983,7 +983,7 @@ const TeacherAnnotationViewer = ({
               border: '1px solid rgba(139, 92, 246, 0.2)'
             }}>
               <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: '#64748b' }}>
-                <strong>첨삭 횟수:</strong> {JSON.parse(teacherAnnotations).length}개
+                <strong>첨삭 횟수:</strong> {JSON.parse(submission.strokeData)?.length || 0}개
               </p>
               <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: '#64748b' }}>
                 <strong>학생 필기:</strong> {JSON.parse(submission.strokeData)?.length || 0}개
