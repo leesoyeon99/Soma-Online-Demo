@@ -49,7 +49,21 @@ const TeacherFeedbackCards = ({
 
   // 첨삭 개수 계산
   const getFeedbackCount = (feedback) => {
-    return feedback.feedbackStrokeData ? JSON.parse(feedback.feedbackStrokeData).length : 0;
+    if (!feedback.feedbackStrokeData) return 0;
+
+    try {
+      // 이미 객체인 경우
+      if (typeof feedback.feedbackStrokeData === 'object') {
+        return Array.isArray(feedback.feedbackStrokeData)
+          ? feedback.feedbackStrokeData.length
+          : 0;
+      }
+      // 문자열인 경우 파싱
+      return JSON.parse(feedback.feedbackStrokeData).length;
+    } catch (error) {
+      console.error('feedbackStrokeData 파싱 에러:', error);
+      return 0;
+    }
   };
 
   // 다양한 한글 첨삭 내용 샘플
