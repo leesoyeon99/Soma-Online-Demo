@@ -746,14 +746,20 @@ const TeacherSubmissionViewer = ({
 //return;
     let bodyData = {
           id: Date.now(),
+          studentSubmission_idx: submission.id,
           mem_seq: mem_seq,
           teacherId: teacherId,
           teacherName: teacherName,
           time_stamp: new Date().toISOString(),
-          feedbackStrokeData: teacherAnnotations,
-          studentSubmissionId: submission.id,
+          feedbackStrokeData: JSON.stringify(teacherAnnotations),  // 타임스탬프 포함된 스트로크
+          teacherAudioUrl: teacherAudioUrl,
+          teacherAudioBase64: teacherAudioBase64,  // ✅ 오디오 추가
+          recordingStartTime: recordingStartTime,  // ✅ 타임스탬프 동기화
+          studentSubmissionId: submission.studentId,
+          currentPage: submission.currentPage,
           bookTitle: submission.bookTitle,
-          bookUrl: submission.bookUrl
+          bookUrl: submission.bookUrl,
+          pdfFileName: submission.pdfFileName
     };
     commonJs.fetchApiCall("S", "teacherSubmissionSave", bodyData)
     .then(responseJson => {
