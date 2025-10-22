@@ -86,7 +86,7 @@ const BookListPage = ({
         commonJs.fetchApiCall("S", "teacherSubmissionList", bodyData)
         .then(responseJson => {
             if (responseJson.result_code === API_RES_CODE.SUCCESS) {
-                window.localStorage.setItem("teacherFeedbacks", '');
+                /*window.localStorage.setItem("teacherFeedbacks", '');
 
                 let subList = responseJson.teacherSubmissionList;
                 let newSubList = [];
@@ -97,6 +97,22 @@ const BookListPage = ({
                     window.localStorage.setItem("teacherFeedbacks", JSON.stringify(subList));
                 }
                 setCurrentPage('teacherFeedbackCards');
+
+                */
+
+                window.localStorage.setItem("teacherFeedbacks", '');
+
+                let subList = responseJson.teacherSubmissionList;
+                if(subList.length > 0){
+                    let newSubList = [];
+                    for(var i=0; i<subList.length; i++){
+                        newSubList.push(JSON.parse(subList[i].feedbackStrokeData));
+                    }
+                    window.localStorage.setItem("teacherFeedbacks", JSON.stringify(newSubList));
+                }
+                setCurrentPage('teacherFeedbackCards');
+
+
             } else {
                 CommonUtils.showServerErr(responseJson.result_code, responseJson.result_message);
             }
