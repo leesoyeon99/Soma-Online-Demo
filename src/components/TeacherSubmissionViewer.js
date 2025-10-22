@@ -331,15 +331,16 @@ const TeacherSubmissionViewer = ({
     
     const feedback = {
       id: Date.now(),
+      studentSubmission_idx:submission.id,
       mem_seq: mem_seq,
       teacherId: teacherId,
       teacherName: teacherName,
-      timestamp: new Date().toISOString(),
-      feedbackStrokeData: teacherAnnotations,  // 타임스탬프 포함된 스트로크
+      time_stamp: new Date().toISOString(),
+      feedbackStrokeData: JSON.stringify(teacherAnnotations),  // 타임스탬프 포함된 스트로크
       teacherAudioUrl: teacherAudioUrl,
       teacherAudioBase64: teacherAudioBase64,  // ✅ 오디오 추가
       recordingStartTime: recordingStartTime,  // ✅ 타임스탬프 동기화
-      studentSubmissionId: submission.id,
+      studentSubmissionId: submission.studentId,
       currentPage: submission.currentPage,
       bookTitle: submission.bookTitle,
       bookUrl: submission.bookUrl,
@@ -651,42 +652,18 @@ const TeacherSubmissionViewer = ({
   };
 
   // 첨삭 저장 (기존 로직 유지)
-  const handleSaveFeedback = () => {
+  /*const handleSaveFeedback = () => {
     if (teacherAnnotations.length === 0) {
       //alert('첨삭할 내용이 없습니다.');
       //return;
     }
-    
-    /*const feedback = {
-      id: Date.now(),
-      teacherId: 'teacher1',
-      teacherName: '선생님',
-      timestamp: new Date().toISOString(),
-      feedbackStrokeData: teacherAnnotations,
-      studentSubmissionId: submission.id,
-      bookTitle: submission.bookTitle,
-      bookUrl: submission.bookUrl
-    };
-    
-    if (onSaveFeedback) {
-      onSaveFeedback(feedback);
-    }
-    
-    alert('첨삭이 저장되었습니다!');*/
 
     const mem_seq = Base64.decode(window.sessionStorage.getItem("noma@mem_seq"));
     const teacherId = Base64.decode(window.sessionStorage.getItem("noma@login_id"));
     const teacherName = Base64.decode(window.sessionStorage.getItem("noma@mem_name"));
-    //const book_id = files[activeFileIndex].id;
-
     const studentSubmissionSelect = window.localStorage.getItem("studentSubmissionSelect");
-    //const book_id = studentSubmissionSelect.book_id;
-//    console.log("studentSubmissionSelect ======================== ", studentSubmissionSelect);
-//    console.log("studentSubmissionSelect ========================>>>>> ", studentSubmissionSelect);
 
-
-//return;
-    let bodyData = {
+    let bodyData1 = {
           id: Date.now(),
           mem_seq: mem_seq,
           teacherId: teacherId,
@@ -697,6 +674,7 @@ const TeacherSubmissionViewer = ({
           bookTitle: submission.bookTitle,
           bookUrl: submission.bookUrl
     };
+
     commonJs.fetchApiCall("S", "teacherSubmissionSave", bodyData)
     .then(responseJson => {
         if (responseJson.result_code === API_RES_CODE.SUCCESS) {
@@ -708,7 +686,7 @@ const TeacherSubmissionViewer = ({
 
 
 
-  };
+  };*/
 
   // 줌 기능
   const handleZoomIn = () => {

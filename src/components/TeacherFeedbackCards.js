@@ -49,7 +49,7 @@ const TeacherFeedbackCards = ({
 
   // 첨삭 개수 계산
   const getFeedbackCount = (feedback) => {
-    return feedback.feedbackStrokeData ? feedback.feedbackStrokeData.length : 0;
+    return feedback.feedbackStrokeData ? JSON.parse(feedback.feedbackStrokeData).length : 0;
   };
 
   // 다양한 한글 첨삭 내용 샘플

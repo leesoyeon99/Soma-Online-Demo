@@ -106,7 +106,20 @@ const BookListPage = ({
                 if(subList.length > 0){
                     let newSubList = [];
                     for(var i=0; i<subList.length; i++){
-                        newSubList.push(JSON.parse(subList[i].feedbackStrokeData));
+                    const Feedbacks =
+                            {
+                              idx: subList[i].idx,
+                              id: subList[i].id, // 1일 전
+                              teacherId: subList[i].teacherId,
+                              teacherName: subList[i].teacherName,
+                              timestamp: new Date(subList[i].time_stamp).toISOString(),
+                              feedbackStrokeData: JSON.parse(subList[i].feedbackStrokeData),
+                              studentSubmissionId: subList[i].studentSubmissionId,
+                              bookTitle: subList[i].bookTitle,
+                              bookUrl: subList[i].bookUrl
+                            }
+                        //newSubList.push(JSON.parse(subList[i].feedbackStrokeData));
+                        newSubList.push(Feedbacks);
                     }
                     window.localStorage.setItem("teacherFeedbacks", JSON.stringify(newSubList));
                 }
