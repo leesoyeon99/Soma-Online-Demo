@@ -116,7 +116,8 @@ const BookListPage = ({
                               feedbackStrokeData: JSON.parse(subList[i].feedbackStrokeData),
                               studentSubmissionId: subList[i].studentSubmissionId,
                               bookTitle: subList[i].bookTitle,
-                              bookUrl: subList[i].bookUrl
+                              bookUrl: subList[i].bookUrl,
+                              currentPage:subList[i].currentPage                              
                             }
                         //newSubList.push(JSON.parse(subList[i].feedbackStrokeData));
                         newSubList.push(Feedbacks);
